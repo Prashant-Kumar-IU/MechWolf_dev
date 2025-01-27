@@ -14,6 +14,8 @@ class Reagent:
         
         self.name = reagent['name']
         self.inChi = reagent['inChi']
+        self.inChiKey = reagent['inChi Key']
+        self.SMILES = reagent['SMILES']
         self.mol_weight = reagent['molecular weight (in g/mol)']
         self.eq = reagent['eq']
         self.syringe = reagent['syringe']
@@ -22,6 +24,9 @@ class Reagent:
         
     def __str__(self):
         return f"{self.name}"
+    
+    def get_name_and_eq(self):
+        return f"{self.name}: {self.eq}"
 
 class Solid(Reagent):
     def __init__(self, reagent, moles):
@@ -46,20 +51,21 @@ class ReagentInputForm(tk.Tk):
         }
         
         self.create_widgets()
+        self.create_display_window()
     
     def create_widgets(self):
         main_frame = ttk.Frame(self, padding="10")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        ttk.Label(main_frame, text='Mass scale (in mg):').grid(row=0, column=0, sticky='e')
+        ttk.Label(main_frame, text='What is the scale of your reaction in terms of your limiting reagent (in mg)?').grid(row=0, column=0, sticky='e')
         self.mass_scale_input = ttk.Entry(main_frame)
         self.mass_scale_input.grid(row=0, column=1, pady=5)
         
-        ttk.Label(main_frame, text='Concentration (in mM):').grid(row=1, column=0, sticky='e')
+        ttk.Label(main_frame, text='What is your desired reaction concentration (in mM)?').grid(row=1, column=0, sticky='e')
         self.concentration_input = ttk.Entry(main_frame)
         self.concentration_input.grid(row=1, column=1, pady=5)
         
-        ttk.Label(main_frame, text='Solvent:').grid(row=2, column=0, sticky='e')
+        ttk.Label(main_frame, text='List all the solvents separated by commas:').grid(row=2, column=0, sticky='e')
         self.solvent_input = ttk.Entry(main_frame)
         self.solvent_input.grid(row=2, column=1, pady=5)
         
@@ -68,6 +74,34 @@ class ReagentInputForm(tk.Tk):
         
         ttk.Button(main_frame, text='Submit', command=self.submit).grid(row=5, column=0, columnspan=2, pady=10)
     
+    def create_display_window(self):
+        self.display_window = tk.Toplevel(self)
+        self.display_window.title("Reagents List")
+        self.display_window.geometry('300x200')
+
+        self.solid_label = ttk.Label(self.display_window, text="Solid reagents added:")
+        self.solid_label.pack()
+        self.solid_reagents_frame = ttk.Frame(self.display_window)
+        self.solid_reagents_frame.pack()
+
+        self.liquid_label = ttk.Label(self.display_window, text="Liquid reagents added:")
+        self.liquid_label.pack()
+        self.liquid_reagents_frame = ttk.Frame(self.display_window)
+        self.liquid_reagents_frame.pack()
+
+    def update_display(self):
+        for widget in self.solid_reagents_frame.winfo_children():
+            widget.destroy()
+        for reagent in self.data['solid reagents']:
+            label = ttk.Label(self.solid_reagents_frame, text=reagent.get_name_and_eq())
+            label.pack()
+
+        for widget in self.liquid_reagents_frame.winfo_children():
+            widget.destroy()
+        for reagent in self.data['liquid reagents']:
+            label = ttk.Label(self.liquid_reagents_frame, text=reagent.get_name_and_eq())
+            label.pack()
+
     def add_solid_reagent(self):
         self.reagent_window('solid')
     
@@ -132,12 +166,13 @@ class ReagentInputForm(tk.Tk):
                 
                 if reagent_type == 'solid':
                     reagent['syringe'] = int(syringe_input.get())
-                    self.data['solid reagents'].append(reagent)
+                    self.data['solid reagents'].append(Solid(reagent, 0))
                 else:
                     reagent['density (in g/mL)'] = float(density_input.get())
                     reagent['syringe'] = int(syringe_input.get())
-                    self.data['liquid reagents'].append(reagent)
+                    self.data['liquid reagents'].append(Liquid(reagent, 0))
                 
+                self.update_display()
                 window.destroy()
             except ValueError:
                 print("Invalid input: Please enter valid numerical values for molecular weight, eq, density, and syringe.")
@@ -161,9 +196,9 @@ class ReagentInputForm(tk.Tk):
         mw_limiting = None
 
         for reagent in data['solid reagents'] + data['liquid reagents']:
-            if reagent['eq'] == 1:
-                limiting_reagent = reagent['name']
-                mw_limiting = reagent['molecular weight (in g/mol)']
+            if reagent.eq == 1:
+                limiting_reagent = reagent.name
+                mw_limiting = reagent.mol_weight
                 break
 
         if mw_limiting is not None:
@@ -171,31 +206,33 @@ class ReagentInputForm(tk.Tk):
             moles_limiting = mass_scale / mw_limiting
 
             for reagent in data['solid reagents']:
-                reagent['moles'] = moles_limiting * reagent['eq']
-                reagent['mass'] = reagent['moles'] * reagent['molecular weight (in g/mol)']
+                reagent.moles = moles_limiting * reagent.eq
+                reagent.mass = reagent.moles * reagent.mol_weight
 
             for reagent in data['liquid reagents']:
-                reagent['moles'] = moles_limiting * reagent['eq']
-                reagent['mass'] = reagent['moles'] * reagent['molecular weight (in g/mol)']
-                reagent['volume'] = reagent['mass'] / reagent['density (in g/mL)']
+                reagent.moles = moles_limiting * reagent.eq
+                reagent.mass = reagent.moles * reagent.mol_weight
+                reagent.volume = reagent.mass / reagent.density
 
             # Print data with just the name of reagent and their InChi, InChi key, and SMILES
             print("Reagent Data:")
             for reagent in data['solid reagents'] + data['liquid reagents']:
-                print(f"{reagent['name']}: InChi: {reagent['inChi']} | InChi Key: {reagent['inChi Key']} | SMILES: {reagent['SMILES']}\n")
+                print(f"{reagent.name}: InChi: {reagent.inChi} | InChi Key: {reagent.inChiKey} | SMILES: {reagent.SMILES}\n")
       
             # Print the name of the limiting reagent and its moles
-            print(f"\nLimiting Reagent: {limiting_reagent}, Moles: {moles_limiting:.4f}\n")
+            print(f"\nLimiting Reagent: {limiting_reagent} | Moles: {moles_limiting:.4f}\n")
+            
+            # Print the list of solvents
+            print(f"Solvents: {data['solvent']}\n")
 
             # Generate stoichiometry table
-            reagent_list = [Solid(reagent, moles_limiting) for reagent in data['solid reagents']] + \
-                           [Liquid(reagent, moles_limiting) for reagent in data['liquid reagents']]
+            reagent_list = data['solid reagents'] + data['liquid reagents']
 
             reagent_table = QTable()
             reagent_table['Reagent'] = [reagent.name for reagent in reagent_list]
             reagent_table['Molecular Weight (g/mol)'] = [reagent.mol_weight for reagent in reagent_list]
-            reagent_table['Amount (mmol)'] = [reagent.moles for reagent in reagent_list]
-            reagent_table['Mass (mg)'] = [reagent.mass for reagent in reagent_list]
+            reagent_table['Amount (mmol)'] = [round(reagent.moles, decimals=4) for reagent in reagent_list]
+            reagent_table['Mass (mg)'] = [round(reagent.mass, decimals=4) for reagent in reagent_list]
             reagent_table['Volume (mL)'] = [round((reagent.volume/1000), 4) if hasattr(reagent, 'volume') else "N/A" for reagent in reagent_list]
             reagent_table['Density (g/mL)'] = [reagent.density if hasattr(reagent, 'density') else "N/A" for reagent in reagent_list]
             reagent_table['eq'] = [reagent.eq for reagent in reagent_list]
