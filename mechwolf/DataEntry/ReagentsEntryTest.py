@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import simpledialog, messagebox, ttk
 
 class ReagentInputForm(tk.Tk):
+    print("I am at the beginning of the code")
     def __init__(self):
         super().__init__()
         self.title('Reagent Input Form')
