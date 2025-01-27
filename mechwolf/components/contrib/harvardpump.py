@@ -1,3 +1,5 @@
+import mechwolf as mw
+
 class HarvardSyringePump(mw.Pump):
     """
     A dual-channel infusion only Harvard syringe pump.
