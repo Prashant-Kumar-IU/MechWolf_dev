@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import simpledialog
 import mechwolf as mw
+import re
+from mechwolf.components.contrib.harvardpump import HarvardSyringePump
 
 class DynamicDialog(simpledialog.Dialog):
     def __init__(self, parent, title, fields, include_mixer=False):
@@ -28,11 +30,11 @@ class DynamicDialog(simpledialog.Dialog):
             self.result["using_mixer"] = self.mixer_var.get()
 
 class ComponentApp:
-    def __init__(self, root, pump_1, pump_2):
+    def __init__(self, root, pumps):
         self.root = root
         self.root.title("Setup Creator")
-        self.pump_1 = pump_1
-        self.pump_2 = pump_2
+        self.pumps = pumps
+        self.pump_type = self.determine_pump_type()
         self.added_elements = []
         self.apparatus = None
         
@@ -134,6 +136,12 @@ class ComponentApp:
         for element in self.added_elements:
             self.listbox.insert(tk.END, element)
 
+    def determine_pump_type(self):
+        for pump in self.pumps:
+            if isinstance(pump, HarvardSyringePump):
+                return "dual-channel"
+        return "single-channel"
+
     def create_setup(self):
         vessel_1 = mw.Vessel(self.vessel_1_description, name=self.vessel_1_name)
         vessel_2 = mw.Vessel(self.vessel_2_description, name=self.vessel_2_name)
@@ -155,22 +163,27 @@ class ComponentApp:
 
         apparatus_name = self.apparatus_name_entry.get()
         A = mw.Apparatus(apparatus_name)
-        A.add(self.pump_1, vessel_1, coil_a)
-        A.add(self.pump_2, vessel_2, coil_a)
+
+        if self.pump_type == "single-channel":
+            A.add(self.pumps[0], vessel_1, coil_a)
+            A.add(self.pumps[1], vessel_2, coil_a)
+        elif self.pump_type == "dual-channel":
+            A.add(self.pumps[0], vessel_1, coil_a)
+            A.add(self.pumps[0], vessel_2, coil_a)
+
         A.add(vessel_1, T1, coil_a)
         A.add(vessel_2, T1, coil_a)
         A.add(T1, product_vessel, coil_x)
 
         self.apparatus = A
-        self.root.quit()  # Close the window
+        self.root.destroy()  # Properly close the window
 
 class ApparatusCreator:
-    def __init__(self, pump_1, pump_2):
-        self.pump_1 = pump_1
-        self.pump_2 = pump_2
+    def __init__(self, *pumps):
+        self.pumps = pumps
 
     def create_apparatus(self):
         root = tk.Tk()
-        app = ComponentApp(root, self.pump_1, self.pump_2)
+        app = ComponentApp(root, self.pumps)
         root.mainloop()
         return app.apparatus
