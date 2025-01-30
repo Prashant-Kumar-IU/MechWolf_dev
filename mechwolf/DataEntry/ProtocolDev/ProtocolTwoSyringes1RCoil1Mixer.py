@@ -1,6 +1,7 @@
 from datetime import timedelta
 from mechwolf.core.protocol import Protocol
 from mechwolf.components import ActiveComponent
+from mechwolf.components.contrib.harvardpump import HarvardSyringePump
 import re
 
 class ProtocolAlgorithm:
@@ -49,6 +50,7 @@ class ProtocolAlgorithm:
         switch = timedelta(seconds=switch_time)
         current = timedelta(seconds=0)
 
+        # Two syringes are being used so dividing by 2:
         pump_rate = flow_rate / 2
 
         flush_time = timedelta(seconds=(rinse_volume / pump_rate * 60))
@@ -57,13 +59,29 @@ class ProtocolAlgorithm:
         print("active_time =", active_time)
         print("flush_time =", flush_time)
 
-        self.protocol.add(self.components[0], start=current,
-                          duration=active_time, rate=f'{pump_rate} mL/min')
+        if isinstance(self.components[0], HarvardSyringePump):
+            # Dual-channel pump
+            self.protocol.add(self.components[0], start=current,
+                              duration=active_time, rate=f'{pump_rate} mL/min')
+        else:
+            # Single-channel pumps
+            self.protocol.add(self.components[0], start=current,
+                              duration=active_time, rate=f'{pump_rate} mL/min')
+            self.protocol.add(self.components[1], start=current,
+                              duration=active_time, rate=f'{pump_rate} mL/min')
 
         current += active_time + switch
 
-        self.protocol.add(self.components[0], start=current,
-                          duration=flush_time, rate=f'{pump_rate} mL/min')
+        if isinstance(self.components[0], HarvardSyringePump):
+            # Dual-channel pump
+            self.protocol.add(self.components[0], start=current,
+                              duration=flush_time, rate=f'{pump_rate} mL/min')
+        else:
+            # Single-channel pumps
+            self.protocol.add(self.components[0], start=current,
+                              duration=flush_time, rate=f'{pump_rate} mL/min')
+            self.protocol.add(self.components[1], start=current,
+                              duration=flush_time, rate=f'{pump_rate} mL/min')
 
         print(f'TOTAL TIME: {current}')
         return self.protocol
