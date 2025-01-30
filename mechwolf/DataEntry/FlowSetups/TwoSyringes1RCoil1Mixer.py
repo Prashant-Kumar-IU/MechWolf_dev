@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import simpledialog
+from tkinter import simpledialog, font, messagebox
 import mechwolf as mw
 import re
 from mechwolf.components.contrib.harvardpump import HarvardSyringePump
@@ -14,13 +14,13 @@ class DynamicDialog(simpledialog.Dialog):
     def body(self, master):
         if self.include_mixer:
             self.mixer_var = tk.BooleanVar()
-            tk.Label(master, text="Are you using a mixer?").pack()
-            tk.Checkbutton(master, text="Yes", variable=self.mixer_var).pack()
+            tk.Label(master, text="Are you using a mixer?", anchor='w').pack(fill='x')
+            tk.Checkbutton(master, text="Yes", variable=self.mixer_var, anchor='w').pack(fill='x')
 
         for field, label_text in self.fields.items():
-            tk.Label(master, text=label_text).pack()
+            tk.Label(master, text=label_text, anchor='w').pack(fill='x')
             entry = tk.Entry(master)
-            entry.pack()
+            entry.pack(fill='x')
             self.entries[field] = entry
         return list(self.entries.values())[0]  # initial focus
 
@@ -32,18 +32,24 @@ class DynamicDialog(simpledialog.Dialog):
 class ComponentApp:
     def __init__(self, root, pumps):
         self.root = root
-        self.root.title("Setup Creator")
+        self.root.title("Create the Setup")
         self.pumps = pumps
         self.pump_type = self.determine_pump_type()
         self.added_elements = []
         self.apparatus = None
-        
+        self.custom_font = font.Font(family="Helvetica", size=14)
+        self.apply_font(self.root)
         self.create_widgets()
-        
+
+    def apply_font(self, widget):
+        widget.option_add("*Font", self.custom_font)
+        for child in widget.winfo_children():
+            self.apply_font(child)
+
     def create_widgets(self):
-        tk.Label(self.root, text="Apparatus Name:").pack()
+        tk.Label(self.root, text="Apparatus Name:", anchor='w').pack(fill='x')
         self.apparatus_name_entry = tk.Entry(self.root)
-        self.apparatus_name_entry.pack(pady=10)
+        self.apparatus_name_entry.pack(pady=10, fill='x')
 
         buttons = [
             ("Fill Vessel Details", self.fill_vessel_details),
@@ -53,24 +59,24 @@ class ComponentApp:
         ]
 
         for text, command in buttons:
-            tk.Button(self.root, text=text, command=command).pack(pady=10)
+            tk.Button(self.root, text=text, command=command, anchor='w').pack(pady=10, fill='x')
 
         self.listbox = tk.Listbox(self.root)
         self.listbox.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
+
     def fill_vessel_details(self):
         fields = {
-            "vessel_1_description": "Enter the description for vessel 1:",
             "vessel_1_name": "Enter the name for vessel 1:",
-            "vessel_2_description": "Enter the description for vessel 2:",
+            "vessel_1_description": "Enter the description for vessel 1:",
             "vessel_2_name": "Enter the name for vessel 2:",
-            "product_vessel_description": "Enter the description for the product vessel:",
-            "product_vessel_name": "Enter the name for the product vessel:"
+            "vessel_2_description": "Enter the description for vessel 2:",
+            "product_vessel_name": "Enter the name for the product vessel:",
+            "product_vessel_description": "Enter the description for the product vessel:"
         }
         dialog = DynamicDialog(self.root, "Enter Vessel Details", fields)
         if dialog.result is None:
             return
-        
+
         self.vessel_1_description = dialog.result["vessel_1_description"]
         self.vessel_1_name = dialog.result["vessel_1_name"]
         self.vessel_2_description = dialog.result["vessel_2_description"]
@@ -96,14 +102,25 @@ class ComponentApp:
         dialog = DynamicDialog(self.root, "Enter Tubing Details", fields, include_mixer=True)
         if dialog.result is None:
             return
-        
+
+        def parse_and_validate(value):
+            try:
+                number = float(re.findall(r"[-+]?\d*\.\d+|\d+", value)[0])
+                return f"{number} in"
+            except (IndexError, ValueError):
+                return None
+
         self.using_mixer = dialog.result["using_mixer"]
-        self.thin_tube_ID = dialog.result["thin_tube_ID"]
-        self.thin_tube_OD = dialog.result["thin_tube_OD"]
+        self.thin_tube_ID = parse_and_validate(dialog.result["thin_tube_ID"])
+        self.thin_tube_OD = parse_and_validate(dialog.result["thin_tube_OD"])
         self.thin_tube_material = dialog.result["thin_tube_material"]
-        self.thick_tube_ID = dialog.result["thick_tube_ID"]
-        self.thick_tube_OD = dialog.result["thick_tube_OD"]
+        self.thick_tube_ID = parse_and_validate(dialog.result["thick_tube_ID"])
+        self.thick_tube_OD = parse_and_validate(dialog.result["thick_tube_OD"])
         self.thick_tube_material = dialog.result["thick_tube_material"]
+
+        if None in [self.thin_tube_ID, self.thin_tube_OD, self.thick_tube_ID, self.thick_tube_OD]:
+            messagebox.showerror("Input Error", "Please enter valid numeric values for tube dimensions.")
+            return
 
         self.added_elements.append("Thin Tube")
         if self.using_mixer:
@@ -118,7 +135,7 @@ class ComponentApp:
         dialog = DynamicDialog(self.root, "Enter Coil Lengths", fields)
         if dialog.result is None:
             return
-        
+
         self.coil_a_length = dialog.result["coil_a_length"]
         self.coil_x_length = dialog.result["coil_x_length"]
 
