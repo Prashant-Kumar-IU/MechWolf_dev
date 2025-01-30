@@ -187,7 +187,7 @@ class ComponentApp:
         def Tmixer(name):
             return mw.TMixer(name=name)
 
-        T1 = Tmixer("reactor_coil")
+        T1 = Tmixer(coil_x)
 
         apparatus_name = self.apparatus_name_entry.get()
         A = mw.Apparatus(apparatus_name)
