@@ -53,11 +53,11 @@ class ProtocolAlgorithm:
         # Three syringes are being used so dividing by 3:
         pump_rate = flow_rate / 3
 
-        flush_time = timedelta(seconds=(rinse_volume / pump_rate * 60))
+        rinse_time = timedelta(seconds=(rinse_volume / pump_rate * 60))
         active_time = timedelta(seconds=(solvent_volume / pump_rate * 60))
 
         print("active_time =", active_time)
-        print("flush_time =", flush_time)
+        print("rinse_time =", rinse_time)
 
         if isinstance(self.components[0], HarvardSyringePump):
             # Dual-channel pumps
@@ -79,17 +79,17 @@ class ProtocolAlgorithm:
         if isinstance(self.components[0], HarvardSyringePump):
             # Dual-channel pumps
             self.protocol.add(self.components[0], start=current,
-                              duration=flush_time, rate=f'{pump_rate} mL/min')
+                              duration=rinse_time, rate=f'{pump_rate} mL/min')
             self.protocol.add(self.components[1], start=current,
-                              duration=flush_time, rate=f'{pump_rate} mL/min')
+                              duration=rinse_time, rate=f'{pump_rate} mL/min')
         else:
             # Single-channel pumps
             self.protocol.add(self.components[0], start=current,
-                              duration=flush_time, rate=f'{pump_rate} mL/min')
+                              duration=rinse_time, rate=f'{pump_rate} mL/min')
             self.protocol.add(self.components[1], start=current,
-                              duration=flush_time, rate=f'{pump_rate} mL/min')
+                              duration=rinse_time, rate=f'{pump_rate} mL/min')
             self.protocol.add(self.components[2], start=current,
-                              duration=flush_time, rate=f'{pump_rate} mL/min')
+                              duration=rinse_time, rate=f'{pump_rate} mL/min')
             
         current += active_time + switch
 
