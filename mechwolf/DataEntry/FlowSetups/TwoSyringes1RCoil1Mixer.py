@@ -114,11 +114,17 @@ class ComponentApp:
         self.thin_tube_ID = parse_and_validate(dialog.result["thin_tube_ID"])
         self.thin_tube_OD = parse_and_validate(dialog.result["thin_tube_OD"])
         self.thin_tube_material = dialog.result["thin_tube_material"]
-        self.thick_tube_ID = parse_and_validate(dialog.result["thick_tube_ID"])
-        self.thick_tube_OD = parse_and_validate(dialog.result["thick_tube_OD"])
-        self.thick_tube_material = dialog.result["thick_tube_material"]
 
-        if None in [self.thin_tube_ID, self.thin_tube_OD, self.thick_tube_ID, self.thick_tube_OD]:
+        if self.using_mixer:
+            self.thick_tube_ID = parse_and_validate(dialog.result["thick_tube_ID"])
+            self.thick_tube_OD = parse_and_validate(dialog.result["thick_tube_OD"])
+            self.thick_tube_material = dialog.result["thick_tube_material"]
+
+            if None in [self.thick_tube_ID, self.thick_tube_OD]:
+                messagebox.showerror("Input Error", "Please enter valid numeric values for tube dimensions.")
+                return
+
+        if None in [self.thin_tube_ID, self.thin_tube_OD]:
             messagebox.showerror("Input Error", "Please enter valid numeric values for tube dimensions.")
             return
 
