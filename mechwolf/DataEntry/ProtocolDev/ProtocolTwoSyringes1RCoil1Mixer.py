@@ -31,7 +31,7 @@ class ProtocolAlgorithm:
             else:
                 raise ValueError("Invalid time format. Please enter a number followed by 'seconds'.")
 
-        print('Enter your desired flow rate (in mL/min):')
+        print('Enter your desired FINAL FLOW RATE (in mL/min):')
         F = input()
         flow_rate = parse_flow_rate(F)
 
