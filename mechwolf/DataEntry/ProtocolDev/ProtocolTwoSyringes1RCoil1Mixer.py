@@ -82,6 +82,8 @@ class ProtocolAlgorithm:
                               duration=flush_time, rate=f'{pump_rate} mL/min')
             self.protocol.add(self.components[1], start=current,
                               duration=flush_time, rate=f'{pump_rate} mL/min')
+        
+        current += active_time + switch
 
         print(f'TOTAL TIME: {current}')
         return self.protocol
