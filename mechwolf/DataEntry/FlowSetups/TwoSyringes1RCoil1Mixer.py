@@ -136,8 +136,19 @@ class ComponentApp:
         if dialog.result is None:
             return
 
-        self.coil_a_length = dialog.result["coil_a_length"]
-        self.coil_x_length = dialog.result["coil_x_length"]
+        def parse_and_validate(value):
+            try:
+                number = float(re.findall(r"[-+]?\d*\.\d+|\d+", value)[0])
+                return f"{number} foot"
+            except (IndexError, ValueError):
+                return None
+
+        self.coil_a_length = parse_and_validate(dialog.result["coil_a_length"])
+        self.coil_x_length = parse_and_validate(dialog.result["coil_x_length"])
+
+        if None in [self.coil_a_length, self.coil_x_length]:
+            messagebox.showerror("Input Error", "Please enter valid numeric values for coil lengths.")
+            return
 
         self.add_elements_to_listbox([
             f"Coil A: {self.coil_a_length}",
