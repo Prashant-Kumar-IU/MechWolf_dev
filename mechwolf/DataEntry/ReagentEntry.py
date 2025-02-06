@@ -75,58 +75,63 @@ class ReagentInputForm:
         self.reagent_window('liquid')
     
     def reagent_window(self, reagent_type):
-        name_input = widgets.Text(layout=widgets.Layout(width='50%'))
-        inchi_input = widgets.Text(layout=widgets.Layout(width='50%'))
-        smiles_input = widgets.Text(layout=widgets.Layout(width='50%'))
-        inchikey_input = widgets.Text(layout=widgets.Layout(width='50%'))
-        mw_input = widgets.FloatText(layout=widgets.Layout(width='50%'))
-        eq_input = widgets.FloatText(layout=widgets.Layout(width='50%'))
+        output_widget = widgets.Output()
+        with output_widget:
+            name_input = widgets.Text(layout=widgets.Layout(width='50%'))
+            inchi_input = widgets.Text(layout=widgets.Layout(width='50%'))
+            smiles_input = widgets.Text(layout=widgets.Layout(width='50%'))
+            inchikey_input = widgets.Text(layout=widgets.Layout(width='50%'))
+            mw_input = widgets.FloatText(layout=widgets.Layout(width='50%'))
+            eq_input = widgets.FloatText(layout=widgets.Layout(width='50%'))
+            
+            if reagent_type == 'solid':
+                syringe_input = widgets.IntText(layout=widgets.Layout(width='50%'))
+                density_input = None
+            else:
+                density_input = widgets.FloatText(layout=widgets.Layout(width='50%'))
+                syringe_input = widgets.IntText(layout=widgets.Layout(width='50%'))
+            
+            save_button = widgets.Button(description='Save')
+            
+            def save_reagent(b):
+                try:
+                    reagent = {
+                        'name': name_input.value,
+                        'inChi': inchi_input.value,
+                        'SMILES': smiles_input.value,
+                        'inChi Key': inchikey_input.value,
+                        'molecular weight (in g/mol)': mw_input.value,
+                        'eq': eq_input.value
+                    }
+                    
+                    if reagent_type == 'solid':
+                        reagent['syringe'] = syringe_input.value
+                        self.data['solid reagents'].append(reagent)
+                    else:
+                        reagent['density (in g/mL)'] = density_input.value
+                        reagent['syringe'] = syringe_input.value
+                        self.data['liquid reagents'].append(reagent)
+                    
+                    self.update_display()
+                    output_widget.clear_output()  # Clear the form after saving
+                except ValueError:
+                    print("Invalid input: Please enter valid numerical values for molecular weight, eq, density, and syringe.")
+            
+            save_button.on_click(save_reagent)
+            
+            display(widgets.VBox([
+                widgets.Label('Name:'), name_input,
+                widgets.Label('InChi:'), inchi_input,
+                widgets.Label('SMILES:'), smiles_input,
+                widgets.Label('InChi Key:'), inchikey_input,
+                widgets.Label('Molecular weight (g/mol):'), mw_input,
+                widgets.Label('Eq:'), eq_input,
+                widgets.Label('Density (g/mL):') if density_input else widgets.Label(), density_input if density_input else widgets.Label(),
+                widgets.Label('Syringe:'), syringe_input,
+                save_button
+            ]))
         
-        if reagent_type == 'solid':
-            syringe_input = widgets.IntText(layout=widgets.Layout(width='50%'))
-            density_input = None
-        else:
-            density_input = widgets.FloatText(layout=widgets.Layout(width='50%'))
-            syringe_input = widgets.IntText(layout=widgets.Layout(width='50%'))
-        
-        save_button = widgets.Button(description='Save')
-        
-        def save_reagent(b):
-            try:
-                reagent = {
-                    'name': name_input.value,
-                    'inChi': inchi_input.value,
-                    'SMILES': smiles_input.value,
-                    'inChi Key': inchikey_input.value,
-                    'molecular weight (in g/mol)': mw_input.value,
-                    'eq': eq_input.value
-                }
-                
-                if reagent_type == 'solid':
-                    reagent['syringe'] = syringe_input.value
-                    self.data['solid reagents'].append(reagent)
-                else:
-                    reagent['density (in g/mL)'] = density_input.value
-                    reagent['syringe'] = syringe_input.value
-                    self.data['liquid reagents'].append(reagent)
-                
-                self.update_display()
-            except ValueError:
-                print("Invalid input: Please enter valid numerical values for molecular weight, eq, density, and syringe.")
-        
-        save_button.on_click(save_reagent)
-        
-        display(widgets.VBox([
-            widgets.Label('Name:'), name_input,
-            widgets.Label('InChi:'), inchi_input,
-            widgets.Label('SMILES:'), smiles_input,
-            widgets.Label('InChi Key:'), inchikey_input,
-            widgets.Label('Molecular weight (g/mol):'), mw_input,
-            widgets.Label('Eq:'), eq_input,
-            widgets.Label('Density (g/mL):') if density_input else widgets.Label(), density_input if density_input else widgets.Label(),
-            widgets.Label('Syringe:'), syringe_input,
-            save_button
-        ]))
+        display(output_widget)
     
     def submit(self, b):
         self.mass_scale_input = widgets.FloatText(layout=widgets.Layout(width='50%'))
