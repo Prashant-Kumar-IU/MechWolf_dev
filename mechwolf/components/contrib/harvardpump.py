@@ -21,12 +21,40 @@ class HarvardSyringePump(mw.Pump):
     metadata = {
         "author": [
             {
-                "first_name": "",
-                "last_name": "",
-                "email": "",
+                "first_name": "Prashant",
+                "last_name": "Kumar",
+                "email": "pprashan@iu.edu",
+                "institution": "Indiana University Bloomington, Departemnt of Chemistry, Computing and Engineering",
+                "github_username": "Prashant-Kumar-IU",
+            },
+            {
+                "first_name": "Nicola",
+                "last_name": "Pohl",
+                "email": "npohl@iu.edu",
+                "institution": "Indiana University Bloomington, Departemnt of Chemistry, Computing and Engineering",
+                "github_username": "NLPohl",
+            },
+            {
+                "first_name": "Murat",
+                "last_name": "Ozturkme",
+                "email": "muzcuk@gmail.com",
                 "institution": "Indiana University, School of Informatics, Computing and Engineering",
-                "github_username": "",
-            }
+                "github_username": "littleblackfish",
+            },
+            {
+                "first_name": "Alex",
+                "last_name": "Mijalis",
+                "email": "Alex Mijalis <Alexander_Mijalis@hms.harvard.edu>",
+                "institution": "Harvard Medical School",
+                "github_username": "amijalis",
+            },
+            {
+                "first_name": "Benjamin",
+                "last_name": "Lee",
+                "email": "benjamindlee@me.com",
+                "institution": "Harvard University",
+                "github_username": "Benjamin-Lee",
+            },
         ],
         "stability": "beta",
         "supported": True,
