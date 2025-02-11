@@ -24,14 +24,14 @@ class HarvardSyringePump(mw.Pump):
                 "first_name": "Prashant",
                 "last_name": "Kumar",
                 "email": "pprashan@iu.edu",
-                "institution": "Indiana University Bloomington, Departemnt of Chemistry, Computing and Engineering",
+                "institution": "Indiana University Bloomington, Departemnt of Chemistry",
                 "github_username": "Prashant-Kumar-IU",
             },
             {
                 "first_name": "Nicola",
                 "last_name": "Pohl",
                 "email": "npohl@iu.edu",
-                "institution": "Indiana University Bloomington, Departemnt of Chemistry, Computing and Engineering",
+                "institution": "Indiana University Bloomington, Departemnt of Chemistry",
                 "github_username": "NLPohl",
             },
             {
