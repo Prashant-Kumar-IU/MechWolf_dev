@@ -24,8 +24,8 @@ class WidgetManager:
     def create_tube_widgets(self, num_tubes):
         """Create widgets for variable number of reaction tubes"""
         for i in range(1, num_tubes + 1):
-            self.widgets[f'reaction_tube{i}_id'] = self.create_text_input(f"Reaction Tube {i} ID")
-            self.widgets[f'reaction_tube{i}_od'] = self.create_text_input(f"Reaction Tube {i} OD")
+            self.widgets[f'reaction_tube{i}_id'] = self.create_text_input(f"Reaction Tube {i} Inner Diameter (ID)")
+            self.widgets[f'reaction_tube{i}_od'] = self.create_text_input(f"Reaction Tube {i} Outer Diameter (OD)")
             self.widgets[f'reaction_tube{i}_material'] = self.create_text_input(f"Reaction Tube {i} Material")
             
     def create_mixer_widgets(self, num_mixers):
@@ -33,8 +33,8 @@ class WidgetManager:
         self.widgets['using_mixer'] = widgets.Checkbox(value=False, description="Using Mixer")
         
         for i in range(1, num_mixers + 1):
-            self.widgets[f'mixer{i}_tube_id'] = self.create_text_input(f"Mixer {i} Tube ID")
-            self.widgets[f'mixer{i}_tube_od'] = self.create_text_input(f"Mixer {i} Tube OD")
+            self.widgets[f'mixer{i}_tube_id'] = self.create_text_input(f"Mixer {i} Inner Diameter (ID)")
+            self.widgets[f'mixer{i}_tube_od'] = self.create_text_input(f"Mixer {i} Outer Diameter (OD)")
             self.widgets[f'mixer{i}_tube_material'] = self.create_text_input(f"Mixer {i} Tube Material")
             
     def create_coil_widgets(self, num_coils):
