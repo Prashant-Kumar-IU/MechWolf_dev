@@ -27,34 +27,48 @@ class TLCInputForm:
                 
             clear_output()
             
-            # Create input boxes for samples with names and distances side by side
+            # Create headers with bigger font and bold styling
+            headers = widgets.HBox([
+                widgets.HTML(
+                    value='<h2 style="font-size: 16px; margin: 0;">Identity of spot</h2>',
+                    layout=widgets.Layout(width='200px')
+                ),
+                widgets.HTML(
+                    value='<h2 style="font-size: 16px; margin: 0;">Distance from baseline (cm)</h2>',
+                    layout=widgets.Layout(width='200px')
+                )
+            ], layout=widgets.Layout(justify_content='space-between', width='500px', margin='5px 0'))
+            
+            # Create input boxes for samples
             inputs = []
             for i in range(num_spots):
                 sample_name = widgets.Text(
-                    placeholder=f'Sample {i+1} name',
+                    placeholder=f'Spot {i+1}',
                     layout=widgets.Layout(width='200px')
                 )
                 sample_distance = widgets.FloatText(
                     layout=widgets.Layout(width='200px')
                 )
                 inputs.append(widgets.HBox([
-                    widgets.VBox([
-                        widgets.Label('Sample name:'),
-                        sample_name
-                    ]),
-                    widgets.VBox([
-                        widgets.Label('Distance (cm):'),
-                        sample_distance
-                    ])
+                    sample_name,
+                    sample_distance
                 ], layout=widgets.Layout(justify_content='space-between', width='500px')))
             
-            # Add solvent distance input
+            # Add solvent distance input with matching header style and spacing
             solvent_distance = widgets.VBox([
-                widgets.Label('Solvent distance (cm):'),
+                widgets.HTML(
+                    value='<h2 style="font-size: 16px; margin: 5;">Distance travelled by solvent front (cm)</h2>',
+                    layout=widgets.Layout(width='200px')
+                ),
                 widgets.FloatText(layout=widgets.Layout(width='200px'))
-            ])
+            ], layout=widgets.Layout(margin='0px 0 20px 0'))  # Add top margin for spacing
+
+            calc_button = widgets.Button(
+                description='Calculate Rf Values',
+                button_style='success',
+                style={'button_color': '#007F5F', 'font_color': 'black'}
+            )
             
-            calc_button = widgets.Button(description='Calculate RF Values')
             result_output = widgets.Output()
             
             def on_calculate(b):
@@ -66,8 +80,8 @@ class TLCInputForm:
                             raise ValueError("Solvent distance cannot be zero")
                             
                         for i in range(num_spots):
-                            sample_name = inputs[i].children[0].children[1].value or f"Sample {i+1}"
-                            sample_dist = inputs[i].children[1].children[1].value
+                            sample_name = inputs[i].children[0].value or f"Spot {i+1}"
+                            sample_dist = inputs[i].children[1].value
                             rf = round(sample_dist / solvent_dist, 4)
                             print(f"RF value for {sample_name}: {rf}")
                     except Exception as e:
@@ -75,9 +89,13 @@ class TLCInputForm:
             
             calc_button.on_click(on_calculate)
             
-            display(widgets.VBox(
-                inputs + [solvent_distance, calc_button, result_output]
-            ))
+            display(widgets.VBox([
+                headers,
+                widgets.VBox(inputs),
+                solvent_distance,
+                calc_button,
+                result_output
+            ]))
             
         except Exception as e:
             print(f"Error: {e}")
