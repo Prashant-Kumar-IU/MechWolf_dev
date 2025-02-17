@@ -165,6 +165,10 @@ class ReagentInputForm:
                 print("Invalid input: Please enter valid numerical values for mass scale and concentration.")
                 return
             
+            if not any(reagent['eq'] == 1.0 for reagent in self.data['solid reagents'] + self.data['liquid reagents']):
+                print("Error: At least one reagent must have an equivalent (eq) value of 1.0.")
+                return
+            
             self.save_data()
             clear_output()
             process_data(self.data_file)
