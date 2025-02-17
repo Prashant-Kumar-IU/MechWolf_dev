@@ -36,7 +36,7 @@ class ReagentInputForm:
         self.add_liquid_button = widgets.Button(description='Add Liquid Reagent')
         self.add_liquid_button.on_click(self.add_liquid_reagent)
         
-        self.submit_button = widgets.Button(description='Submit')
+        self.submit_button = widgets.Button(description='SUBMIT', button_style='success', style={'button_color': '#007F5F', 'font_color': 'black'})
         self.submit_button.on_click(self.submit)
         
         self.buttons_box = widgets.VBox([
@@ -57,8 +57,8 @@ class ReagentInputForm:
         children = []
         for reagent in self.data['solid reagents'] + self.data['liquid reagents']:
             label = widgets.Label(f"{reagent['name']}: {reagent['eq']}")
-            edit_button = widgets.Button(description='Edit', button_style='info', style={'button_color': '#cce5ff', 'font_color': 'black'})
-            delete_button = widgets.Button(description='Delete', button_style='danger', style={'button_color': '#ffcccc', 'font_color': 'black'})
+            edit_button = widgets.Button(description='Edit', button_style='info', style={'button_color': '#1E3A8A', 'font_color': 'black'})
+            delete_button = widgets.Button(description='Delete', button_style='danger', style={'button_color': '#D72638', 'font_color': 'black'})
             edit_button.on_click(lambda b, r=reagent: self.edit_reagent(r))
             delete_button.on_click(lambda b, r=reagent: self.delete_reagent(r))
             children.append(widgets.HBox([label, edit_button, delete_button], layout=widgets.Layout(margin='0 0 10px 0')))
