@@ -39,13 +39,14 @@ class ReagentInputForm:
         self.submit_button = widgets.Button(description='Submit')
         self.submit_button.on_click(self.submit)
         
+        self.buttons_box = widgets.VBox([
+            self.add_solid_button,
+            self.add_liquid_button
+        ], layout=widgets.Layout(width='30%', margin='0 10px 0 0'))
+        
         display(widgets.VBox([
             widgets.HBox([
-                widgets.VBox([
-                    self.add_solid_button,
-                    self.add_liquid_button,
-                    self.submit_button
-                ], layout=widgets.Layout(width='30%', margin='0 10px 0 0')),
+                self.buttons_box,
                 self.reagents_list
             ])
         ]))
@@ -56,10 +57,19 @@ class ReagentInputForm:
         children = []
         for reagent in self.data['solid reagents'] + self.data['liquid reagents']:
             label = widgets.Label(f"{reagent['name']}: {reagent['eq']}")
+            edit_button = widgets.Button(description='Edit', button_style='info', style={'button_color': '#cce5ff', 'font_color': 'black'})
             delete_button = widgets.Button(description='Delete', button_style='danger', style={'button_color': '#ffcccc', 'font_color': 'black'})
+            edit_button.on_click(lambda b, r=reagent: self.edit_reagent(r))
             delete_button.on_click(lambda b, r=reagent: self.delete_reagent(r))
-            children.append(widgets.HBox([label, delete_button], layout=widgets.Layout(margin='0 0 10px 0')))
+            children.append(widgets.HBox([label, edit_button, delete_button], layout=widgets.Layout(margin='0 0 10px 0')))
         self.reagents_list.children = children
+        
+        if self.data['solid reagents'] or self.data['liquid reagents']:
+            if self.submit_button not in self.buttons_box.children:
+                self.buttons_box.children += (self.submit_button,)
+        else:
+            if self.submit_button in self.buttons_box.children:
+                self.buttons_box.children = tuple(child for child in self.buttons_box.children if child != self.submit_button)
     
     def delete_reagent(self, reagent):
         if reagent in self.data['solid reagents']:
@@ -74,43 +84,45 @@ class ReagentInputForm:
     def add_liquid_reagent(self, b):
         self.reagent_window('liquid')
     
-    def reagent_window(self, reagent_type):
+    def reagent_window(self, reagent_type, reagent=None):
         output_widget = widgets.Output()
         with output_widget:
-            name_input = widgets.Text(layout=widgets.Layout(width='50%'))
-            inchi_input = widgets.Text(layout=widgets.Layout(width='50%'))
-            smiles_input = widgets.Text(layout=widgets.Layout(width='50%'))
-            inchikey_input = widgets.Text(layout=widgets.Layout(width='50%'))
-            mw_input = widgets.FloatText(layout=widgets.Layout(width='50%'))
-            eq_input = widgets.FloatText(layout=widgets.Layout(width='50%'))
+            name_input = widgets.Text(value=reagent['name'] if reagent else '', layout=widgets.Layout(width='50%'))
+            inchi_input = widgets.Text(value=reagent['inChi'] if reagent else '', layout=widgets.Layout(width='50%'))
+            smiles_input = widgets.Text(value=reagent['SMILES'] if reagent else '', layout=widgets.Layout(width='50%'))
+            inchikey_input = widgets.Text(value=reagent['inChi Key'] if reagent else '', layout=widgets.Layout(width='50%'))
+            mw_input = widgets.FloatText(value=reagent['molecular weight (in g/mol)'] if reagent else 0, layout=widgets.Layout(width='50%'))
+            eq_input = widgets.FloatText(value=reagent['eq'] if reagent else 0, layout=widgets.Layout(width='50%'))
+            syringe_input = widgets.IntText(value=reagent['syringe'] if reagent else 0, layout=widgets.Layout(width='50%'))
             
             if reagent_type == 'solid':
-                syringe_input = widgets.IntText(layout=widgets.Layout(width='50%'))
                 density_input = None
             else:
-                density_input = widgets.FloatText(layout=widgets.Layout(width='50%'))
-                syringe_input = widgets.IntText(layout=widgets.Layout(width='50%'))
+                density_input = widgets.FloatText(value=reagent['density (in g/mL)'] if reagent else 0, layout=widgets.Layout(width='50%'))
             
             save_button = widgets.Button(description='Save')
             
             def save_reagent(b):
                 try:
-                    reagent = {
+                    new_reagent = {
                         'name': name_input.value,
                         'inChi': inchi_input.value,
                         'SMILES': smiles_input.value,
                         'inChi Key': inchikey_input.value,
                         'molecular weight (in g/mol)': mw_input.value,
-                        'eq': eq_input.value
+                        'eq': eq_input.value,
+                        'syringe': syringe_input.value
                     }
                     
                     if reagent_type == 'solid':
-                        reagent['syringe'] = syringe_input.value
-                        self.data['solid reagents'].append(reagent)
+                        if reagent:
+                            self.data['solid reagents'].remove(reagent)
+                        self.data['solid reagents'].append(new_reagent)
                     else:
-                        reagent['density (in g/mL)'] = density_input.value
-                        reagent['syringe'] = syringe_input.value
-                        self.data['liquid reagents'].append(reagent)
+                        new_reagent['density (in g/mL)'] = density_input.value
+                        if reagent:
+                            self.data['liquid reagents'].remove(reagent)
+                        self.data['liquid reagents'].append(new_reagent)
                     
                     self.update_display()
                     output_widget.clear_output()  # Clear the form after saving
@@ -132,6 +144,10 @@ class ReagentInputForm:
             ]))
         
         display(output_widget)
+    
+    def edit_reagent(self, reagent):
+        reagent_type = 'solid' if reagent in self.data['solid reagents'] else 'liquid'
+        self.reagent_window(reagent_type, reagent)
     
     def submit(self, b):
         self.mass_scale_input = widgets.FloatText(layout=widgets.Layout(width='50%'))
