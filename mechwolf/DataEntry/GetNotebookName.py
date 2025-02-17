@@ -49,7 +49,8 @@ def get_notebook_json_name(save_dir=None):
                         notebook_name = os.path.basename(notebook_path)
                         # Replace the .ipynb extension with .json
                         json_name = notebook_name.replace('.ipynb', '.json')
-                        print(f"Found active notebook: {notebook_name}, creating JSON: {json_name}")
+                        #print(f"Found active notebook: {notebook_name}")
+                        print(f"JSON file created or in use: {json_name}")
                         # Return the full path to the JSON file
                         return os.path.join(save_dir, json_name)
             except requests.RequestException as e:
