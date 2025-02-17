@@ -79,9 +79,13 @@ class ReagentInputForm:
         self.update_display()
     
     def add_solid_reagent(self, b):
+        if self.submit_button in self.buttons_box.children:
+            self.buttons_box.children = tuple(child for child in self.buttons_box.children if child != self.submit_button)
         self.reagent_window('solid')
     
     def add_liquid_reagent(self, b):
+        if self.submit_button in self.buttons_box.children:
+            self.buttons_box.children = tuple(child for child in self.buttons_box.children if child != self.submit_button)
         self.reagent_window('liquid')
     
     def reagent_window(self, reagent_type, reagent=None):
@@ -126,6 +130,8 @@ class ReagentInputForm:
                     
                     self.update_display()
                     output_widget.clear_output()  # Clear the form after saving
+                    if self.submit_button not in self.buttons_box.children:
+                        self.buttons_box.children += (self.submit_button,)
                 except ValueError:
                     print("Invalid input: Please enter valid numerical values for molecular weight, eq, density, and syringe.")
             
