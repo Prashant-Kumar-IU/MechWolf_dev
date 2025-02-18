@@ -77,7 +77,7 @@ def process_data(data_file):
         reagent_table['Molecular Weight (g/mol)'] = [reagent.mol_weight for reagent in reagent_list]
         reagent_table['Amount (mmol)'] = [round(reagent.moles, decimals=4) for reagent in reagent_list]
         reagent_table['Mass (mg)'] = [round(reagent.mass, decimals=4) for reagent in reagent_list]
-        reagent_table['Volume (mL)'] = [round((reagent.volume/1000), 4) if hasattr(reagent, 'volume') else "N/A" for reagent in reagent_list]
+        reagent_table['Volume (mL)'] = [round((reagent.volume/1000), decimals=4) if hasattr(reagent, 'volume') and reagent.volume != 0 else "N/A" for reagent in reagent_list]
         reagent_table['Density (g/mL)'] = [reagent.density if hasattr(reagent, 'density') else "N/A" for reagent in reagent_list]
         reagent_table['eq'] = [reagent.eq for reagent in reagent_list]
         reagent_table['Syringe'] = [reagent.syringe for reagent in reagent_list]
