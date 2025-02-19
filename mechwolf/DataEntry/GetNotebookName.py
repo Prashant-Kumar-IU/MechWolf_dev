@@ -1,13 +1,10 @@
 def get_notebook_json_name(save_dir=None):
-    """
-    Gets the current Jupyter notebook name and returns it with .json extension
-    
+    """ Gets the current Jupyter notebook name and returns it with .json extension.
     Args:
-        save_dir (str, optional): Directory where JSON file should be saved. 
+        save_dir (str, optional): Directory where the JSON file should be saved. 
                                  Defaults to current working directory.
-    
     Returns:
-        str: The full path to the JSON file
+        str: The full path to the JSON file.
     """
     try:
         import os
@@ -32,14 +29,26 @@ def get_notebook_json_name(save_dir=None):
         # Iterate over all running Jupyter notebook servers
         for srv in notebookapp.list_running_servers():
             # Construct the URL to get the sessions from the server
-            response = srv['url'] + 'api/sessions'
+            response_url = srv['url'] + 'api/sessions'
             token = srv.get('token', '')
             if token:
-                response += '?token=' + token
+                response_url += f'?token={token}'
             
             try:
                 # Get the list of sessions from the server
-                sessions = requests.get(response).json()
+                response = requests.get(response_url)
+                
+                # Check if the response is successful
+                if response.status_code != 200:
+                    print(f"Error: Failed to retrieve sessions, status code: {response.status_code}")
+                    continue
+                
+                sessions = response.json()
+                
+                # Ensure sessions is a list
+                if not isinstance(sessions, list):
+                    print(f"Error: Expected list of sessions, got: {type(sessions)}")
+                    continue
                 
                 # Iterate over the sessions to find the one with the matching kernel ID
                 for sess in sessions:
@@ -49,21 +58,15 @@ def get_notebook_json_name(save_dir=None):
                         notebook_name = os.path.basename(notebook_path)
                         # Replace the .ipynb extension with .json
                         json_name = notebook_name.replace('.ipynb', '.json')
-                        #print(f"Found active notebook: {notebook_name}")
-                        print(f"JSON file created or in use: {json_name}")
                         # Return the full path to the JSON file
                         return os.path.join(save_dir, json_name)
             except requests.RequestException as e:
-                # Handle errors in getting the notebook server information
                 print(f"Error getting notebook server information: {e}")
             except (KeyError, TypeError) as e:
-                # Handle errors in parsing the session information
                 print(f"Error parsing session information: {e}")
         
-        # Raise an error if the active notebook name could not be determined
         raise RuntimeError("Could not determine active notebook name")
         
     except Exception as e:
-        # Print any other errors that occur
         print(f"Error getting notebook name: {e}")
         return None
