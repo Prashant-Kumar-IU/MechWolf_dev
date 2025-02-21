@@ -36,13 +36,22 @@ def parse_numeric_foot(value):
     except (IndexError, ValueError):
         return None
 
-def validate_required_fields(data):
-    """Validate all required fields are present"""
+def validate_required_fields(data, use_rmv=False):
+    """Validate all required fields are present
+    Args:
+        data: Dictionary containing field values
+        use_rmv: Boolean to toggle between Product Vessel and Reaction Mixture Vessel validation
+    Returns:
+        List of missing field names
+    """
+    vessel_field_name = 'Reaction Mixture Vessel Name' if use_rmv else 'Product Vessel Name'
+    vessel_key = 'reaction_mixture_vessel_name' if use_rmv else 'product_vessel_name'
+    
     required_fields = {
         'Apparatus Name': data.get('apparatus_name'),
         'Vessel 1 Name': data.get('vessel1_name'),
         'Vessel 2 Name': data.get('vessel2_name'),
-        'Product Vessel Name': data.get('product_vessel_name'),
+        vessel_field_name: data.get(vessel_key),
         'Reaction Tube ID': data.get('reaction_tube_id_raw'),
         'Reaction Tube OD': data.get('reaction_tube_od_raw'),
         'Reaction Tube Material': data.get('reaction_tube_material'),
@@ -51,20 +60,15 @@ def validate_required_fields(data):
     }
     return [name for name, value in required_fields.items() if not value]
 
+# Maintain backward compatibility
 def check_required_fields(data):
-    """Check for missing required fields"""
-    required_fields = {
-        'Apparatus Name': data.get('apparatus_name'),
-        'Vessel 1 Name': data.get('vessel1_name'),
-        'Vessel 2 Name': data.get('vessel2_name'),
-        'Product Vessel Name': data.get('product_vessel_name'),
-        'Reaction Tube ID': data.get('reaction_tube_id_raw'),
-        'Reaction Tube OD': data.get('reaction_tube_od_raw'),
-        'Reaction Tube Material': data.get('reaction_tube_material'),
-        'Coil A Length': data.get('coil_a_raw'),
-        'Coil X Length': data.get('coil_x_raw')
-    }
-    return [name for name, value in required_fields.items() if not value]
+    """Alias for validate_required_fields with default settings"""
+    return validate_required_fields(data, use_rmv=False)
+
+# Keep the old name for backward compatibility but make it use the new function
+def validate_required_fields_with_rmv(data):
+    """Alias for validate_required_fields with RMV enabled"""
+    return validate_required_fields(data, use_rmv=True)
 
 def get_coil_letter(index):
     """Convert numeric index to coil letter sequence"""
