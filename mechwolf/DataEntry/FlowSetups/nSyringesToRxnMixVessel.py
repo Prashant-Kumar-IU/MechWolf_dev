@@ -225,13 +225,7 @@ class ApparatusCreator:
     def __init__(self, *pumps, data_file=None):
         self.pumps = pumps
         self.json_file = data_file if data_file else "apparatus_config.json"
-        self.pump_type = self.determine_pump_type()
-
-    def determine_pump_type(self):
-        for pump in self.pumps:
-            if isinstance(pump, HarvardSyringePump):
-                return "dual-channel"
-        return "single-channel"
+        # Remove pump_type as we'll handle all pumps generically
 
     def create_apparatus(self):
         import time
@@ -270,14 +264,26 @@ class ApparatusCreator:
                 vessel_config['vessel_desc'],
                 name=vessel_config['vessel_name']
             )
-            A.add(self.pumps[pump_index], vessel, tube)
-            A.add(vessel, reaction_mixture_vessel, tube)  # Changed variable name
+            
+            # Get the specific pump for this vessel
+            pump = self.pumps[pump_index]
+            
+            # Generic connection approach that works for all pump types
+            A.add(pump, vessel, tube)
+            A.add(vessel, reaction_mixture_vessel, tube)
+        
         return A
 
 if __name__ == "__main__":
-    from sys import argv
-    pump_1 = HarvardSyringePump()
-    pump_2 = HarvardSyringePump()
-    # Additional pumps can be passed as needed
-    creator = ApparatusCreator(pump_1, pump_2, data_file="apparatus_config.json")
+    # Example showing different pump types
+    from mechwolf.components.contrib.harvardpump import HarvardSyringePump
+    from mechwolf.components.contrib.varian import VarianPump
+    from mechwolf.components.contrib.tmc_stepper import TMCPump
+    
+    # Example of mixed pump types
+    pump_1 = HarvardSyringePump(syringe_volume="10 mL", syringe_diameter="14.567 mm", serial_port="COM1")
+    pump_2 = VarianPump(serial_port="COM2", max_rate="5 ml/min")
+    pump_3 = TMCPump(serial_port="COM3")
+    
+    creator = ApparatusCreator(pump_1, pump_2, pump_3, data_file="apparatus_config.json")
     creator.create_apparatus()
