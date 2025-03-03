@@ -30,7 +30,24 @@ class SerialPortViewer:
     def show_serial_ports(self) -> None:
         os_type = platform.system()
 
-        if os_type == "Linux":
+        if (
+            os_type == "Linux"
+            and os.path.exists("/proc/device-tree/model")
+            and "Raspberry Pi" in open("/proc/device-tree/model").read()
+        ):
+            print(
+                "Plug in your devices one by one and then note down the serial IDs. The order in which you plug in the pumps will be assigned as serial ports /dev/ttyACM0, /dev/ttyACM1, /dev/ttyACM2, and so on."
+            )
+            if os.path.exists("/dev/serial/by-id"):
+                ports: List[str] = os.listdir("/dev/serial/by-id")
+                if ports:
+                    for port in ports:
+                        print(port)
+                else:
+                    print("No serial ports connected.")
+            else:
+                print("No serial ports found.")
+        elif os_type == "Linux":
             if os.path.exists("/dev/serial/by-id"):
                 ports: List[str] = os.listdir("/dev/serial/by-id")
                 if ports:
