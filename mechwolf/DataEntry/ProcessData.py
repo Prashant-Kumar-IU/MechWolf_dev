@@ -1,4 +1,22 @@
 import json
+
+"""
+Processes reagent data from a JSON file and generates a stoichiometry table.
+Args:
+    data_file (str): Path to the JSON file containing reagent data.
+Raises:
+    AssertionError: If any required field is missing in the reagent data.
+Classes:
+    Reagent: Represents a chemical reagent with attributes such as name, inChi, inChiKey, SMILES, molecular weight, eq, syringe, moles, and mass.
+    Solid: Inherits from Reagent and represents a solid reagent.
+    Liquid: Inherits from Reagent and represents a liquid reagent with additional attributes for density and volume.
+Functions:
+    process_data(data_file: str) -> None: Processes the reagent data, calculates moles and mass, and generates a stoichiometry table.
+    main() -> None: Placeholder function for script entry point.
+Example:
+    To use this script, call the `process_data` function with the path to the JSON file containing reagent data:
+    process_data("path/to/data_file.json")
+"""
 from astropy.table import QTable
 from sigfig import round
 from typing import Dict, Any, Optional, List

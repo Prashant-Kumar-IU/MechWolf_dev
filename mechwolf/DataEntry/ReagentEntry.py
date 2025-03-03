@@ -1,4 +1,44 @@
 import json
+
+"""
+Provides a class for managing reagent data entry using ipywidgets in a Jupyter notebook.
+Classes:
+    ReagentInputForm: A class to handle the creation, display, and management of reagent data entry forms.
+ReagentInputForm:
+    __init__(data_file: str) -> None:
+        Initializes the ReagentInputForm with a specified JSON data file.
+        Args:
+            data_file (str): The path to the JSON file where reagent data is stored.
+    load_data() -> None:
+        Loads reagent data from the specified JSON file.
+    save_data() -> None:
+        Saves the current reagent data to the specified JSON file.
+    create_widgets() -> None:
+        Creates and displays the widgets for reagent data entry.
+    update_display() -> None:
+        Updates the display of the reagent list and buttons.
+    delete_reagent(reagent: Dict[str, Any]) -> None:
+        Deletes a specified reagent from the data.
+    add_solid_reagent(b: widgets.Button) -> None:
+        Opens a form to add a new solid reagent.
+    add_liquid_reagent(b: widgets.Button) -> None:
+        Opens a form to add a new liquid reagent.
+    reagent_window(reagent_type: str, reagent: Optional[Dict[str, Any]] = None) -> None:
+        Opens a form to add or edit a reagent.
+        Args:
+            reagent_type (str): The type of reagent ("solid" or "liquid").
+            reagent (Optional[Dict[str, Any]]): The reagent data to edit, if any.
+    edit_reagent(reagent: Dict[str, Any]) -> None:
+        Opens a form to edit an existing reagent.
+        Args:
+            reagent (Dict[str, Any]): The reagent data to edit.
+    submit(b: widgets.Button) -> None:
+        Opens a form to enter additional data and submit the reagent data.
+    mainloop() -> None:
+        Placeholder method to match the old interface.
+    run() -> None:
+        Runs the application, either creating widgets or processing data based on existing data.
+"""
 import ipywidgets as widgets
 from IPython.display import display, clear_output
 from mechwolf.DataEntry.ProcessData import process_data
@@ -8,7 +48,10 @@ from typing import Dict, Any, Optional, List
 class ReagentInputForm:
     def __init__(self, data_file: str) -> None:
         self.data_file: str = data_file
-        self.data: Dict[str, List[Dict[str, Any]]] = {"solid reagents": [], "liquid reagents": []}
+        self.data: Dict[str, List[Dict[str, Any]]] = {
+            "solid reagents": [],
+            "liquid reagents": [],
+        }
         self.load_data()
 
     def load_data(self) -> None:

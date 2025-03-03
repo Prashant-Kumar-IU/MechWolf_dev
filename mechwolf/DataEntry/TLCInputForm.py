@@ -4,6 +4,25 @@ from typing import List
 
 
 class TLCInputForm:
+    """
+    A class to create and manage a TLC (Thin Layer Chromatography) input form using ipywidgets.
+    The form allows users to input the number of spots, their identities, and distances from the baseline.
+    It also includes functionality to calculate and display the Rf values based on the input data.
+    Methods:
+        __init__:
+            Initializes the TLCInputForm instance and creates the initial widgets.
+        create_initial_widgets:
+            Creates the initial form for entering the number of spots and a button to create the detailed form.
+        on_create_form:
+            Handles the creation of the detailed form based on the number of spots entered.
+            It includes input fields for spot identities and distances, as well as a solvent distance input.
+            Also includes a button to calculate Rf values and display the results.
+    Args:
+        None
+    Returns:
+        None
+    """
+
     def __init__(self) -> None:
         self.main_output: widgets.Output = widgets.Output()
         self.spots_box: widgets.VBox
@@ -96,7 +115,9 @@ class TLCInputForm:
                             raise ValueError("Solvent distance cannot be zero")
 
                         for i in range(num_spots):
-                            sample_name: str = inputs[i].children[0].value or f"Spot {i+1}"
+                            sample_name: str = (
+                                inputs[i].children[0].value or f"Spot {i+1}"
+                            )
                             sample_dist: float = inputs[i].children[1].value
                             rf: float = round(sample_dist / solvent_dist, 4)
                             print(f"RF value for {sample_name}: {rf}")
