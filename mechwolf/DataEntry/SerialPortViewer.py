@@ -44,9 +44,9 @@ class SerialPortViewer:
                     for port in ports:
                         print(port)
                 else:
-                    print("No serial ports connected.")
+                    print("No devices/serial ports connected.")
             else:
-                print("No serial ports found.")
+                print("No devices/serial ports found.")
         elif os_type == "Linux":
             if os.path.exists("/dev/serial/by-id"):
                 ports: List[str] = os.listdir("/dev/serial/by-id")
@@ -54,9 +54,9 @@ class SerialPortViewer:
                     for port in ports:
                         print(port)
                 else:
-                    print("No serial ports connected.")
+                    print("No devices/serial ports connected.")
             else:
-                print("No serial ports found.")
+                print("No devices/serial ports found.")
         elif os_type == "Windows":
             result = subprocess.run(
                 [
@@ -71,12 +71,12 @@ class SerialPortViewer:
             if output:
                 print(output)
             else:
-                print("No serial ports connected.")
+                print("No devices/serial ports connected.")
         elif os_type == "Darwin":  # macOS
             serial_ports: List[str] = glob.glob("/dev/cu.*")
             if serial_ports:
                 print(serial_ports)
             else:
-                print("No serial ports connected.")
+                print("No devices/serial ports connected.")
         else:
             print("Unsupported operating system.")
