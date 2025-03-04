@@ -1,5 +1,4 @@
 from os import path
-
 from setuptools import find_packages, setup
 
 here = path.abspath(path.dirname(__file__))
@@ -10,13 +9,13 @@ with open(path.join(here, "README.md")) as f:
 
 setup(
     name="mechwolf",
-    version="0.1.2.dev0",
+    version="0.1.3.dev0",
     description="Continuous flow process description, analysis, and automation",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/MechWolf/MechWolf",
-    author="Benjamin Lee and Alex Mijalis",
-    author_email="benjamindlee@me.com",
+    url="https://github.com/Prashant-Kumar-IU/MechWolf_dev",
+    author="Prashant Kumar (based on original by Benjamin Lee and Alex Mijalis. Check out the original repo at https://github.com/MechWolf/MechWolf)",
+    author_email="pprashan@iu.edu",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
