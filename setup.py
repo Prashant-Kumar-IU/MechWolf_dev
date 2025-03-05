@@ -46,5 +46,10 @@ setup(
         "terminaltables",
         "vega",
         "xxhash",
+        "astropy",
+        "sigfig", 
+        "nbconvert[qtpdf]",
+        "pyppeteer",
+        "inkscape",
     ],
 )
