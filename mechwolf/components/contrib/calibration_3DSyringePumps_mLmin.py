@@ -1,0 +1,1373 @@
+# *************************************************************************
+# FreeStep Controller Jupyter Calibration Tool
+# Copyright(C) 4
+#
+# This program is free software: you can redistribute it and / or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.If not, see < https://www.gnu.org/licenses/>.
+# *************************************************************************
+
+import ipywidgets as widgets
+from IPython.display import display, HTML, clear_output
+import time
+import os
+from freestep_3DSyringePump_controller import FreeStepController
+
+class JupyterCalibrationTool:
+    """Interactive Jupyter notebook tool for calibrating motors using FreeStep controller"""
+    
+    def __init__(self):
+        self.controller = FreeStepController()
+        
+        # For storing selections
+        self.selected_port = None
+        self.selected_mcu = None
+        self.selected_motor = None
+        
+        # For calibration trials
+        self.first_trial = {"freq": None, "duration": None, "measurement": None, "ups": None}
+        self.second_trial = {"freq": None, "duration": None, "measurement": None, "ups": None}
+        
+        # Initialize additional attributes
+        self.step_pin = 0
+        self.dir_pin = 0
+        
+        # Create widgets
+        self.create_widgets()
+        
+        # Disable run buttons by default
+        self.run_first_trial_button.disabled = True
+        self.run_second_trial_button.disabled = True
+        
+        # Display main UI
+        self.display_ui()
+        
+    def create_widgets(self):
+        """Create all widgets for the UI"""
+        # Status area
+        self.status_output = widgets.Output(layout=widgets.Layout(width='100%', border='1px solid #ddd'))
+        self.header = widgets.HTML("<h1>FreeStep Calibration Tool</h1>")
+        
+        # Storage information
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.storage_info = widgets.HTML(
+            f"<div style='padding: 10px; background: #f8f8f8; border-left: 3px solid #2196F3;'>"
+            f"<p><b>Data Storage:</b> Profiles are stored in JSON files in {base_dir}</p>"
+            f"<p>• MCU profiles: MCUs.json</p>"
+            f"<p>• Motor profiles: motors.json</p>"
+            f"</div>"
+        )
+        
+        # Port selection widgets
+        self.port_dropdown = widgets.Dropdown(
+            description='Port:',
+            options=[],
+            layout=widgets.Layout(width='50%')
+        )
+        self.refresh_ports_button = widgets.Button(
+            description='Refresh Ports',
+            button_style='info',
+            icon='refresh'
+        )
+        self.connect_button = widgets.Button(
+            description='Connect',
+            button_style='success',
+            icon='plug'
+        )
+        
+        # MCU profile management widgets
+        self.mcu_dropdown = widgets.Dropdown(
+            description='MCU Profile:',
+            options=[],
+            layout=widgets.Layout(width='50%')
+        )
+        self.refresh_mcus_button = widgets.Button(
+            description='Refresh MCUs',
+            button_style='info',
+            icon='refresh'
+        )
+        self.new_mcu_name = widgets.Text(
+            description='New MCU Name:',
+            value='New MCU',
+            layout=widgets.Layout(width='40%')
+        )
+        self.add_mcu_button = widgets.Button(
+            description='Add MCU Profile',
+            button_style='success',
+            icon='plus'
+        )
+        self.mcu_list_output = widgets.Output(
+            layout={'border': '1px solid #ddd', 'padding': '10px', 'margin': '10px 0'}
+        )
+        
+        # Motor profile management widgets
+        self.motor_dropdown = widgets.Dropdown(
+            description='Motor Profile:',
+            options=[],
+            layout=widgets.Layout(width='50%')
+        )
+        self.refresh_motors_button = widgets.Button(
+            description='Refresh Motors',
+            button_style='info',
+            icon='refresh'
+        )
+        self.new_motor_name = widgets.Text(
+            description='New Motor Name:',
+            value='New Motor',
+            layout=widgets.Layout(width='60%')
+        )
+        self.add_motor_button = widgets.Button(
+            description='Add Motor Profile',
+            button_style='success',
+            icon='plus'
+        )
+        self.motor_list_output = widgets.Output(
+            layout={'border': '1px solid #ddd', 'padding': '10px', 'margin': '10px 0'}
+        )
+        
+        # Calibration selection widgets - simplify to just motor selection
+        self.calibration_motor_dropdown = widgets.Dropdown(
+            description='Motor Profile:',
+            options=[],
+            layout=widgets.Layout(width='50%')
+        )
+        
+        self.calibration_mcu_info = widgets.HTML(
+            value="<p>No motor selected</p>",
+            layout=widgets.Layout(width='100%')
+        )
+        
+        # Pin configuration widgets
+        self.step_pin_input = widgets.IntText(
+            description='Step Pin:',
+            value=0,
+            layout=widgets.Layout(width='40%')
+        )
+        self.dir_pin_input = widgets.IntText(
+            description='Dir Pin:',
+            value=0,
+            layout=widgets.Layout(width='40%')
+        )
+        self.configure_pins_button = widgets.Button(
+            description='Configure Pins',
+            button_style='primary',
+            icon='wrench'
+        )
+        
+        # Calibration trial widgets - First trial
+        self.first_trial_freq_input = widgets.FloatText(
+            description='Frequency (Hz):',
+            value=100.0,
+            layout=widgets.Layout(width='40%')
+        )
+        self.first_trial_duration_input = widgets.FloatText(
+            description='Duration (s):',
+            value=10.0,
+            layout=widgets.Layout(width='40%')
+        )
+        self.first_trial_measurement_input = widgets.FloatText(
+            description='Volume (mL):',
+            value=0.0,
+            layout=widgets.Layout(width='40%')
+        )
+        self.run_first_trial_button = widgets.Button(
+            description='Run First Trial',
+            button_style='warning',
+            icon='play'
+        )
+        
+        # Calibration trial widgets - Second trial
+        self.second_trial_freq_input = widgets.FloatText(
+            description='Frequency (Hz):',
+            value=500.0,
+            layout=widgets.Layout(width='40%')
+        )
+        self.second_trial_duration_input = widgets.FloatText(
+            description='Duration (s):',
+            value=10.0,
+            layout=widgets.Layout(width='40%')
+        )
+        self.second_trial_measurement_input = widgets.FloatText(
+            description='Volume (mL):',
+            value=0.0,
+            layout=widgets.Layout(width='40%')
+        )
+        self.run_second_trial_button = widgets.Button(
+            description='Run Second Trial',
+            button_style='warning',
+            icon='play'
+        )
+        
+        # Calculate calibration button
+        self.calculate_button = widgets.Button(
+            description='Calculate Calibration',
+            button_style='success',
+            icon='calculator'
+        )
+        
+        # Calibration results display
+        self.calibration_results = widgets.Output(
+            layout={'border': '1px solid #ddd', 'padding': '10px'}
+        )
+        
+        # Testing widgets
+        self.test_mcu_dropdown = widgets.Dropdown(
+            description='MCU Profile:',
+            options=[],
+            layout=widgets.Layout(width='50%')
+        )
+        self.test_motor_dropdown = widgets.Dropdown(
+            description='Motor Profile:',
+            options=[],
+            layout=widgets.Layout(width='50%')
+        )
+        self.test_ups_input = widgets.FloatText(
+            description='Flow Rate (mL/min):',
+            value=1.0,
+            layout=widgets.Layout(width='40%')
+        )
+        self.test_direction = widgets.RadioButtons(
+            options=['forward', 'backward'],
+            description='Direction:',
+            value='forward'
+        )
+        self.test_duration_input = widgets.FloatText(
+            description='Duration (s):',
+            value=5.0,
+            layout=widgets.Layout(width='40%')
+        )
+        self.run_test_button = widgets.Button(
+            description='Run Test',
+            button_style='primary',
+            icon='play'
+        )
+        self.stop_test_button = widgets.Button(
+            description='Stop Motor',
+            button_style='danger',
+            icon='stop'
+        )
+        
+        # MCU profile editing widgets
+        self.edit_mcu_name = widgets.Text(
+            description='Edit Name:',
+            layout=widgets.Layout(width='40%'),
+            disabled=True
+        )
+        self.save_mcu_button = widgets.Button(
+            description='Save Changes',
+            button_style='success',
+            icon='save',
+            disabled=True
+        )
+        self.delete_mcu_button = widgets.Button(
+            description='Delete MCU',
+            button_style='danger',
+            icon='trash',
+            disabled=True
+        )
+        self.current_mcu_id = None
+        
+        # Motor profile editing widgets - Move these here, before their references
+        self.edit_motor_name = widgets.Text(
+            description='Edit Name:',
+            layout=widgets.Layout(width='60%'),
+            disabled=True
+        )
+        
+        # Add MCU association dropdown for editing
+        self.edit_motor_mcu_dropdown = widgets.Dropdown(
+            description='Associated MCU:',
+            options=[],
+            layout=widgets.Layout(width='50%'),
+            disabled=True
+        )
+        
+        self.edit_motor_step_pin = widgets.IntText(
+            description='Step Pin:',
+            value=0,
+            layout=widgets.Layout(width='40%'),
+            disabled=True
+        )
+        
+        self.edit_motor_dir_pin = widgets.IntText(
+            description='Dir Pin:',
+            value=0,
+            layout=widgets.Layout(width='40%'),
+            disabled=True
+        )
+        
+        self.update_pins_button = widgets.Button(
+            description='Update Pins',
+            button_style='primary',
+            icon='wrench',
+            disabled=True
+        )
+        
+        # Create save and delete buttons for motors 
+        self.save_motor_button = widgets.Button(
+            description='Save Changes',
+            button_style='success',
+            icon='save',
+            disabled=True
+        )
+        
+        self.delete_motor_button = widgets.Button(
+            description='Delete Motor',
+            button_style='danger',
+            icon='trash',
+            disabled=True
+        )
+        
+        self.current_motor_id = None
+        
+        # Motor creation/editing widgets
+        self.new_motor_step_pin = widgets.IntText(
+            description='Step Pin:',
+            value=0,
+            layout=widgets.Layout(width='40%')
+        )
+        self.new_motor_dir_pin = widgets.IntText(
+            description='Dir Pin:',
+            value=0,
+            layout=widgets.Layout(width='40%')
+        )
+        
+        # Add motor-MCU association widgets
+        self.associate_title = widgets.HTML("<h3>Associate Motor with MCU</h3>")
+        self.associate_motor_dropdown = widgets.Dropdown(
+            description='Motor:',
+            options=[],
+            layout=widgets.Layout(width='50%')
+        )
+        self.associate_mcu_dropdown = widgets.Dropdown(
+            description='MCU:',
+            options=[],
+            layout=widgets.Layout(width='50%')
+        )
+        self.associate_step_pin = widgets.IntText(
+            description='Step Pin:',
+            value=0,
+            layout=widgets.Layout(width='40%')
+        )
+        self.associate_dir_pin = widgets.IntText(
+            description='Dir Pin:',
+            value=0,
+            layout=widgets.Layout(width='40%')
+        )
+        self.associate_button = widgets.Button(
+            description='Associate Motor with MCU',
+            button_style='primary',
+            icon='link'
+        )
+        
+        # Tab layout
+        self.tabs = widgets.Tab()
+        
+        # Add button event handlers - Move all these after all widgets are created
+        self.refresh_ports_button.on_click(self.refresh_ports)
+        self.connect_button.on_click(self.connect_port)
+        self.refresh_mcus_button.on_click(self.refresh_mcus)
+        self.add_mcu_button.on_click(self.add_mcu)
+        self.refresh_motors_button.on_click(self.refresh_motors)
+        self.add_motor_button.on_click(self.add_motor)
+        self.configure_pins_button.on_click(self.configure_pins)
+        self.run_first_trial_button.on_click(self.run_first_trial)
+        self.run_second_trial_button.on_click(self.run_second_trial)
+        self.calculate_button.on_click(self.calculate_calibration)
+        self.run_test_button.on_click(self.run_test)
+        self.stop_test_button.on_click(self.stop_motor)
+        self.associate_button.on_click(self.associate_motor_with_mcu)
+        self.update_pins_button.on_click(self.update_motor_pins)
+        
+        # MCU and motor editing event handlers
+        self.calibration_motor_dropdown.observe(self.calibration_motor_changed, names='value')
+        self.test_mcu_dropdown.observe(self.update_test_selections, names='value')
+        self.save_mcu_button.on_click(self.save_mcu_changes)
+        self.delete_mcu_button.on_click(self.delete_mcu)
+        self.save_motor_button.on_click(self.save_motor_changes)
+        self.delete_motor_button.on_click(self.delete_motor)
+        
+        # Initial data load
+        self.refresh_ports()
+        self.refresh_mcus()
+        self.refresh_motors()
+        self.display_mcu_list()
+        self.display_motor_list()
+        self.update_association_dropdowns()
+    
+    def display_ui(self):
+        """Display the main UI with tabs"""
+        # Connection tab (shared across all functions)
+        connection_tab = widgets.VBox([
+            self.storage_info,
+            widgets.HTML("<h3>Serial Port Connection</h3>"),
+            widgets.HBox([self.port_dropdown, self.refresh_ports_button, self.connect_button])
+        ])
+        
+        # MCU Profiles tab
+        mcu_profiles_tab = widgets.VBox([
+            widgets.HTML("<h3>Create/Manage MCU Profiles</h3>"),
+            widgets.HBox([self.new_mcu_name, self.add_mcu_button, self.refresh_mcus_button]),
+            widgets.HTML("<h3>Edit Selected MCU</h3>"),
+            widgets.HBox([self.edit_mcu_name, self.save_mcu_button, self.delete_mcu_button]),
+            widgets.HTML("<h3>Available MCU Profiles</h3>"),
+            self.mcu_list_output
+        ])
+        
+        # Motor Profiles tab - reorganized for simpler flow
+        motor_profiles_tab = widgets.VBox([
+            widgets.HTML("<h3>Create New Motor Profile</h3>"),
+            widgets.HBox([self.new_motor_name, self.add_motor_button]),
+            widgets.HBox([self.refresh_motors_button]),
+            
+            # Edit section moved up before association
+            widgets.HTML("<h3>Edit Motor & MCU Association</h3>"),
+            widgets.HTML("<p>Edit motor name and update associated MCU pins</p>"),
+            widgets.HBox([self.edit_motor_name]),
+            widgets.HBox([self.edit_motor_mcu_dropdown]),
+            widgets.HBox([self.edit_motor_step_pin, self.edit_motor_dir_pin]),
+            widgets.HBox([self.update_pins_button, self.save_motor_button, self.delete_motor_button]),
+            
+            # Association section for new associations
+            self.associate_title,
+            widgets.HTML("<p>Associate a motor with a new MCU and set its pins</p>"),
+            widgets.HBox([self.associate_motor_dropdown, self.associate_mcu_dropdown]),
+            widgets.HBox([self.associate_step_pin, self.associate_dir_pin]),
+            self.associate_button,
+            
+            widgets.HTML("<h3>Available Motor Profiles</h3>"),
+            self.motor_list_output
+        ])
+        
+        # Calibration tab - simplified
+        calibration_tab = widgets.VBox([
+            widgets.HTML("<h3>Select Motor for Calibration</h3>"),
+            self.calibration_motor_dropdown,
+            self.calibration_mcu_info,
+            widgets.HTML("<h3>First Calibration Trial</h3>"),
+            widgets.HBox([self.first_trial_freq_input, self.first_trial_duration_input]),
+            self.first_trial_measurement_input,
+            self.run_first_trial_button,
+            widgets.HTML("<h3>Second Calibration Trial</h3>"),
+            widgets.HBox([self.second_trial_freq_input, self.second_trial_duration_input]),
+            self.second_trial_measurement_input,
+            self.run_second_trial_button,
+            widgets.HTML("<h3>Calibration Results</h3>"),
+            self.calculate_button,
+            self.calibration_results
+        ])
+        
+        # Testing tab
+        testing_tab = widgets.VBox([
+            widgets.HTML("<h3>Select Profiles for Testing</h3>"),
+            widgets.HBox([self.test_mcu_dropdown, self.test_motor_dropdown]),
+            widgets.HTML("<h3>Test Parameters</h3>"),
+            self.test_ups_input,
+            self.test_direction,
+            self.test_duration_input,
+            widgets.HBox([self.run_test_button, self.stop_test_button])
+        ])
+        
+        # Set up the tabs
+        self.tabs.children = [connection_tab, mcu_profiles_tab, motor_profiles_tab, calibration_tab, testing_tab]
+        self.tabs.set_title(0, 'Connection')
+        self.tabs.set_title(1, 'MCU Profiles')
+        self.tabs.set_title(2, 'Motor Profiles')
+        self.tabs.set_title(3, 'Calibration')
+        self.tabs.set_title(4, 'Testing')
+        
+        # Display everything
+        display(self.header)
+        display(self.status_output)
+        display(self.tabs)
+    
+    def log(self, message, clear=False):
+        """Log a message to the status output"""
+        with self.status_output:
+            if clear:
+                clear_output()
+            print(message)
+    
+    def refresh_ports(self, _=None):
+        """Refresh the available ports"""
+        self.log("Refreshing available ports...", clear=True)
+        ports = self.controller.list_ports()
+        
+        # Update the dropdown
+        self.port_dropdown.options = [('Select Port', None)] + [(p['path'], p['path']) for p in ports]
+        self.port_dropdown.value = None
+        
+        self.log(f"Found {len(ports)} ports")
+    
+    def refresh_mcus(self, _=None):
+        """Refresh the available MCU profiles"""
+        self.log("Loading MCU profiles...", clear=True)
+        mcus = self.controller.get_mcus()
+        
+        # Update MCU dropdowns
+        options = [('Select MCU', None)] + [(mcu['name'], mcu) for mcu in mcus]
+        self.mcu_dropdown.options = options
+        self.test_mcu_dropdown.options = options
+        self.associate_mcu_dropdown.options = options  # Update association dropdown
+        
+        # Clear selections
+        self.mcu_dropdown.value = None
+        self.test_mcu_dropdown.value = None
+        self.associate_mcu_dropdown.value = None  # Reset association selection
+        
+        # Update the MCU list display
+        self.display_mcu_list()
+        
+        self.log(f"Loaded {len(mcus)} MCU profiles")
+    
+    def refresh_motors(self, _=None):
+        """Refresh the available motor profiles"""
+        self.log("Loading motor profiles...", clear=True)
+        motors = self.controller.get_motors()
+        
+        # Update all motor dropdowns
+        options = [('Select Motor', None)] + [(motor['name'], motor) for motor in motors]
+        self.motor_dropdown.options = options
+        self.calibration_motor_dropdown.options = options
+        self.associate_motor_dropdown.options = options  # Update association dropdown
+        
+        # Reset selections
+        self.motor_dropdown.value = None
+        self.calibration_motor_dropdown.value = None
+        self.associate_motor_dropdown.value = None  # Reset association selection
+        
+        # Update the motor list display
+        self.display_motor_list()
+        
+        self.log(f"Loaded {len(motors)} motor profiles")
+    
+    def add_mcu(self, _=None):
+        """Add a new MCU profile"""
+        name = self.new_mcu_name.value.strip()
+        if not name:
+            self.log("Please enter a valid name for the new MCU profile", clear=True)
+            return
+        
+        self.log(f"Adding new MCU profile '{name}'...", clear=True)
+        unique_id = self.controller.add_mcu(name)
+        
+        if unique_id:
+            self.log(f"Added MCU profile '{name}' with ID {unique_id}")
+            self.refresh_mcus()  # Refresh the dropdown
+            self.new_mcu_name.value = "New MCU"  # Reset the input field
+        else:
+            self.log("Failed to add MCU profile")
+    
+    def add_motor(self, _=None):
+        """Add a new motor profile with just a name"""
+        name = self.new_motor_name.value.strip()
+        
+        if not name:
+            self.log("Please enter a valid name for the new motor profile", clear=True)
+            return
+        
+        self.log(f"Adding new motor profile '{name}'...", clear=True)
+        unique_id = self.controller.add_motor(name)
+        
+        if unique_id:
+            self.log(f"Added motor profile '{name}' with ID {unique_id}")
+            self.log("To use this motor, please associate it with an MCU using the section below.")
+            
+            self.refresh_motors()  # Refresh the dropdown
+            
+            # Reset the input fields
+            self.new_motor_name.value = "New Motor"
+        else:
+            self.log("Failed to add motor profile")
+    
+    def connect_port(self, _):
+        """Connect to the selected port"""
+        if not self.port_dropdown.value:
+            self.log("Please select a port first", clear=True)
+            return
+        
+        port = self.port_dropdown.value
+        self.log(f"Connecting to {port}...", clear=True)
+        
+        if self.controller.connect_port(port):
+            self.selected_port = port
+            self.log(f"Connected to {port} successfully")
+        else:
+            self.log(f"Failed to connect to {port}")
+    
+    def run_calibration_trial(self, trial_name):
+        """Run a calibration trial"""
+        # Get the selected motor
+        selected_motor = self.selected_motor
+        
+        if not self.selected_port:
+            self.log("Please connect to a port first", clear=True)
+            return
+            
+        if not self.selected_mcu:
+            self.log("No MCU available for this motor. Configure the motor in an MCU first.", clear=True)
+            return
+            
+        if not selected_motor:
+            self.log("Please select a motor profile first", clear=True)
+            return
+        
+        # Get trial parameters based on which trial we're running
+        if trial_name == "First":
+            freq = self.first_trial_freq_input.value
+            duration = self.first_trial_duration_input.value
+        else:
+            freq = self.second_trial_freq_input.value
+            duration = self.second_trial_duration_input.value
+        
+        # Ensure step and dir pins are integers
+        step_pin = int(self.step_pin)
+        dir_pin = int(self.dir_pin)
+        
+        # Use the direct send_formatted_command method that formats JSON correctly for Arduino
+        self.log(f"Running {trial_name} trial at {freq} Hz for {duration} seconds...", clear=True)
+        
+        # Create a command directly compatible with the Arduino's parser
+        success = self.controller.serial_manager.send_formatted_command(
+            self.selected_port,  # Port name 
+            "timed",             # Command type
+            step_pin,            # Step pin
+            dir_pin,             # Direction pin
+            freq,                # Frequency in Hz
+            duration,            # Duration value
+            "s",                 # Time unit (seconds)
+            "forward"            # Direction
+        )
+        
+        if not success:
+            self.log("Failed to send command to the device. Check connections.", clear=True)
+            return
+            
+        # Start a countdown timer
+        for remaining in range(int(duration), 0, -1):
+            self.log(f"Running... {remaining}s remaining", clear=True)
+            time.sleep(1)
+            
+        self.log(f"{trial_name} trial complete. Please enter the measured distance.", clear=True)
+    
+    def display_mcu_list(self):
+        """Display the list of MCU profiles in the MCU tab"""
+        with self.mcu_list_output:
+            clear_output()
+            mcus = self.controller.get_mcus()
+            if not mcus:
+                print("No MCU profiles found.")
+                return
+            
+            # Create a simple interactive list
+            for i, mcu in enumerate(mcus):
+                mcu_id = mcu.get('uniqueID')
+                
+                # Print profile info with an edit button
+                print(f"{i+1}. {mcu.get('name')} (ID: {mcu_id})")
+                
+                # Create and display an edit button for this MCU
+                edit_btn = widgets.Button(
+                    description="Edit",
+                    button_style='info',
+                    layout=widgets.Layout(width='80px')
+                )
+                
+                # Create a closure to capture the mcu_id
+                def create_mcu_handler(mcu_id):
+                    def handler(button):
+                        self.edit_mcu(mcu_id)
+                    return handler
+                    
+                # Add click handler with the captured ID
+                edit_btn.on_click(create_mcu_handler(mcu_id))
+                
+                display(edit_btn)
+                
+                if 'motors' in mcu and mcu['motors']:
+                    print("   Configured motors:")
+                    for motor in mcu['motors']:
+                        print(f"   - {motor.get('name')} (Step: {motor.get('step')}, Dir: {motor.get('dir')})")
+                else:
+                    print("   No motors configured")
+                print("")
+
+    def display_motor_list(self):
+        """Display the list of motor profiles in the Motor tab"""
+        with self.motor_list_output:
+            clear_output()
+            motors = self.controller.get_motors()
+            if not motors:
+                print("No motor profiles found.")
+                return
+            
+            # Create a simple interactive list
+            for i, motor in enumerate(motors):
+                motor_id = motor.get('uniqueID')
+                calibrated = "Yes" if motor.get("calibrated") else "No"
+                
+                # Print profile info
+                print(f"{i+1}. {motor.get('name')} (ID: {motor_id})")
+                
+                # Create and display an edit button for this motor
+                edit_btn = widgets.Button(
+                    description="Edit",
+                    button_style='info',
+                    layout=widgets.Layout(width='80px')
+                )
+                
+                # Create a closure to capture the motor_id
+                def create_motor_handler(motor_id):
+                    def handler(button):
+                        self.edit_motor(motor_id)
+                    return handler
+                    
+                # Add click handler with the captured ID
+                edit_btn.on_click(create_motor_handler(motor_id))
+                
+                display(edit_btn)
+                
+                print(f"   Calibrated: {calibrated}")
+                
+                # Find if this motor has pins configured in any MCU
+                mcus = self.controller.get_mcus()
+                for mcu in mcus:
+                    for mcu_motor in mcu.get('motors', []):
+                        if mcu_motor.get('uniqueID') == motor_id:
+                            print(f"   Used in MCU '{mcu.get('name')}' with Step: {mcu_motor.get('step')}, Dir: {mcu_motor.get('dir')}")
+                
+                if calibrated == "Yes":
+                    min_ups = motor.get("minUPS")
+                    max_ups = motor.get("maxUPS")
+                    print(f"   Range: {min_ups:.6f} to {max_ups:.2f} mL/min")
+                print("")
+    
+    def edit_mcu(self, mcu_id):
+        """Enable editing for the selected MCU"""
+        mcus = self.controller.get_mcus()
+        mcu = next((m for m in mcus if m.get('uniqueID') == mcu_id), None)
+        
+        if mcu:
+            self.current_mcu_id = mcu_id
+            self.edit_mcu_name.value = mcu.get('name', '')
+            self.edit_mcu_name.disabled = False
+            self.save_mcu_button.disabled = False
+            self.delete_mcu_button.disabled = False
+            self.log(f"Editing MCU: {mcu.get('name')}", clear=True)
+    
+    def save_mcu_changes(self, _):
+        """Save changes to the edited MCU"""
+        if not self.current_mcu_id:
+            return
+        
+        mcus = self.controller.get_mcus()
+        mcu = next((m for m in mcus if m.get('uniqueID') == self.current_mcu_id), None)
+        
+        if mcu:
+            mcu['name'] = self.edit_mcu_name.value.strip()
+            self.controller.profile_manager.save_mcus(mcus)
+            self.refresh_mcus()
+            self.log(f"Saved changes to MCU: {mcu['name']}", clear=True)
+            
+            # Reset the edit fields
+            self.current_mcu_id = None
+            self.edit_mcu_name.value = ''
+            self.edit_mcu_name.disabled = True
+            self.save_mcu_button.disabled = True
+            self.delete_mcu_button.disabled = True
+    
+    def delete_mcu(self, _):
+        """Delete the selected MCU"""
+        if not self.current_mcu_id:
+            return
+        
+        mcus = self.controller.get_mcus()
+        mcu = next((m for m in mcus if m.get('uniqueID') == self.current_mcu_id), None)
+        
+        if mcu:
+            mcu_name = mcu.get('name')
+            mcus = [m for m in mcus if m.get('uniqueID') != self.current_mcu_id]
+            self.controller.profile_manager.save_mcus(mcus)
+            self.log(f"Deleted MCU: {mcu_name}", clear=True)
+            self.refresh_mcus()
+            
+            # Reset the edit fields
+            self.current_mcu_id = None
+            self.edit_mcu_name.value = ''
+            self.edit_mcu_name.disabled = True
+            self.save_mcu_button.disabled = True
+            self.delete_mcu_button.disabled = True
+    
+    def edit_motor(self, motor_id):
+        """Enable editing for the selected motor with MCU associations"""
+        motors = self.controller.get_motors()
+        motor = next((m for m in motors if m.get('uniqueID') == motor_id), None)
+        
+        if motor:
+            self.current_motor_id = motor_id
+            self.edit_motor_name.value = motor.get('name', '')
+            
+            # Enable the editing widgets
+            self.edit_motor_name.disabled = False
+            self.save_motor_button.disabled = False
+            self.delete_motor_button.disabled = False
+            
+            # Find MCU associations for this motor
+            mcus = self.controller.get_mcus()
+            associated_mcus = []
+            
+            for mcu in mcus:
+                for mcu_motor in mcu.get('motors', []):
+                    if mcu_motor.get('uniqueID') == motor_id:
+                        associated_mcus.append((mcu['name'], mcu))
+            
+            # Update the MCU dropdown with associated MCUs
+            if associated_mcus:
+                self.edit_motor_mcu_dropdown.options = [('Select MCU', None)] + associated_mcus
+                self.edit_motor_mcu_dropdown.disabled = False
+                self.edit_motor_mcu_dropdown.observe(self.motor_mcu_association_changed, names='value')
+            else:
+                self.edit_motor_mcu_dropdown.options = [('No MCU Associations', None)]
+                self.edit_motor_mcu_dropdown.disabled = True
+                self.edit_motor_step_pin.disabled = True
+                self.edit_motor_dir_pin.disabled = True
+                self.update_pins_button.disabled = True
+            
+            self.log(f"Editing motor: {motor.get('name')}", clear=True)
+            if not associated_mcus:
+                self.log("This motor is not associated with any MCU. Use the Associate Motor with MCU section below.")
+    
+    def motor_mcu_association_changed(self, change):
+        """Handle selection change in the MCU association dropdown"""
+        selected_mcu = change.new
+        
+        if not selected_mcu or not self.current_motor_id:
+            self.edit_motor_step_pin.disabled = True
+            self.edit_motor_dir_pin.disabled = True
+            self.update_pins_button.disabled = True
+            return
+        
+        # Find the motor in the selected MCU
+        for motor in selected_mcu.get('motors', []):
+            if motor.get('uniqueID') == self.current_motor_id:
+                # Found the motor in this MCU, fill in the current pin values
+                self.edit_motor_step_pin.value = motor.get('step', 0)
+                self.edit_motor_dir_pin.value = motor.get('dir', 0)
+                self.edit_motor_step_pin.disabled = False
+                self.edit_motor_dir_pin.disabled = False
+                self.update_pins_button.disabled = False
+                break
+    
+    def update_motor_pins(self, _):
+        """Update pin assignments for a motor in the selected MCU"""
+        if not self.current_motor_id:
+            return
+            
+        selected_mcu = self.edit_motor_mcu_dropdown.value
+        if not selected_mcu:
+            self.log("Please select an MCU", clear=True)
+            return
+        
+        step_pin = self.edit_motor_step_pin.value
+        dir_pin = self.edit_motor_dir_pin.value
+        
+        # Find the motor in the MCU
+        motor_updated = False
+        for motor in selected_mcu.get('motors', []):
+            if motor.get('uniqueID') == self.current_motor_id:
+                motor['step'] = step_pin
+                motor['dir'] = dir_pin
+                motor_updated = True
+                break
+        
+        if motor_updated:
+            # Save the updated MCU profile
+            self.controller.profile_manager.update_mcu(selected_mcu)
+            self.log(f"Updated pin assignments in MCU '{selected_mcu.get('name')}': step={step_pin}, dir={dir_pin}")
+            
+            # Refresh displays
+            self.display_mcu_list()
+            self.display_motor_list()
+        else:
+            self.log("Error: Motor not found in selected MCU", clear=True)
+    
+    def save_motor_changes(self, _):
+        """Save changes to the edited motor name"""
+        if not self.current_motor_id:
+            return
+        
+        motors = self.controller.get_motors()
+        motor = next((m for m in motors if m.get('uniqueID') == self.current_motor_id), None)
+        
+        if motor:
+            new_name = self.edit_motor_name.value.strip()
+            if not new_name:
+                self.log("Please enter a valid name", clear=True)
+                return
+                
+            motor['name'] = new_name
+            self.controller.profile_manager.save_motors(motors)
+            
+            # Update name in all MCUs where this motor is used
+            mcus = self.controller.get_mcus()
+            for mcu in mcus:
+                for mcu_motor in mcu.get('motors', []):
+                    if mcu_motor.get('uniqueID') == self.current_motor_id:
+                        mcu_motor['name'] = new_name  # Update name to match
+                        self.controller.profile_manager.update_mcu(mcu)
+                    
+            self.log(f"Saved changes to motor name: {motor['name']}", clear=True)
+            self.refresh_mcus()
+            self.refresh_motors()
+            
+            # Reset the edit fields
+            self.current_motor_id = None
+            self.edit_motor_name.value = ''
+            self.edit_motor_name.disabled = True
+            self.save_motor_button.disabled = True
+            self.delete_motor_button.disabled = True
+    
+    def delete_motor(self, _):
+        """Delete the selected motor"""
+        if not self.current_motor_id:
+            return
+        
+        motors = self.controller.get_motors()
+        motor = next((m for m in motors if m.get('uniqueID') == self.current_motor_id), None)
+        
+        if motor:
+            motor_name = motor.get('name')
+            
+            # Remove the motor from all MCUs first
+            mcus = self.controller.get_mcus()
+            for mcu in mcus:
+                if 'motors' in mcu:
+                    original_length = len(mcu['motors'])
+                    mcu['motors'] = [m for m in mcu['motors'] if m.get('uniqueID') != self.current_motor_id]
+                    if len(mcu['motors']) != original_length:
+                        self.controller.profile_manager.update_mcu(mcu)
+            
+            # Now delete the motor profile
+            motors = [m for m in motors if m.get('uniqueID') != self.current_motor_id]
+            self.controller.profile_manager.save_motors(motors)
+            self.log(f"Deleted motor: {motor_name}", clear=True)
+            self.refresh_mcus()
+            self.refresh_motors()
+            
+            # Reset the edit fields
+            self.current_motor_id = None
+            self.edit_motor_name.value = ''
+            self.edit_motor_step_pin.value = 0
+            self.edit_motor_dir_pin.value = 0
+            self.edit_motor_name.disabled = True
+            self.edit_motor_step_pin.disabled = True
+            self.edit_motor_dir_pin.disabled = True
+            self.save_motor_button.disabled = True
+            self.delete_motor_button.disabled = True
+    
+    def configure_pins(self, _):
+        """Configure the step and dir pins for the selected motor in an MCU"""
+        # We now get the selected motor from the calibration_motor_dropdown
+        selected_motor = self.selected_motor
+        selected_mcu = self.selected_mcu
+        
+        if not self.selected_port:
+            self.log("Please connect to a port first", clear=True)
+            return
+            
+        if not selected_mcu:
+            self.log("No MCU available for this motor. Configure the motor in an MCU first.", clear=True)
+            return
+            
+        if not selected_motor:
+            self.log("Please select a motor profile first", clear=True)
+            return
+        
+        step_pin = self.step_pin_input.value
+        dir_pin = self.dir_pin_input.value
+        
+        self.log(f"Configuring pins for {selected_motor['name']} in {selected_mcu['name']}...", clear=True)
+        
+        # Find the motor in the MCU
+        motor_in_mcu = None
+        for motor in selected_mcu.get('motors', []):
+            if motor.get('uniqueID') == selected_motor.get('uniqueID'):
+                motor_in_mcu = motor
+                break
+        
+        # Update or add the motor to the MCU
+        if motor_in_mcu:
+            motor_in_mcu['step'] = step_pin
+            motor_in_mcu['dir'] = dir_pin
+        else:
+            if 'motors' not in selected_mcu:
+                selected_mcu['motors'] = []
+                
+            selected_mcu['motors'].append({
+                'uniqueID': selected_motor.get('uniqueID'),
+                'name': selected_motor.get('name'),
+                'step': step_pin,
+                'dir': dir_pin
+            })
+        
+        # Save the updated MCU profile
+        self.controller.profile_manager.update_mcu(selected_mcu)
+        self.log(f"Motor pins configured successfully: step={step_pin}, dir={dir_pin}")
+        
+        # Update the step and dir pins for future operations
+        self.step_pin = step_pin
+        self.dir_pin = dir_pin
+        
+        # Update the MCU info display
+        self.calibration_mcu_info.value = (
+            f"<p>Using MCU: <b>{self.selected_mcu.get('name')}</b> with "
+            f"Step Pin: <b>{self.step_pin}</b>, Dir Pin: <b>{self.dir_pin}</b></p>"
+        )
+        
+        # Refresh the MCU list to show the updated configuration
+        self.display_mcu_list()
+    
+    def run_first_trial(self, _):
+        """Run the first calibration trial"""
+        self.run_calibration_trial("First")
+    
+    def run_second_trial(self, _):
+        """Run the second calibration trial"""
+        self.run_calibration_trial("Second")
+    
+    def calculate_calibration(self, _):
+        """Calculate the calibration parameters based on trial data"""
+        # Update selections from dropdowns
+        self.update_selected_items()
+        
+        if not self.selected_motor:
+            self.log("Please select a motor profile first", clear=True)
+            return
+        
+        # Get measurement values from input fields
+        first_measurement = self.first_trial_measurement_input.value
+        second_measurement = self.second_trial_measurement_input.value
+        
+        if first_measurement <= 0 or second_measurement <= 0:
+            self.log("Please enter valid measurements for both trials", clear=True)
+            return
+        
+        # Store trial data and convert to mL/min
+        self.first_trial = {
+            "freq": self.first_trial_freq_input.value,
+            "duration": self.first_trial_duration_input.value,
+            "measurement": first_measurement,
+            "ups": (first_measurement / self.first_trial_duration_input.value) * 60  # Convert to mL/min
+        }
+        
+        self.second_trial = {
+            "freq": self.second_trial_freq_input.value,
+            "duration": self.second_trial_duration_input.value,
+            "measurement": second_measurement,
+            "ups": (second_measurement / self.second_trial_duration_input.value) * 60  # Convert to mL/min
+        }
+        
+        self.log(f"Calculating calibration parameters...", clear=True)
+        
+        # Calculate calibration parameters
+        ups_slope = (self.second_trial["ups"] - self.first_trial["ups"]) / (self.second_trial["freq"] - self.first_trial["freq"])
+        ups_intercept = self.first_trial["ups"] - ups_slope * self.first_trial["freq"]
+        
+        max_ups = ups_intercept + ups_slope * 1000  # Cap at x=1000Hz
+        min_ups = ups_intercept  # Bottom at 0Hz
+        if min_ups < 0.000005:
+            min_ups = 0.000005  # Minimum threshold
+        
+        # Update the motor profile with calibration data
+        self.selected_motor["UPSSlope"] = ups_slope
+        self.selected_motor["UPSIntercept"] = ups_intercept
+        self.selected_motor["maxUPS"] = max_ups
+        self.selected_motor["minUPS"] = min_ups
+        self.selected_motor["calibrated"] = True
+        
+        # Save the updated motor profile
+        self.controller.profile_manager.update_motor(self.selected_motor)
+        
+        # Display the results
+        with self.calibration_results:
+            clear_output()
+            print(f"Calibration calculation complete:")
+            print(f"Flow Rate Slope: {ups_slope:.6f}")
+            print(f"Flow Rate Intercept: {ups_intercept:.6f}")
+            print(f"Min Flow Rate: {min_ups:.6f} mL/min")
+            print(f"Max Flow Rate: {max_ups:.2f} mL/min")
+            
+        self.log(f"Calibration saved successfully", clear=True)
+        
+        # Update test widget range
+        self.test_ups_input.min = min_ups
+        self.test_ups_input.max = max_ups
+    
+    def run_test(self, _):
+        """Test a calibrated motor at a specific UPS"""
+        # Get selections from test dropdowns
+        selected_mcu = self.test_mcu_dropdown.value
+        selected_motor = self.test_motor_dropdown.value
+        
+        if not self.selected_port:
+            self.log("Please connect to a port first", clear=True)
+            return
+            
+        if not selected_mcu:
+            self.log("Please select an MCU profile first", clear=True)
+            return
+            
+        if not selected_motor:
+            self.log("Please select a motor profile first", clear=True)
+            return
+            
+        if not selected_motor.get("calibrated"):
+            self.log("Motor is not calibrated! Please calibrate it first.", clear=True)
+            return
+        
+        # Get test parameters
+        ups = self.test_ups_input.value
+        direction = self.test_direction.value
+        duration = self.test_duration_input.value
+        
+        # Get calibration parameters
+        min_ups = selected_motor.get("minUPS", 0)
+        max_ups = selected_motor.get("maxUPS", 0)
+        
+        # Validate UPS
+        if ups < min_ups:
+            self.log(f"Speed too low! Minimum is {min_ups:.6f} units/s", clear=True)
+            return
+            
+        if ups > max_ups:
+            self.log(f"Speed too high! Maximum is {max_ups:.2f} units/s", clear=True)
+            return
+        
+        self.log(f"Running motor at {ups} units/s {direction} for {duration} seconds...", clear=True)
+        
+        # Run the command
+        success = self.controller.run_timed_command(
+            self.selected_port, 
+            selected_motor, 
+            selected_mcu, 
+            ups, 
+            duration, 
+            "s", 
+            direction
+        )
+        
+        if success:
+            # Start a countdown timer
+            for remaining in range(int(duration), 0, -1):
+                self.log(f"Running... {remaining}s remaining", clear=True)
+                time.sleep(1)
+                
+            self.log(f"Test complete!", clear=True)
+        else:
+            self.log(f"Error running the motor!", clear=True)
+    
+    def stop_motor(self, _):
+        """Stop the motor"""
+        # Get selections from test dropdowns
+        selected_mcu = self.test_mcu_dropdown.value
+        selected_motor = self.test_motor_dropdown.value
+        
+        if not self.selected_port or not selected_mcu or not selected_motor:
+            self.log("Please select port, MCU and motor first", clear=True)
+            return
+            
+        self.log("Stopping motor...", clear=True)
+        
+        success = self.controller.stop_command(self.selected_port, selected_mcu, selected_motor)
+        
+        if success:
+            self.log("Motor stopped", clear=True)
+        else:
+            self.log("Failed to stop motor", clear=True)
+    
+    def cleanup(self):
+        """Clean up resources when done"""
+        self.controller.cleanup()
+        self.log("Resources cleaned up", clear=True)
+
+    def update_selected_items(self):
+        """Update the selected items from dropdowns"""
+        if self.calibration_motor_dropdown.value:
+            self.selected_motor = self.calibration_motor_dropdown.value
+                
+        # Check if this motor is already in the MCU and update pin fields if so
+        if self.selected_mcu and self.selected_motor and 'motors' in self.selected_mcu:
+            for motor in self.selected_mcu['motors']:
+                if motor.get('uniqueID') == self.selected_motor.get('uniqueID'):
+                    self.step_pin_input.value = motor.get('step', 0)
+                    self.dir_pin_input.value = motor.get('dir', 0)
+                    break
+
+    def update_test_selections(self, change):
+        """Update the available motors when an MCU is selected in the test tab"""
+        if change['new'] is None:
+            self.test_motor_dropdown.options = [('Select Motor', None)]
+            return
+                
+        selected_mcu = change['new']
+        
+        # Get all motors
+        motors = self.controller.get_motors()
+        
+        # Filter motors based on if they're configured in this MCU and calibrated
+        mcu_motor_ids = [motor.get('uniqueID') for motor in selected_mcu.get('motors', [])]
+        calibrated_motors = [motor for motor in motors if motor.get('uniqueID') in mcu_motor_ids and motor.get('calibrated')]
+        
+        # Update the test motor dropdown
+        self.test_motor_dropdown.options = [('Select Motor', None)] + [(motor['name'], motor) for motor in calibrated_motors]
+        
+        # Reset the motor selection
+        self.test_motor_dropdown.value = None
+
+    def find_mcu_for_motor(self, motor_id):
+        """Find an MCU that has the specified motor configured and connected"""
+        if not motor_id or not self.selected_port:
+            return None
+            
+        # Get all MCU profiles
+        mcus = self.controller.get_mcus()
+        
+        # First look for any MCU that has this motor configured
+        for mcu in mcus:
+            for motor in mcu.get('motors', []):
+                if motor.get('uniqueID') == motor_id:
+                    return mcu
+        
+        return None
+
+    def calibration_motor_changed(self, change):
+        """Handle motor selection change in the calibration tab"""
+        selected_motor = change.new
+        
+        if not selected_motor:
+            self.calibration_mcu_info.value = "<p>No motor selected</p>"
+            return
+        
+        # Store the selected motor
+        self.selected_motor = selected_motor
+        
+        # Find an MCU with this motor
+        self.selected_mcu = self.find_mcu_for_motor(selected_motor.get('uniqueID'))
+        
+        if not self.selected_mcu:
+            self.calibration_mcu_info.value = (
+                f"<p style='color: red;'>Motor '{selected_motor.get('name')}' is not configured in any MCU. "
+                f"Please go to the Motor Profiles tab and associate this motor with an MCU.</p>"
+            )
+            self.run_first_trial_button.disabled = True
+            self.run_second_trial_button.disabled = True
+            return
+        
+        # Find motor configuration in the MCU
+        motor_config = None
+        for motor in self.selected_mcu.get('motors', []):
+            if motor.get('uniqueID') == selected_motor.get('uniqueID'):
+                motor_config = motor
+                break
+        
+        if not motor_config:
+            self.calibration_mcu_info.value = "<p style='color: red;'>Motor configuration not found.</p>"
+            self.run_first_trial_button.disabled = True
+            self.run_second_trial_button.disabled = True
+            return
+        
+        # Store pin configuration
+        self.step_pin = motor_config.get('step', 0)
+        self.dir_pin = motor_config.get('dir', 0)
+        
+        # Update info display
+        self.calibration_mcu_info.value = (
+            f"<p>Using MCU: <b>{self.selected_mcu.get('name')}</b> with "
+            f"Step Pin: <b>{self.step_pin}</b>, Dir Pin: <b>{self.dir_pin}</b></p>"
+        )
+        
+        # Enable run buttons
+        self.run_first_trial_button.disabled = False
+        self.run_second_trial_button.disabled = False
+
+    def update_association_dropdowns(self):
+        """Update the association dropdowns with current motors and MCUs"""
+        # Update motor dropdown
+        motors = self.controller.get_motors()
+        self.associate_motor_dropdown.options = [('Select Motor', None)] + [(motor['name'], motor) for motor in motors]
+        
+        # Update MCU dropdown
+        mcus = self.controller.get_mcus()
+        self.associate_mcu_dropdown.options = [('Select MCU', None)] + [(mcu['name'], mcu) for mcu in mcus]
+    
+    def associate_motor_with_mcu(self, _):
+        """Associate a motor with an MCU"""
+        selected_motor = self.associate_motor_dropdown.value
+        selected_mcu = self.associate_mcu_dropdown.value
+        
+        if not selected_motor:
+            self.log("Please select a motor first", clear=True)
+            return
+            
+        if not selected_mcu:
+            self.log("Please select an MCU first", clear=True)
+            return
+        
+        step_pin = self.associate_step_pin.value
+        dir_pin = self.associate_dir_pin.value
+        
+        self.log(f"Associating motor '{selected_motor['name']}' with MCU '{selected_mcu['name']}'...", clear=True)
+        
+        # Find the motor in the MCU
+        motor_in_mcu = None
+        for motor in selected_mcu.get('motors', []):
+            if motor.get('uniqueID') == selected_motor.get('uniqueID'):
+                motor_in_mcu = motor
+                break
+        
+        # Update or add the motor to the MCU
+        if motor_in_mcu:
+            motor_in_mcu['step'] = step_pin
+            motor_in_mcu['dir'] = dir_pin
+            self.log(f"Updated existing motor association with step={step_pin}, dir={dir_pin}")
+        else:
+            if 'motors' not in selected_mcu:
+                selected_mcu['motors'] = []
+                
+            selected_mcu['motors'].append({
+                'uniqueID': selected_motor.get('uniqueID'),
+                'name': selected_motor.get('name'),
+                'step': step_pin,
+                'dir': dir_pin
+            })
+            self.log(f"Created new motor association with step={step_pin}, dir={dir_pin}")
+        
+        # Save the updated MCU profile
+        self.controller.profile_manager.update_mcu(selected_mcu)
+        self.log(f"Motor '{selected_motor['name']}' successfully associated with MCU '{selected_mcu['name']}'")
+        
+        # Refresh displays
+        self.display_mcu_list()
+        self.display_motor_list()
+        
+        # After successful association, update the edit motor screen if it's showing the same motor
+        if self.current_motor_id == selected_motor.get('uniqueID'):
+            self.edit_motor(self.current_motor_id)
+
+# Usage example:
+# In a Jupyter notebook, do the following:
+# 
+# from jupyter_calibration import JupyterCalibrationTool
+# tool = JupyterCalibrationTool()
+#
+# When done:
+# tool.cleanup()
