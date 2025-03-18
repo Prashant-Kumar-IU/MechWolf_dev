@@ -369,6 +369,33 @@ class JupyterCalibrationTool:
             icon='link'
         )
         
+        # Syringe information widgets for calibration
+        self.syringe_info_header = widgets.HTML("<h3>Syringe Information</h3>")
+        self.syringe_brand_input = widgets.Text(
+            description='Brand/Manufacturer:',
+            value='',
+            placeholder='e.g., BD, Hamilton',
+            layout=widgets.Layout(width='60%')
+        )
+        self.syringe_model_input = widgets.Text(
+            description='Model/Type:',
+            value='',
+            placeholder='e.g., Plastic, Glass, Model #',
+            layout=widgets.Layout(width='60%')
+        )
+        self.syringe_volume_input = widgets.FloatText(
+            description='Volume (mL):',
+            value=10.0,
+            min=0.001,
+            layout=widgets.Layout(width='40%')
+        )
+        self.syringe_diameter_input = widgets.FloatText(
+            description='Inner Diameter (mm):',  # Changed to Inner Diameter
+            value=15.0,
+            min=0.1,
+            layout=widgets.Layout(width='40%')
+        )
+        
         # Tab layout
         self.tabs = widgets.Tab()
         
@@ -448,11 +475,19 @@ class JupyterCalibrationTool:
             self.motor_list_output
         ])
         
-        # Calibration tab - simplified
+        # Calibration tab - modified to include syringe information
         calibration_tab = widgets.VBox([
             widgets.HTML("<h3>Select Motor for Calibration</h3>"),
             self.calibration_motor_dropdown,
             self.calibration_mcu_info,
+            
+            # Syringe information section
+            self.syringe_info_header,
+            widgets.HTML("<p>Please provide information about the syringe used for calibration:</p>"),
+            self.syringe_brand_input,
+            self.syringe_model_input,
+            widgets.HBox([self.syringe_volume_input, self.syringe_diameter_input]),
+            
             widgets.HTML("<h3>First Calibration Trial</h3>"),
             widgets.HBox([self.first_trial_freq_input, self.first_trial_duration_input]),
             self.first_trial_measurement_input,
@@ -651,14 +686,16 @@ class JupyterCalibrationTool:
         if not success:
             self.log("Failed to send command to the device. Check connections.", clear=True)
             return
+        
+        self.log(f"Sent command to {self.selected_port}: timed run at {freq}Hz for {duration}s", clear=False)
             
         # Start a countdown timer
         for remaining in range(int(duration), 0, -1):
             self.log(f"Running... {remaining}s remaining", clear=True)
             time.sleep(1)
             
-        self.log(f"{trial_name} trial complete. Please enter the measured distance.", clear=True)
-    
+        self.log(f"{trial_name} trial complete. Please enter the measured volume.", clear=True)
+
     def display_mcu_list(self):
         """Display the list of MCU profiles in the MCU tab"""
         with self.mcu_list_output:
@@ -738,6 +775,18 @@ class JupyterCalibrationTool:
                 
                 print(f"   Calibrated: {calibrated}")
                 
+                # Display syringe info if available
+                if "syringeInfo" in motor:
+                    si = motor["syringeInfo"]
+                    if "innerDiameterMM" in si:  # Use the new key if available
+                        diameter_key = "innerDiameterMM"
+                        diameter_label = "inner dia"
+                    else:  # For backwards compatibility with old saved profiles
+                        diameter_key = "diameterMM"
+                        diameter_label = "dia"
+                    print(f"   Syringe: {si.get('brand')} {si.get('model')}, {si.get('volumeML')}mL, {si.get(diameter_key)}mm {diameter_label}")
+                    print(f"   Calibration Date: {si.get('calibrationDate', 'Unknown')}")
+                
                 # Find if this motor has pins configured in any MCU
                 mcus = self.controller.get_mcus()
                 for mcu in mcus:
@@ -748,7 +797,7 @@ class JupyterCalibrationTool:
                 if calibrated == "Yes":
                     min_ups = motor.get("minUPS")
                     max_ups = motor.get("maxUPS")
-                    print(f"   Range: {min_ups:.6f} to {max_ups:.2f} mL/min")
+                    print(f"   Flow Rate Range: {min_ups:.6f} to {max_ups:.2f} mL/min")
                 print("")
     
     def edit_mcu(self, mcu_id):
@@ -843,6 +892,12 @@ class JupyterCalibrationTool:
                 self.update_pins_button.disabled = True
             
             self.log(f"Editing motor: {motor.get('name')}", clear=True)
+            
+            # Display syringe info if available
+            if "syringeInfo" in motor:
+                si = motor["syringeInfo"]
+                self.log(f"Calibrated with {si.get('brand')} {si.get('model')} syringe ({si.get('volumeML')}mL, {si.get('diameterMM')}mm dia)")
+                
             if not associated_mcus:
                 self.log("This motor is not associated with any MCU. Use the Associate Motor with MCU section below.")
     
@@ -1053,6 +1108,20 @@ class JupyterCalibrationTool:
             self.log("Please select a motor profile first", clear=True)
             return
         
+        # Check for required syringe information
+        syringe_brand = self.syringe_brand_input.value.strip()
+        syringe_model = self.syringe_model_input.value.strip()
+        syringe_volume = self.syringe_volume_input.value
+        syringe_diameter = self.syringe_diameter_input.value
+        
+        if not syringe_brand or not syringe_model:
+            self.log("Please enter syringe brand and model information", clear=True)
+            return
+        
+        if syringe_volume <= 0 or syringe_diameter <= 0:
+            self.log("Please enter valid syringe volume and diameter values", clear=True)
+            return
+        
         # Get measurement values from input fields
         first_measurement = self.first_trial_measurement_input.value
         second_measurement = self.second_trial_measurement_input.value
@@ -1094,6 +1163,15 @@ class JupyterCalibrationTool:
         self.selected_motor["minUPS"] = min_ups
         self.selected_motor["calibrated"] = True
         
+        # Add syringe information to the motor profile
+        self.selected_motor["syringeInfo"] = {
+            "brand": syringe_brand,
+            "model": syringe_model,
+            "volumeML": syringe_volume,
+            "innerDiameterMM": syringe_diameter,  # Changed key name to innerDiameterMM
+            "calibrationDate": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        
         # Save the updated motor profile
         self.controller.profile_manager.update_motor(self.selected_motor)
         
@@ -1105,6 +1183,11 @@ class JupyterCalibrationTool:
             print(f"Flow Rate Intercept: {ups_intercept:.6f}")
             print(f"Min Flow Rate: {min_ups:.6f} mL/min")
             print(f"Max Flow Rate: {max_ups:.2f} mL/min")
+            print(f"\nCalibrated with:")
+            print(f"Syringe Brand: {syringe_brand}")
+            print(f"Syringe Model: {syringe_model}")
+            print(f"Syringe Volume: {syringe_volume} mL")
+            print(f"Syringe Inner Diameter: {syringe_diameter} mm")  # Updated text
             
         self.log(f"Calibration saved successfully", clear=True)
         
@@ -1145,27 +1228,64 @@ class JupyterCalibrationTool:
         
         # Validate UPS
         if ups < min_ups:
-            self.log(f"Speed too low! Minimum is {min_ups:.6f} units/s", clear=True)
+            self.log(f"Speed too low! Minimum is {min_ups:.6f} mL/min", clear=True)
             return
             
         if ups > max_ups:
-            self.log(f"Speed too high! Maximum is {max_ups:.2f} units/s", clear=True)
+            self.log(f"Speed too high! Maximum is {max_ups:.2f} mL/min", clear=True)
             return
         
-        self.log(f"Running motor at {ups} units/s {direction} for {duration} seconds...", clear=True)
+        self.log(f"Running motor at {ups} mL/min {direction} for {duration} seconds...", clear=True)
         
-        # Run the command
-        success = self.controller.run_timed_command(
-            self.selected_port, 
-            selected_motor, 
-            selected_mcu, 
-            ups, 
-            duration, 
-            "s", 
-            direction
-        )
+        # Find the motor in the MCU profile to get pins
+        motor_config = None
+        for motor in selected_mcu.get('motors', []):
+            if motor.get('uniqueID') == selected_motor.get('uniqueID'):
+                motor_config = motor
+                break
+                
+        if not motor_config:
+            self.log("Error: Motor not found in MCU profile", clear=True)
+            return
+            
+        # Get step and dir pins
+        step_pin = motor_config.get("step")
+        dir_pin = motor_config.get("dir")
+        
+        # Convert UPS to frequency
+        freq = self.controller.command_processor.convert_ups_to_freq(selected_motor, ups)
+        if freq is None:
+            return
+            
+        self.log(f"Using calculated frequency: {freq:.2f}Hz", clear=False)
+        
+        # Create command with syringe info if available
+        command = {
+            "type": "timed",
+            "direction": direction,
+            "freq": freq,
+            "stepPin": step_pin,
+            "dirPin": dir_pin,
+            "timeValue": duration,
+            "timeUnit": "s"
+        }
+        
+        # Add syringe diameter if available for potential calibration adjustments
+        if "syringeInfo" in selected_motor:
+            si = selected_motor["syringeInfo"]
+            if "innerDiameterMM" in si:
+                command["syringeDiameter"] = si.get("innerDiameterMM")
+                self.log(f"Including syringe inner diameter: {si.get('innerDiameterMM')}mm", clear=False)
+            elif "diameterMM" in si:
+                command["syringeDiameter"] = si.get("diameterMM")
+                self.log(f"Including syringe diameter: {si.get('diameterMM')}mm", clear=False)
+        
+        # Send the command directly
+        success = self.controller.serial_manager.send_command(self.selected_port, command)
         
         if success:
+            self.log(f"Sent command to {self.selected_port}: timed run at {freq}Hz for {duration}s", clear=False)
+            
             # Start a countdown timer
             for remaining in range(int(duration), 0, -1):
                 self.log(f"Running... {remaining}s remaining", clear=True)
@@ -1294,6 +1414,35 @@ class JupyterCalibrationTool:
             f"<p>Using MCU: <b>{self.selected_mcu.get('name')}</b> with "
             f"Step Pin: <b>{self.step_pin}</b>, Dir Pin: <b>{self.dir_pin}</b></p>"
         )
+        
+        # Fill in existing syringe info if available
+        if "syringeInfo" in selected_motor:
+            si = selected_motor["syringeInfo"]
+            self.syringe_brand_input.value = si.get('brand', '')
+            self.syringe_model_input.value = si.get('model', '')
+            self.syringe_volume_input.value = si.get('volumeML', 10.0)
+            
+            # Handle both old and new diameter key names
+            if "innerDiameterMM" in si:
+                self.syringe_diameter_input.value = si.get('innerDiameterMM', 15.0)
+                diameter_label = "inner dia"
+                diameter_value = si.get('innerDiameterMM')
+            else:
+                self.syringe_diameter_input.value = si.get('diameterMM', 15.0)
+                diameter_label = "dia"
+                diameter_value = si.get('diameterMM')
+            
+            # Add additional info to the display
+            self.calibration_mcu_info.value += (
+                f"<p>Previously calibrated with: <b>{si.get('brand')} {si.get('model')}</b> "
+                f"({si.get('volumeML')}mL, {diameter_value}mm {diameter_label}) on {si.get('calibrationDate', 'Unknown')}</p>"
+            )
+        else:
+            # Reset syringe fields if no prior calibration
+            self.syringe_brand_input.value = ''
+            self.syringe_model_input.value = ''
+            self.syringe_volume_input.value = 10.0
+            self.syringe_diameter_input.value = 15.0
         
         # Enable run buttons
         self.run_first_trial_button.disabled = False

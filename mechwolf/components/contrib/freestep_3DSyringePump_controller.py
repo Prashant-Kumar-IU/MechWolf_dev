@@ -83,6 +83,31 @@ class SerialManager:
             
         try:
             port = self.open_ports[port_name]
+            
+            # Handle syringe diameter calibration if provided
+            if "syringeDiameter" in command_data and "freq" in command_data:
+                diameter = command_data["syringeDiameter"]
+                # Calculate cross-sectional area
+                radius = diameter / 2.0
+                cross_sectional_area = 3.14159 * (radius ** 2)
+                
+                # Get reference diameter from command data or use default
+                reference_diameter = command_data.get("referenceDiameter", 8.0)  # Default 8mm diameter
+                reference_radius = reference_diameter / 2.0
+                reference_area = 3.14159 * (reference_radius ** 2)
+                
+                # Scale frequency based on the ratio of cross-sectional areas
+                # When area increases, frequency should decrease proportionally to maintain the same flow rate
+                area_ratio = reference_area / cross_sectional_area if cross_sectional_area > 0 else 1.0
+                command_data["freq"] = command_data["freq"] * area_ratio
+                
+                print(f"Calibrated for syringe diameter: {diameter}mm (ratio: {area_ratio:.4f})")
+                
+                # Remove the syringeDiameter field before sending to avoid confusion at the MCU
+                del command_data["syringeDiameter"]
+                if "referenceDiameter" in command_data:
+                    del command_data["referenceDiameter"]
+            
             json_data = json.dumps(command_data)
             port.write(f"{json_data}\n".encode())
             print(f"Sent command to {port_name}: {json_data}")
@@ -117,6 +142,9 @@ class SerialManager:
                 port.write((json_str + "\n").encode())
                 print(f"Sent formatted command to {port_name}: {json_str}")
                 return True
+            else:
+                print(f"Port {port_name} is no longer open.")
+                return False
         except Exception as e:
             print(f"Error sending formatted command to {port_name}: {e}")
         
@@ -475,8 +503,28 @@ class FreeStepController:
         if freq is None:
             return False
             
+        # Create the command
+        command = {
+            "type": "timed",
+            "direction": direction,
+            "freq": freq,
+            "stepPin": step_pin,
+            "dirPin": dir_pin,
+            "timeValue": time_value,
+            "timeUnit": time_unit
+        }
+        
+        # Add syringe diameter info if available
+        if "syringeInfo" in motor_profile:
+            if "innerDiameterMM" in motor_profile["syringeInfo"]:
+                command["syringeDiameter"] = motor_profile["syringeInfo"]["innerDiameterMM"]
+                print(f"Using syringe inner diameter: {motor_profile['syringeInfo']['innerDiameterMM']}mm")
+            elif "diameterMM" in motor_profile["syringeInfo"]:
+                command["syringeDiameter"] = motor_profile["syringeInfo"]["diameterMM"]
+                print(f"Using syringe diameter: {motor_profile['syringeInfo']['diameterMM']}mm")
+        
         # Send the command
-        return self.command_processor.run_timed(port, direction, freq, step_pin, dir_pin, time_value, time_unit)
+        return self.serial_manager.send_command(port, command)
     
     def stop_command(self, port, mcu_profile, motor_profile):
         """Stop a motor using profiles"""
