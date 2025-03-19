@@ -131,13 +131,34 @@ class FreeStepPump(mw.Pump):
                 self._controller.stop_command(self.serial_port, self._mcu_profile, self._motor_profile)
                 time.sleep(0.5)  # Small delay to ensure stop takes effect
                 
-                # Now run with the new rate and direction
+                # Get the calibrated diameter from motor profile
+                calibrated_diameter = None
+                current_diameter = self.syringe_diameter.to(mw._ureg.mm).magnitude
+                
+                if "syringeInfo" in self._motor_profile:
+                    si = self._motor_profile["syringeInfo"]
+                    if "innerDiameterMM" in si:
+                        calibrated_diameter = si.get("innerDiameterMM")
+                    elif "diameterMM" in si:
+                        calibrated_diameter = si.get("diameterMM")
+                
+                # Calculate area ratio and adjust flow rate if needed
+                diameter_ratio = 1.0
+                if calibrated_diameter and current_diameter and calibrated_diameter != current_diameter:
+                    # The flow rate is proportional to the cross-sectional area
+                    # So we need to adjust by the square of the diameter ratio
+                    diameter_ratio = (calibrated_diameter / current_diameter) ** 2
+                    print(f"Adjusting for different syringe diameter: {current_diameter}mm vs calibrated {calibrated_diameter}mm")
+                    print(f"Diameter ratio²: {diameter_ratio:.4f}")
+                
+                # Now run with the new rate and direction, with automatic diameter adjustment
                 success = self._controller.run_basic_command(
                     self.serial_port, 
                     self._motor_profile, 
                     self._mcu_profile,
                     abs_rate,  # Always use positive flow rate value
-                    direction  # Direction determined by sign of original rate
+                    direction,  # Direction determined by sign of original rate
+                    diameter_ratio=diameter_ratio  # Pass diameter ratio to adjust frequency
                 )
                 
                 if success:

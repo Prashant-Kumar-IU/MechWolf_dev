@@ -497,7 +497,7 @@ class FreeStepController:
         """Add a new motor profile"""
         return self.profile_manager.add_motor(name)
     
-    def run_basic_command(self, port, motor_profile, mcu_profile, ups, direction):
+    def run_basic_command(self, port, motor_profile, mcu_profile, ups, direction, diameter_ratio=1.0):
         """Run a motor in basic mode using profiles"""
         if not motor_profile.get("calibrated", False):
             print("Error: Motor is not calibrated")
@@ -523,6 +523,11 @@ class FreeStepController:
         if freq is None:
             return False
             
+        # Apply diameter ratio to adjust frequency
+        if diameter_ratio != 1.0:
+            freq = freq * diameter_ratio
+            print(f"Adjusted frequency: {freq:.2f}Hz (after diameter ratio applied)")
+        
         # Send the command
         return self.command_processor.run_basic(port, direction, freq, step_pin, dir_pin)
     
