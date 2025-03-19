@@ -257,7 +257,8 @@ class ProtocolGUI:
 
         def update_active_time(*args: Any) -> None:
             if flow_rate.value and volume.value:
-                active_time = (volume.value / flow_rate.value) * 60
+                # Use absolute value of flow rate for time calculation
+                active_time = (volume.value / abs(flow_rate.value)) * 60
                 formatted_time = self._format_time(active_time)
                 active_time_display.value = f"Active Time: {formatted_time}"
 
@@ -481,11 +482,16 @@ class ProtocolGUI:
         # Print each pump's configuration
         for pump_idx, details in sorted(pump_entries.items()):
             vessels_str = ", ".join(details["vessels"])
+            direction = " (backward)" if details["flow_rate"] < 0 else ""
+            flow_display = abs(details["flow_rate"])
+            
             pump_info = f"Pump {pump_idx} → {vessels_str}"
-            flow_info = f"Flow Rate: {details['flow_rate']} mL/min"
+            flow_info = f"Flow Rate: {flow_display} mL/min{direction}"
             volume_info = f"Volume: {details['volume']} mL"
             delay_info = f"Delay: {details['delay']} s"
-            active_time = (details["volume"] / details["flow_rate"]) * 60
+            
+            # Use absolute value of flow rate for time calculation
+            active_time = (details["volume"] / abs(details["flow_rate"])) * 60
             time_info = f"Active Time: {self._format_time(active_time)}"
 
             print(f"     {pump_info}")

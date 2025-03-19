@@ -145,9 +145,9 @@ class ProtocolAlgorithm:
 
                 # Process each pump configuration
                 for config in gui.configs:
-                    # Calculate active time based on volume and flow rate
+                    # Calculate active time based on volume and ABSOLUTE flow rate
                     active_time = timedelta(
-                        seconds=(config.volume / config.flow_rate * 60)
+                        seconds=(config.volume / abs(config.flow_rate) * 60)
                     )
 
                     # Calculate total time for this pump (delay + active_time)
@@ -161,7 +161,7 @@ class ProtocolAlgorithm:
                         config.pump,
                         start=timedelta(seconds=config.delay),
                         duration=active_time,
-                        rate=f"{config.flow_rate} mL/min",
+                        rate=f"{config.flow_rate} mL/min",  # Keep original direction
                     )
 
                 print(f"TOTAL TIME: {latest_end_time}")

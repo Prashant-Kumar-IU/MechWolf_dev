@@ -113,29 +113,34 @@ class FreeStepPump(mw.Pump):
             print(f"Rate change detected for {self.name}: {self._last_rate} -> {rate_mlmin} mL/min")
             self._last_rate = rate_mlmin
             
-            if rate_mlmin <= 0:
+            # Determine operation direction - negative rate means backward/aspiration
+            direction = "backward" if rate_mlmin < 0 else "forward"
+            # Use absolute value for calculations
+            abs_rate = abs(rate_mlmin)
+            
+            if abs_rate <= 0.000001:  # Near-zero rate threshold for stopping
                 # Stop the pump
                 print(f"Stopping pump {self.name}")
                 self._controller.stop_command(self.serial_port, self._mcu_profile, self._motor_profile)
                 print(f"Pump {self.name} stopped")
             else:
-                # Run at the specified rate - using the controller's method directly like the calibration tool
-                print(f"Setting pump {self.name} to {rate_mlmin} mL/min")
+                # Run at the specified rate and direction
+                print(f"Setting pump {self.name} to {abs_rate} mL/min ({direction})")
                 
                 # Force pump to run by stopping first
                 self._controller.stop_command(self.serial_port, self._mcu_profile, self._motor_profile)
                 time.sleep(0.5)  # Small delay to ensure stop takes effect
                 
-                # Now run with the new rate
+                # Now run with the new rate and direction
                 success = self._controller.run_basic_command(
                     self.serial_port, 
                     self._motor_profile, 
                     self._mcu_profile,
-                    rate_mlmin, 
-                    "forward"
+                    abs_rate,  # Always use positive flow rate value
+                    direction  # Direction determined by sign of original rate
                 )
                 
                 if success:
-                    print(f"Pump {self.name} now running at {rate_mlmin} mL/min")
+                    print(f"Pump {self.name} now running at {abs_rate} mL/min ({direction})")
                 else:
                     print(f"Failed to set flow rate for {self.name}")
