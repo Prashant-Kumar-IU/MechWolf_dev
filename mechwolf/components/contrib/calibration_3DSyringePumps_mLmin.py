@@ -20,7 +20,7 @@ import ipywidgets as widgets
 from IPython.display import display, HTML, clear_output
 import time
 import os
-from freestep_3DSyringePump_controller import FreeStepController
+from mechwolf.components.contrib.freestep_3DSyringePump_controller import FreeStepController
 
 class JupyterCalibrationTool:
     """Interactive Jupyter notebook tool for calibrating motors using FreeStep controller"""
@@ -245,6 +245,22 @@ class JupyterCalibrationTool:
             value=5.0,
             layout=widgets.Layout(width='40%')
         )
+        
+        # Add syringe diameter override for testing
+        self.test_syringe_diameter = widgets.FloatText(
+            description='Custom Inner Diameter (mm):',
+            value=0.0,
+            min=0.0,
+            step=0.1,
+            layout=widgets.Layout(width='50%'),
+            placeholder='Leave 0 to use calibrated diameter'
+        )
+        self.test_use_calibrated_checkbox = widgets.Checkbox(
+            value=True,
+            description='Use calibrated syringe data',
+            layout=widgets.Layout(width='60%')
+        )
+        
         self.run_test_button = widgets.Button(
             description='Run Test',
             button_style='primary',
@@ -399,6 +415,17 @@ class JupyterCalibrationTool:
         # Tab layout
         self.tabs = widgets.Tab()
         
+        # Add calibration details output area for the testing tab with increased height
+        self.test_calibration_details = widgets.Output(
+            layout=widgets.Layout(
+                border='1px solid #ddd',
+                padding='10px',
+                width='100%',
+                height='300px',  # Increased height to show more information
+                overflow='auto'
+            )
+        )
+        
         # Add button event handlers - Move all these after all widgets are created
         self.refresh_ports_button.on_click(self.refresh_ports)
         self.connect_button.on_click(self.connect_port)
@@ -418,10 +445,16 @@ class JupyterCalibrationTool:
         # MCU and motor editing event handlers
         self.calibration_motor_dropdown.observe(self.calibration_motor_changed, names='value')
         self.test_mcu_dropdown.observe(self.update_test_selections, names='value')
+        self.test_motor_dropdown.observe(self.test_motor_dropdown_changed, names='value')
+        self.test_ups_input.observe(self.update_flow_rate, names='value')
+        self.test_syringe_diameter.observe(self.update_custom_diameter, names='value')
         self.save_mcu_button.on_click(self.save_mcu_changes)
         self.delete_mcu_button.on_click(self.delete_mcu)
         self.save_motor_button.on_click(self.save_motor_changes)
         self.delete_motor_button.on_click(self.delete_motor)
+        
+        # Add event handler for the checkbox
+        self.test_use_calibrated_checkbox.observe(self.toggle_diameter_field, names='value')
         
         # Initial data load
         self.refresh_ports()
@@ -501,15 +534,35 @@ class JupyterCalibrationTool:
             self.calibration_results
         ])
         
-        # Testing tab
+        # Testing tab with side-by-side layout for parameters and calibration details
         testing_tab = widgets.VBox([
             widgets.HTML("<h3>Select Profiles for Testing</h3>"),
             widgets.HBox([self.test_mcu_dropdown, self.test_motor_dropdown]),
+            
+            # Place Test Parameters header above the HBox layout that contains
+            # both the parameters and calibration details
             widgets.HTML("<h3>Test Parameters</h3>"),
-            self.test_ups_input,
-            self.test_direction,
-            self.test_duration_input,
-            widgets.HBox([self.run_test_button, self.stop_test_button])
+            
+            # Main HBox for side-by-side layout
+            widgets.HBox([
+                # Left side - all the input controls (40% width)
+                widgets.VBox([
+                    self.test_ups_input,
+                    widgets.HTML("<h4>Syringe Options</h4>"),
+                    self.test_use_calibrated_checkbox,
+                    self.test_syringe_diameter,
+                    widgets.HTML("<h4>Run Parameters</h4>"),
+                    self.test_direction,
+                    self.test_duration_input,
+                    widgets.HBox([self.run_test_button, self.stop_test_button])
+                ], layout=widgets.Layout(width='40%')),
+                
+                # Right side - calibration details (60% width)
+                widgets.VBox([
+                    widgets.HTML("<h4>Calibration Details</h4>"),
+                    self.test_calibration_details
+                ], layout=widgets.Layout(width='60%'))
+            ])
         ])
         
         # Set up the tabs
@@ -1221,6 +1274,7 @@ class JupyterCalibrationTool:
         ups = self.test_ups_input.value
         direction = self.test_direction.value
         duration = self.test_duration_input.value
+        custom_diameter = self.test_syringe_diameter.value if not self.test_use_calibrated_checkbox.value else 0.0
         
         # Get calibration parameters
         min_ups = selected_motor.get("minUPS", 0)
@@ -1257,28 +1311,42 @@ class JupyterCalibrationTool:
         if freq is None:
             return
             
-        self.log(f"Using calculated frequency: {freq:.2f}Hz", clear=False)
+        # Round frequency to integer for stepper motor
+        freq_int = int(round(freq))
+        self.log(f"Using calculated frequency: {freq:.2f}Hz (rounded to {freq_int}Hz for stepper motor)", clear=False)
         
         # Create command with syringe info if available
         command = {
             "type": "timed",
             "direction": direction,
-            "freq": freq,
-            "stepPin": step_pin,
-            "dirPin": dir_pin,
-            "timeValue": duration,
+            "freq": freq_int,  # Use integer frequency
+            "stepPin": int(step_pin),  # Ensure integer values
+            "dirPin": int(dir_pin),    # Ensure integer values
+            "timeValue": float(duration),
             "timeUnit": "s"
         }
         
-        # Add syringe diameter if available for potential calibration adjustments
-        if "syringeInfo" in selected_motor:
+        # Handle custom syringe diameter if provided
+        if custom_diameter > 0.0:
+            command["syringeDiameter"] = float(custom_diameter)  # Ensure proper float formatting
+            self.log(f"Using custom syringe inner diameter: {custom_diameter}mm", clear=False)
+            
+            # If there's calibrated diameter info, provide it as reference
+            if "syringeInfo" in selected_motor:
+                si = selected_motor["syringeInfo"]
+                if "innerDiameterMM" in si:
+                    command["referenceDiameter"] = si.get("innerDiameterMM")
+                elif "diameterMM" in si:
+                    command["referenceDiameter"] = si.get("diameterMM")
+        # Add calibrated syringe diameter if available and not using custom
+        elif "syringeInfo" in selected_motor:
             si = selected_motor["syringeInfo"]
             if "innerDiameterMM" in si:
                 command["syringeDiameter"] = si.get("innerDiameterMM")
-                self.log(f"Including syringe inner diameter: {si.get('innerDiameterMM')}mm", clear=False)
+                self.log(f"Using calibrated syringe inner diameter: {si.get('innerDiameterMM')}mm", clear=False)
             elif "diameterMM" in si:
                 command["syringeDiameter"] = si.get("diameterMM")
-                self.log(f"Including syringe diameter: {si.get('diameterMM')}mm", clear=False)
+                self.log(f"Using calibrated syringe diameter: {si.get('diameterMM')}mm", clear=False)
         
         # Send the command directly
         success = self.controller.serial_manager.send_command(self.selected_port, command)
@@ -1336,6 +1404,9 @@ class JupyterCalibrationTool:
         """Update the available motors when an MCU is selected in the test tab"""
         if change['new'] is None:
             self.test_motor_dropdown.options = [('Select Motor', None)]
+            with self.test_calibration_details:
+                clear_output()
+                print("No motor selected.")
             return
                 
         selected_mcu = change['new']
@@ -1352,7 +1423,128 @@ class JupyterCalibrationTool:
         
         # Reset the motor selection
         self.test_motor_dropdown.value = None
-
+        
+        # Clear calibration details
+        with self.test_calibration_details:
+            clear_output()
+            print("Select a calibrated motor to view details.")
+    
+    def update_calibration_details(self):
+        """Update the calibration details display based on current selections"""
+        # Clear the current display
+        with self.test_calibration_details:
+            clear_output()
+            
+            # Get the selected motor
+            selected_motor = self.test_motor_dropdown.value
+            if not selected_motor:
+                print("No motor selected.")
+                return
+            
+            # Get the current flow rate and custom diameter settings
+            flow_rate = self.test_ups_input.value
+            custom_diameter = self.test_syringe_diameter.value if not self.test_use_calibrated_checkbox.value else 0.0
+            
+            # Display calibration parameters
+            print(f"=== Motor: {selected_motor.get('name')} ===")
+            
+            # Show calibration parameters
+            slope = selected_motor.get("UPSSlope", 0)
+            intercept = selected_motor.get("UPSIntercept", 0)
+            min_ups = selected_motor.get("minUPS", 0)
+            max_ups = selected_motor.get("maxUPS", 0)
+            print(f"Calibration Parameters:")
+            print(f"  - Slope: {slope:.6f}")
+            print(f"  - Intercept: {intercept:.6f}")
+            print(f"  - Flow Rate Range: {min_ups:.6f} to {max_ups:.2f} mL/min")
+            
+            # Show original syringe info
+            if "syringeInfo" in selected_motor:
+                si = selected_motor["syringeInfo"]
+                cal_date = si.get("calibrationDate", "Unknown")
+                
+                # Get diameter and use correct key
+                if "innerDiameterMM" in si:
+                    calibrated_diameter = si.get("innerDiameterMM")
+                    diameter_label = "Inner Diameter"
+                else:
+                    calibrated_diameter = si.get("diameterMM")
+                    diameter_label = "Diameter"
+                    
+                print(f"\nCalibrated with:")
+                print(f"  - Syringe: {si.get('brand')} {si.get('model')}")
+                print(f"  - Volume: {si.get('volumeML')}mL, {diameter_label}: {calibrated_diameter}mm")
+                print(f"  - Calibration Date: {cal_date}")
+                
+                # Calculate base frequency
+                freq = self.controller.command_processor.convert_ups_to_freq(selected_motor, flow_rate)
+                freq_int = int(round(freq)) if freq is not None else 0
+                
+                print(f"\nCurrent Settings:")
+                print(f"  - Flow Rate: {flow_rate:.4f} mL/min")
+                print(f"  - Base Frequency: {freq:.2f}Hz ({freq_int}Hz rounded)")
+                
+                # Show the effect of custom diameter if specified
+                if custom_diameter > 0.0:
+                    ratio = (calibrated_diameter / custom_diameter) ** 2
+                    adjusted_freq = freq_int * ratio if freq is not None else 0
+                    
+                    print(f"\nCustom Syringe Calculations:")
+                    print(f"  - Custom Inner Diameter: {custom_diameter}mm")
+                    print(f"  - Calibrated Diameter: {calibrated_diameter}mm")
+                    print(f"  - Area Ratio: {ratio:.4f} (calibrated/custom)²") 
+                    print(f"  - Frequency Adjustment: {freq_int}Hz → {int(round(adjusted_freq))}Hz")
+                    
+                    # Explain what this means
+                    if ratio > 1:
+                        print(f"  - Effect: Motor will run FASTER to maintain flow rate")
+                        print(f"    (Custom syringe is narrower than calibrated syringe)")
+                    else:
+                        print(f"  - Effect: Motor will run SLOWER to maintain flow rate")
+                        print(f"    (Custom syringe is wider than calibrated syringe)")
+    
+    def test_motor_dropdown_changed(self, change):
+        """Handle when the test motor dropdown value changes"""
+        if change['new'] is None:
+            with self.test_calibration_details:
+                clear_output()
+                print("No motor selected.")
+            return
+        
+        # Update details display
+        self.update_calibration_details()
+        
+        # Update syringe diameter placeholder
+        selected_motor = change['new']
+        if selected_motor and "syringeInfo" in selected_motor:
+            si = selected_motor["syringeInfo"]
+            if "innerDiameterMM" in si:
+                diameter = si.get("innerDiameterMM")
+                label = "inner diameter"
+            else:
+                diameter = si.get("diameterMM")
+                label = "diameter"
+                
+            # Set the tooltip or placeholder to show what diameter is calibrated
+            self.test_syringe_diameter.placeholder = f"Calibrated: {diameter}mm"
+    
+    def toggle_diameter_field(self, change):
+        """Enable or disable the custom syringe diameter input based on checkbox"""
+        self.test_syringe_diameter.disabled = change['new']
+        if change['new']:  # if using calibrated data
+            self.test_syringe_diameter.value = 0.0
+        
+        # Update calibration details display
+        self.update_calibration_details()
+    
+    def update_flow_rate(self, change):
+        """Update calculations when flow rate changes"""
+        self.update_calibration_details()
+    
+    def update_custom_diameter(self, change):
+        """Update calculations when custom diameter changes"""
+        self.update_calibration_details()
+    
     def find_mcu_for_motor(self, motor_id):
         """Find an MCU that has the specified motor configured and connected"""
         if not motor_id or not self.selected_port:

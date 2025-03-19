@@ -108,7 +108,18 @@ class SerialManager:
                 if "referenceDiameter" in command_data:
                     del command_data["referenceDiameter"]
             
-            json_data = json.dumps(command_data)
+            # Convert frequency to integer for stepper motor control
+            if "freq" in command_data:
+                command_data["freq"] = int(round(command_data["freq"]))
+            
+            # Make sure step and dir pins are integers
+            if "stepPin" in command_data:
+                command_data["stepPin"] = int(command_data["stepPin"])
+            if "dirPin" in command_data:
+                command_data["dirPin"] = int(command_data["dirPin"])
+                
+            # Use compact JSON formatting with no whitespace
+            json_data = json.dumps(command_data, separators=(',', ':'))
             port.write(f"{json_data}\n".encode())
             print(f"Sent command to {port_name}: {json_data}")
             return True
@@ -124,12 +135,13 @@ class SerialManager:
             return False
         
         # Create the command with minimal JSON structure for Arduino's simple parser
+        # Convert frequency to integer for stepper motor control
         command = {
             "type": type,
-            "stepPin": step_pin,
-            "dirPin": dir_pin,
-            "freq": freq,
-            "timeValue": time_value,
+            "stepPin": int(step_pin),
+            "dirPin": int(dir_pin),
+            "freq": int(round(freq)),
+            "timeValue": float(time_value),
             "timeUnit": time_unit,
             "direction": direction
         }
