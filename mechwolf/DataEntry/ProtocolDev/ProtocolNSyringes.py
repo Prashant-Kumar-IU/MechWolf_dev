@@ -70,10 +70,10 @@ class ProtocolAlgorithm:
         for config in configs:
             if (
                 not self.validate_flow_rate(str(config.flow_rate))
-                or config.flow_rate <= 0
+                or config.flow_rate == 0  # Only check for zero, allow negative values
             ):
                 raise ValueError(
-                    f"Invalid flow rate: {config.flow_rate}. Please enter a positive number followed by 'mL/min'."
+                    f"Invalid flow rate: {config.flow_rate}. Please enter a non-zero number followed by 'mL/min'."
                 )
             if not self.validate_volume(str(config.volume)) or config.volume <= 0:
                 raise ValueError(
@@ -88,7 +88,7 @@ class ProtocolAlgorithm:
     def validate_flow_rate(self, flow_rate: str) -> bool:
         return bool(
             re.match(
-                r"^\d+(\.\d+)?(?:\s*(?:mL/min|ML/Min|ml/min|ML/min|ML/MIN))?$",
+                r"^-?\d+(\.\d+)?(?:\s*(?:mL/min|ML/Min|ml/min|ML/min|ML/MIN))?$",
                 flow_rate,
             )
         )

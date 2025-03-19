@@ -25,7 +25,7 @@ class ProtocolAlgorithm:
     def create_protocol(self) -> Protocol:
         def parse_flow_rate(flow_rate: str) -> float:
             match = re.match(
-                r"(\d+(\.\d+)?)\s*(mL/min|ML/Min|ml/min|ML/min|ML/MIN)?", flow_rate
+                r"(-?\d+(\.\d+)?)\s*(mL/min|ML/Min|ml/min|ML/min|ML/MIN)?", flow_rate
             )
             if match:
                 return float(match.group(1))

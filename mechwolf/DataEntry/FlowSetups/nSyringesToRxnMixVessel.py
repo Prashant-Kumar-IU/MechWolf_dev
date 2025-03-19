@@ -355,13 +355,13 @@ class ApparatusCreator:
 
 if __name__ == "__main__":
     from mechwolf.components.contrib.varian import VarianPump
-    from mechwolf.components.contrib.tmc_stepper import TMCPump
+    from mechwolf.components.contrib.freestep_pump import FreeStepPump
 
     pump_1 = HarvardSyringePump(
         syringe_volume="10 mL", syringe_diameter="14.567 mm", serial_port="COM1"
     )
     pump_2 = VarianPump(serial_port="COM2", max_rate="5 ml/min")
-    pump_3 = TMCPump(serial_port="COM3")
+    pump_3 = FreeStepPump(serial_port="COM3")
 
     creator = ApparatusCreator(
         pump_1, pump_2, pump_3, data_file="apparatus_config.json"

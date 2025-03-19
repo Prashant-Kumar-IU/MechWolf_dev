@@ -225,7 +225,7 @@ class ProtocolGUI:
 
         flow_rate = widgets.BoundedFloatText(
             value=entry["flow_rate"] if entry is not None else 0.0,
-            min=0.000001,  # Prevent divide by zero
+            min=-1000.0,  # Allow negative flow rates for backward operation
             max=1000.0,  # Reasonable upper limit
             description="Flow Rate (mL/min):",
             style=input_style,
@@ -344,11 +344,15 @@ class ProtocolGUI:
 
         # Create display entries
         for pump_idx, details in sorted(pump_entries.items()):
+            # Include direction indication in the display
+            direction = " (backward)" if details["flow_rate"] < 0 else ""
+            flow_rate_display = abs(details["flow_rate"])  # Show absolute value
+            
             label = widgets.HTML(
                 value=(
                     f"<div style='font-size: 14px; padding: 5px;'>"
                     f"Pump {pump_idx} → {details['vessels']}: "
-                    f"{details['flow_rate']} mL/min, {details['volume']} mL, {details['delay']}s delay</div>"
+                    f"{flow_rate_display} mL/min{direction}, {details['volume']} mL, {details['delay']}s delay</div>"
                 ),
                 layout=widgets.Layout(width="100%"),
             )
