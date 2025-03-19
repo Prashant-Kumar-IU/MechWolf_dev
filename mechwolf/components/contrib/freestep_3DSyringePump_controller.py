@@ -31,11 +31,17 @@ class SerialManager:
     def __init__(self):
         self.open_ports = {}  # port_name -> serial_connection
         self.listeners = []
+        self.read_threads = {}  # port_name -> thread
+        self.stop_flags = {}    # port_name -> stop flag
         
     def list_ports(self):
         """Lists all available serial ports"""
         return [{"path": port.device, "description": port.description} 
                 for port in serial.tools.list_ports.comports()]
+    
+    def is_port_open(self, port_name):
+        """Checks if a port is currently open"""
+        return port_name in self.open_ports and self.open_ports[port_name].is_open
     
     def open_port(self, port_name, baudrate=9600):
         """Opens a serial port"""
@@ -47,8 +53,12 @@ class SerialManager:
             port = serial.Serial(port_name, baudrate, timeout=1)
             self.open_ports[port_name] = port
             
+            # Set flag for this port to False (don't stop)
+            self.stop_flags[port_name] = False
+            
             # Start a thread to read responses
             thread = threading.Thread(target=self._read_responses, args=(port_name,), daemon=True)
+            self.read_threads[port_name] = thread
             thread.start()
             
             print(f"Opened port {port_name} at {baudrate} baud")
@@ -61,8 +71,22 @@ class SerialManager:
         """Closes a serial port"""
         if port_name in self.open_ports:
             try:
+                # Signal the reading thread to stop
+                self.stop_flags[port_name] = True
+                
+                # Wait a short time for thread to notice the flag
+                time.sleep(0.2)
+                
+                # Now close the port
                 self.open_ports[port_name].close()
+                
+                # Clean up resources
                 del self.open_ports[port_name]
+                if port_name in self.read_threads:
+                    del self.read_threads[port_name]
+                if port_name in self.stop_flags:
+                    del self.stop_flags[port_name]
+                    
                 print(f"Closed port {port_name}")
                 return True
             except Exception as e:
@@ -164,18 +188,31 @@ class SerialManager:
     
     def _read_responses(self, port_name):
         """Background thread to read responses from the port"""
-        port = self.open_ports[port_name]
-        while port_name in self.open_ports and self.open_ports[port_name].is_open:
+        while port_name in self.open_ports:
+            # Check if we've been asked to stop
+            if port_name in self.stop_flags and self.stop_flags[port_name]:
+                print(f"Stopping read thread for {port_name}")
+                break
+                
             try:
+                # Only try to read if port is still open
+                port = self.open_ports.get(port_name)
+                if not port or not port.is_open:
+                    break
+                    
                 if port.in_waiting:
                     data = port.readline().decode().strip()
                     print(f"Received from {port_name}: {data}")
                     for callback in self.listeners:
                         callback(port_name, data)
             except Exception as e:
-                print(f"Error reading from {port_name}: {e}")
+                # Don't print error if we're stopping intentionally
+                if not (port_name in self.stop_flags and self.stop_flags[port_name]):
+                    print(f"Error reading from {port_name}: {e}")
                 break
             time.sleep(0.1)
+        
+        print(f"Read thread for {port_name} has exited")
     
     def add_response_listener(self, callback):
         """Add a callback function to receive responses"""
