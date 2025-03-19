@@ -481,16 +481,22 @@ Set-ExecutionPolicy Restricted -Scope CurrentUser</code></pre>
         <p>Follow these steps to run Jupyter Notebook with MechWolf on your system:</p>
     
         <div class="step-container">
-            <h2><i class="fas fa-terminal"></i> Step 1: Open Terminal</h2>
+            <h2><i class="fas fa-laptop-code"></i> Windows Instructions</h2>
             <ol>
                 <li>Press the <strong>Start</strong> or <strong>Windows key</strong> on your keyboard.</li>
-                <li>Search for <strong>Command Prompt</strong> or <strong>PowerShell</strong> and open it.</li>
+                <li>Search for <strong>Anaconda Prompt</strong> and open it.</li>
+                <li>Type or copy the following command and press <strong>Enter</strong>:</li>
             </ol>
+            <div class="code-block">
+                <pre><code>start_notebook</code></pre>
+                <button class="copy-btn" onclick="copyToClipboard('start_notebook')"><i class="far fa-copy"></i> Copy</button>
+            </div>
         </div>
         
         <div class="step-container">
-            <h2><i class="fas fa-code"></i> Step 2: Activate the MechWolf Environment</h2>
+            <h2><i class="fab fa-apple"></i> macOS Instructions</h2>
             <ol>
+                <li>Open Terminal using Spotlight (press <strong>Cmd + Space</strong> and type "Terminal").</li>
                 <li>Type or copy the following command and press <strong>Enter</strong>:</li>
             </ol>
             <div class="code-block">
@@ -503,21 +509,39 @@ Set-ExecutionPolicy Restricted -Scope CurrentUser</code></pre>
             <p style="font-weight: 600; font-size: 1.1rem; color: var(--primary); margin-bottom: 8px;">
                 <i class="fas fa-laptop-code"></i> Jupyter Notebook should be running in your browser now!
             </p>
-            <p style="color: var(--secondary); margin-top: 0;">
-                <p style="color: var(--secondary); margin-top: 0; text-align: left;">
+            <p style="color: var(--secondary); margin-top: 0; text-align: left;">
                 Checkout the jupyter notebook templates folder for your next chemistry experiment and use the electronic lab notebook pages!
-                </p>
             </p>
         </div>
         
         <div class="step-container">
             <h2><i class="fas fa-exclamation-triangle"></i> Troubleshooting</h2>
-            <p>If Jupyter Notebook doesn't open automatically, try running these commands:</p>
+            <p>If Jupyter Notebook doesn't open automatically, try these alternative methods:</p>
+            
+            <h3>Windows Troubleshooting:</h3>
+            <ol>
+                <li>If <code>start_notebook</code> command gives an error, try the following:</li>
+            </ol>
+            <div class="code-block">
+                <pre><code>conda activate mechwolf_env
+cd MechWolf_dev
+jupyter notebook --NotebookApp.token=''</code></pre>
+                <button class="copy-btn" onclick="copyToClipboard('conda activate mechwolf_env\ncd MechWolf_dev\njupyter notebook --NotebookApp.token=\'\'')"><i class="far fa-copy"></i> Copy</button>
+            </div>
+            
+            <h3>macOS Troubleshooting:</h3>
             <div class="code-block">
                 <pre><code>cd MechWolf_dev
 jupyter notebook --NotebookApp.token=''</code></pre>
                 <button class="copy-btn" onclick="copyToClipboard('cd MechWolf_dev\njupyter notebook --NotebookApp.token=\'\'')"><i class="far fa-copy"></i> Copy</button>
             </div>
+            
+            <p><strong>Note:</strong> If you're still encountering issues, make sure that:</p>
+            <ul>
+                <li>The MechWolf environment was properly installed</li>
+                <li>You have navigated to the correct directory</li>
+                <li>Your Anaconda/Miniconda installation is up to date</li>
+            </ul>
         </div>
     </div>
     
@@ -527,10 +551,16 @@ jupyter notebook --NotebookApp.token=''</code></pre>
         
         <div class="step-container">
             <h2><i class="fas fa-terminal"></i> Step 1: Open Terminal</h2>
+            
+            <h3><i class="fab fa-windows"></i> For Windows Users:</h3>
             <ol>
                 <li>Press the <strong>Start</strong> or <strong>Windows key</strong> on your keyboard.</li>
-                <li>Search for <strong>Command Prompt</strong> or <strong>PowerShell</strong> and open it.</li>
-                <li>For macOS users, open Terminal using Spotlight (press <strong>Cmd + Space</strong> and type "Terminal").</li>
+                <li>Search for <strong>Anaconda Prompt</strong> and open it.</li>
+            </ol>
+            
+            <h3><i class="fab fa-apple"></i> For macOS Users:</h3>
+            <ol>
+                <li>Open Terminal using Spotlight (press <strong>Cmd + Space</strong> and type "Terminal").</li>
             </ol>
         </div>
         
@@ -540,16 +570,15 @@ jupyter notebook --NotebookApp.token=''</code></pre>
                 <li>Type or copy the following command and press <strong>Enter</strong>:</li>
             </ol>
             <div class="code-block">
-                <pre><code>conda run -n mechwolf_env bash</code></pre>
-                <button class="copy-btn" onclick="copyToClipboard('conda run -n mechwolf_env bash')"><i class="far fa-copy"></i> Copy</button>
+                <pre><code>conda activate mechwolf_env</code></pre>
+                <button class="copy-btn" onclick="copyToClipboard('conda activate mechwolf_env')"><i class="far fa-copy"></i> Copy</button>
             </div>
-            <p>This launches a new shell within your MechWolf environment.</p>
         </div>
         
         <div class="step-container">
             <h2><i class="fas fa-code-branch"></i> Step 3: Update MechWolf from Git</h2>
             <ol>
-                <li>In the new shell that opens, run the following commands in sequence:</li>
+                <li>After activating the environment, run the following commands in sequence:</li>
             </ol>
             <div class="code-block">
                 <pre><code>cd MechWolf_dev
@@ -563,7 +592,7 @@ pip install -e .</code></pre>
             <h2><i class="fas fa-info-circle"></i> What This Does</h2>
             <p>This update process:</p>
             <ul>
-                <li>Uses <code>conda run</code> to ensure updates happen in the correct environment.</li>
+                <li>Activates the MechWolf environment where all dependencies are installed.</li>
                 <li>Gets the latest code from the MechWolf development repository (<a href="https://github.com/Prashant-Kumar-IU/MechWolf_dev" target="_blank">https://github.com/Prashant-Kumar-IU/MechWolf_dev</a>), which is based on the <a href="https://github.com/MechWolf/MechWolf" target="_blank">original MechWolf repository</a>. See the <a href="#" onclick="document.querySelector('.tab-btn[data-tab=\'credits\']').click(); return false;">Credits</a> section for all contributors.</li>
                 <li>Reinstalls the package in development mode to apply changes.</li>
                 <li>Preserves your setup so Jupyter continues to launch automatically on regular activation.</li>
@@ -636,28 +665,24 @@ pip install -e .</code></pre>
                 <div class="credit-card" style="border: 1px solid #e0e6ed; border-radius: var(--radius); padding: 1rem; background-color: #fff;">
                     <h3>Benjamin Lee</h3>
                     <p><i class="fas fa-university"></i> Harvard University</p>
-                    <p><i class="fas fa-envelope"></i> <a href="mailto:benjamindlee@me.com">benjamindlee@me.com</a></p>
                     <p><i class="fab fa-github"></i> <a href="https://github.com/Benjamin-Lee" target="_blank">Benjamin-Lee</a></p>
                 </div>
                 
                 <div class="credit-card" style="border: 1px solid #e0e6ed; border-radius: var(--radius); padding: 1rem; background-color: #fff;">
                     <h3>Alex Mijalis</h3>
                     <p><i class="fas fa-university"></i> Harvard Medical School</p>
-                    <p><i class="fas fa-envelope"></i> <a href="mailto:Alexander_Mijalis@hms.harvard.edu">Alexander_Mijalis@hms.harvard.edu</a></p>
                     <p><i class="fab fa-github"></i> <a href="https://github.com/amijalis" target="_blank">amijalis</a></p>
                 </div>
                 
                 <div class="credit-card" style="border: 1px solid #e0e6ed; border-radius: var(--radius); padding: 1rem; background-color: #fff;">
                     <h3>Murat Ozturkme</h3>
                     <p><i class="fas fa-university"></i> Indiana University, School of Informatics, Computing and Engineering</p>
-                    <p><i class="fas fa-envelope"></i> <a href="mailto:muzcuk@gmail.com">muzcuk@gmail.com</a></p>
                     <p><i class="fab fa-github"></i> <a href="https://github.com/littleblackfish" target="_blank">littleblackfish</a></p>
                 </div>
                 
                 <div class="credit-card" style="border: 1px solid #e0e6ed; border-radius: var(--radius); padding: 1rem; background-color: #fff;">
                     <h3>Nicola Pohl</h3>
                     <p><i class="fas fa-university"></i> Indiana University Bloomington, Department of Chemistry</p>
-                    <p><i class="fas fa-envelope"></i> <a href="mailto:npohl@iu.edu">npohl@iu.edu</a></p>
                     <p><i class="fab fa-github"></i> <a href="https://github.com/NLPohl" target="_blank">NLPohl</a></p>
                 </div>
             </div>
