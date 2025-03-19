@@ -700,6 +700,11 @@ class JupyterCalibrationTool:
         port = self.port_dropdown.value
         self.log(f"Connecting to {port}...", clear=True)
         
+        # First disconnect any existing connections to ensure clean state
+        if self.selected_port:
+            self.controller.disconnect_port(self.selected_port)
+            self.selected_port = None
+        
         if self.controller.connect_port(port):
             self.selected_port = port
             self.log(f"Connected to {port} successfully")
@@ -738,6 +743,10 @@ class JupyterCalibrationTool:
         # Use the direct send_formatted_command method that formats JSON correctly for Arduino
         self.log(f"Running {trial_name} trial at {freq} Hz for {duration} seconds...", clear=True)
         
+        # First stop any running motor to clear buffer and ensure clean state
+        self.controller.stop_command(self.selected_port, self.selected_mcu, self.selected_motor)
+        time.sleep(0.5)  # Give time for stop command to process
+        
         # Create a command directly compatible with the Arduino's parser
         success = self.controller.serial_manager.send_formatted_command(
             self.selected_port,  # Port name 
@@ -760,6 +769,10 @@ class JupyterCalibrationTool:
         for remaining in range(int(duration), 0, -1):
             self.log(f"Running... {remaining}s remaining", clear=True)
             time.sleep(1)
+        
+        # Stop the pump after the trial to ensure it's not left running
+        self.controller.stop_command(self.selected_port, self.selected_mcu, self.selected_motor)
+        time.sleep(0.5)  # Give time for stop command to process
             
         self.log(f"{trial_name} trial complete. Please enter the measured volume.", clear=True)
 
@@ -1305,6 +1318,10 @@ class JupyterCalibrationTool:
         
         self.log(f"Running motor at {ups} mL/min {direction} for {duration} seconds...", clear=True)
         
+        # First stop any running motor to clear buffer and ensure clean state
+        self.controller.stop_command(self.selected_port, selected_mcu, selected_motor)
+        time.sleep(0.5)  # Give time for stop command to process
+        
         # Find the motor in the MCU profile to get pins
         motor_config = None
         for motor in selected_mcu.get('motors', []):
@@ -1373,6 +1390,10 @@ class JupyterCalibrationTool:
                 self.log(f"Running... {remaining}s remaining", clear=True)
                 time.sleep(1)
                 
+            # Stop the motor after the test to ensure it's not left running
+            self.controller.stop_command(self.selected_port, selected_mcu, selected_motor)
+            time.sleep(0.5)  # Give time for stop command to process
+                
             self.log(f"Test complete!", clear=True)
         else:
             self.log(f"Error running the motor!", clear=True)
@@ -1398,8 +1419,25 @@ class JupyterCalibrationTool:
     
     def cleanup(self):
         """Clean up resources when done"""
+        # Stop any running motors before cleanup
+        if self.selected_port and self.selected_mcu and self.selected_motor:
+            self.controller.stop_command(self.selected_port, self.selected_mcu, self.selected_motor)
+            time.sleep(0.5)  # Give time for stop command to process
+            
+        # Close all ports properly
+        if self.selected_port:
+            self.controller.disconnect_port(self.selected_port)
+            
+        # Clean up controller resources
         self.controller.cleanup()
         self.log("Resources cleaned up", clear=True)
+        
+    def __del__(self):
+        """Destructor to ensure cleanup when the object is garbage collected"""
+        try:
+            self.cleanup()
+        except:
+            pass
 
     def update_selected_items(self):
         """Update the selected items from dropdowns"""
