@@ -466,6 +466,15 @@ class JupyterCalibrationTool:
     
     def display_ui(self):
         """Display the main UI with tabs"""
+        # Import visualization module here to prevent circular imports
+        from mechwolf.components.contrib.calibration_visualizations import CalibrationVisualizer
+        
+        # Create the visualizer instance
+        self.visualizer = CalibrationVisualizer(self.controller)
+        
+        # Create the overview tab first
+        overview_tab = self.visualizer.create_overview_tab()
+        
         # Connection tab (shared across all functions)
         connection_tab = widgets.VBox([
             self.storage_info,
@@ -565,13 +574,18 @@ class JupyterCalibrationTool:
             ])
         ])
         
-        # Set up the tabs
-        self.tabs.children = [connection_tab, mcu_profiles_tab, motor_profiles_tab, calibration_tab, testing_tab]
-        self.tabs.set_title(0, 'Connection')
-        self.tabs.set_title(1, 'MCU Profiles')
-        self.tabs.set_title(2, 'Motor Profiles')
-        self.tabs.set_title(3, 'Calibration')
-        self.tabs.set_title(4, 'Testing')
+        # Add the visualization tab using the visualizer layout
+        visualization_tab = self.visualizer.create_tab_layout()
+        
+        # Set up the tabs including the new overview tab at the beginning
+        self.tabs.children = [overview_tab, connection_tab, mcu_profiles_tab, motor_profiles_tab, calibration_tab, testing_tab, visualization_tab]
+        self.tabs.set_title(0, 'Overview')
+        self.tabs.set_title(1, 'Connection')
+        self.tabs.set_title(2, 'MCU Profiles')
+        self.tabs.set_title(3, 'Motor Profiles')
+        self.tabs.set_title(4, 'Calibration')
+        self.tabs.set_title(5, 'Testing')
+        self.tabs.set_title(6, 'Visualization')
         
         # Display everything
         display(self.header)
