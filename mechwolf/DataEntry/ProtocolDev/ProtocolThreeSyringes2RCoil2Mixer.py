@@ -3,7 +3,6 @@ from mechwolf.core.protocol import Protocol
 from mechwolf.components import ActiveComponent
 from mechwolf.components.contrib.harvardpump import HarvardSyringePump
 import re
-from typing import Optional
 
 
 class ProtocolAlgorithm:

@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 """
 This module provides a graphical user interface (GUI) for configuring pump protocols in a Jupyter notebook environment.
 Classes:
@@ -27,7 +25,7 @@ ProtocolGUI:
         form_container (widgets.VBox): A container for the form elements.
         entries_display (widgets.VBox): A container for displaying pump entries.
         main_container (widgets.HBox): The main container for the GUI.
-    Methods:
+Methods:
         create_widgets(): Creates and displays the widgets for the GUI.
         initialize_entries(): Initializes the entries list or loads from existing configuration.
         show_next_pump_form(): Displays the form for the next unmapped pump-vessel pair.
@@ -42,7 +40,7 @@ ProtocolGUI:
 import ipywidgets as widgets
 from IPython.display import display, clear_output
 import mechwolf as mw
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union, Tuple
 from dataclasses import dataclass
 from .protocol_data_manager import ProtocolDataManager
 
@@ -107,10 +105,13 @@ class ProtocolGUI:
             layout=widgets.Layout(width="60%", margin="0 0 0 20px"),
         )
 
-        # Main container
-        self.main_container = widgets.HBox(
-            [left_container, right_container], layout=widgets.Layout(width="100%")
-        )
+        # Main container for better compatibility across versions
+        self.main_container = widgets.VBox([
+            widgets.HBox(
+                [left_container, right_container], 
+                layout=widgets.Layout(width="100%")
+            )
+        ])
 
         display(self.main_container)
 
@@ -148,7 +149,7 @@ class ProtocolGUI:
 
     def initialize_entries(self) -> None:
         """Initialize empty entries list or load from existing config"""
-        if self.existing_config and "pump_entries" in self.existing_config:
+        if (self.existing_config and "pump_entries" in self.existing_config):
             # Load existing entries
             for entry in self.existing_config["pump_entries"]:
                 self.temp_entries.append(entry)
@@ -297,7 +298,7 @@ class ProtocolGUI:
 
         save_btn.on_click(save_entry)
 
-        # Stack form elements vertically with more space
+        # Stack form elements vertically with more space for better compatibility
         form = widgets.VBox(
             [
                 pump_info,
@@ -390,7 +391,7 @@ class ProtocolGUI:
 
             # Show empty form for this position, but don't auto-progress
             self.current_mapping_index = mapping_index
-            # Clear output before showing new form
+            # Clear output before showing new form - use wait=True for compatibility
             clear_output(wait=True)
             self.display_main_container()
             self.pump_entry_window(None)
@@ -453,7 +454,7 @@ class ProtocolGUI:
 
         self.setup_complete = True
         self.main_container.close()
-        clear_output()
+        clear_output(wait=True)  # Use wait parameter for compatibility
 
         # Center the header
         print("\n" + "=" * 50)
