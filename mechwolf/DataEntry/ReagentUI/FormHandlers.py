@@ -238,9 +238,14 @@ class ReagentFormHandler:
         if on_save:
             def validate_and_save(b):
                 # Collect form data
+                # Clean the InChI value by removing the InChI= prefix if present
+                inchi_value = inchi_input.value
+                if inchi_value and inchi_value.startswith("InChI="):
+                    inchi_value = inchi_value[6:]  # Remove 'InChI=' prefix
+                
                 new_reagent = {
                     "name": name_input.value,
-                    "inChi": inchi_input.value,
+                    "inChi": inchi_value,  # Use the cleaned InChI value
                     "SMILES": smiles_input.value,
                     "inChi Key": inchikey_input.value,
                     "molecular weight (in g/mol)": mw_input.value,
@@ -446,4 +451,4 @@ class FinalDetailsFormHandler:
             update_volume()
         
         return form
-
+    

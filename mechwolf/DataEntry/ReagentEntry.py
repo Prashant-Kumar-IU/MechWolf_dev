@@ -400,9 +400,14 @@ class ReagentInputForm:
         accordion.selected_index = accordion_index
         
         # Create a new reagent from the compound data
+        # Strip InChI= prefix from the InChI string if it exists
+        inchi = compound['inchi']
+        if inchi and inchi.startswith("InChI="):
+            inchi = inchi[6:]  # Remove 'InChI=' prefix
+            
         new_reagent = {
             "name": compound['name'],
-            "inChi": compound['inchi'],
+            "inChi": inchi,
             "SMILES": compound['smiles'],
             "inChi Key": compound['inchikey'],
             "molecular weight (in g/mol)": compound['molecular_weight'],
