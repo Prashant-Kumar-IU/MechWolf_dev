@@ -1,8 +1,18 @@
 import json
 import ipywidgets as widgets
-from IPython.display import display, clear_output
+from IPython.display import display, clear_output, Image
 from mechwolf.DataEntry.ProcessData import process_data
 from typing import Dict, Any, Optional, List, Callable, Union
+import requests
+import io
+import base64
+from PIL import Image as PILImage
+try:
+    from rdkit import Chem
+    from rdkit.Chem import Draw
+    rdkit_available = True
+except ImportError:
+    rdkit_available = False
 
 class ReagentInputForm:
     def __init__(self, data_file: str) -> None:
@@ -29,6 +39,15 @@ class ReagentInputForm:
         self.add_reagents_tab = None
         self.current_reagents_tab = None
         self.final_details_tab = None
+        self.search_tab = None  # New search tab
+        
+        # Search components
+        self.search_input = None
+        self.search_results = None
+        self.search_status = None
+        
+        # PubChem cache to avoid repeated API calls
+        self.pubchem_cache = {}
 
     def load_data(self) -> None:
         """Load reagent data from JSON file."""
@@ -57,15 +76,20 @@ class ReagentInputForm:
         # Create the final details tab content
         self.final_details_tab = self.create_final_details_tab()
         
+        # Create the search tab content
+        self.search_tab = self.create_search_tab()
+        
         # Set the tab children and titles
         self.tab_container.children = [
             self.add_reagents_tab,
             self.current_reagents_tab,
+            self.search_tab,
             self.final_details_tab
         ]
         self.tab_container.set_title(0, "Add Reagents")
         self.tab_container.set_title(1, "Current Reagents")
-        self.tab_container.set_title(2, "Final Details")
+        self.tab_container.set_title(2, "Search Chemical")
+        self.tab_container.set_title(3, "Final Details")
         
         # Main container now just includes the tabs
         self.main_container = widgets.VBox([
@@ -78,7 +102,7 @@ class ReagentInputForm:
         
         # Update the reagent list
         self.update_reagent_list()
-    
+
     def create_add_reagents_tab(self) -> widgets.Widget:
         """Create the tab content for adding reagents with forms directly displayed."""
         # Create an accordion for organizing solid and liquid forms
@@ -178,6 +202,67 @@ class ReagentInputForm:
             "<span style='font-size: 0.8em; color: #666;'>Required: Must be > 0</span>"
         )
         
+        # Add structure visualization area
+        structure_area = widgets.Output(
+            layout=widgets.Layout(
+                height="200px",
+                width="200px",
+                margin="10px auto",
+                border="1px solid #ddd"
+            )
+        )
+        
+        # Function to update structure visualization
+        def update_structure(change=None):
+            structure_area.clear_output()
+            if not rdkit_available:
+                with structure_area:
+                    print("RDKit not available")
+                return
+                
+            smiles = smiles_input.value
+            if not smiles:
+                return
+                
+            try:
+                with structure_area:
+                    mol = Chem.MolFromSmiles(smiles)
+                    if mol:
+                        img = Draw.MolToImage(mol, size=(180, 180))
+                        display(img)
+                    else:
+                        print("Invalid SMILES")
+            except Exception as e:
+                with structure_area:
+                    print(f"Error: {e}")
+        
+        # Connect update to SMILES field
+        smiles_input.observe(update_structure, names='value')
+        
+        # Add lookup button for structure
+        lookup_button = widgets.Button(
+            description="Lookup Structure",
+            button_style="info",
+            icon="search",
+            layout=widgets.Layout(width="auto")
+        )
+        
+        def on_lookup(b):
+            if smiles_input.value:
+                update_structure()
+            elif name_input.value:
+                # Try to lookup by name
+                results = self.search_pubchem(name_input.value, 'name')
+                if results:
+                    compound = results[0]
+                    smiles_input.value = compound['smiles']
+                    inchi_input.value = compound['inchi']
+                    inchikey_input.value = compound['inchikey']
+                    mw_input.value = compound['molecular_weight']
+                    update_structure()
+        
+        lookup_button.on_click(on_lookup)
+        
         # Add density field for liquid reagents
         density_input = None
         density_tooltip = None
@@ -217,6 +302,19 @@ class ReagentInputForm:
             form_fields.append(widgets.VBox([density_input, density_tooltip]))
             
         form_fields.append(widgets.VBox([syringe_input, syringe_tooltip]))
+        
+        # Add structure visualization
+        form_fields.append(widgets.VBox([
+            widgets.HTML("<h4>Structure Preview</h4>"),
+            structure_area,
+            lookup_button
+        ], layout=widgets.Layout(
+            align_items="center",
+            border="1px solid #ddd",
+            margin="10px 0",
+            padding="10px"
+        )))
+        
         form_fields.append(widgets.HBox([save_button]))
         
         # Create form container with color coding
@@ -229,6 +327,10 @@ class ReagentInputForm:
                 background_color=bg_color
             )
         )
+        
+        # Update structure if SMILES is available
+        if smiles_input.value:
+            update_structure()
         
         # Validation function
         def validate_and_save(b):
@@ -296,7 +398,7 @@ class ReagentInputForm:
         save_button.on_click(validate_and_save)
         
         return form
-    
+
     def create_current_reagents_tab(self) -> widgets.Widget:
         """Create the tab content for viewing current reagents."""
         # Create reagent list container
@@ -423,6 +525,276 @@ class ReagentInputForm:
             form
         ], layout=widgets.Layout(padding="10px"))
 
+    def create_search_tab(self) -> widgets.Widget:
+        """Create the tab content for searching chemicals from PubChem."""
+        # Create search input area
+        self.search_input = widgets.Text(
+            placeholder="Enter chemical name, SMILES, InChI, or CAS",
+            description="Search:",
+            layout=widgets.Layout(width="80%")
+        )
+        
+        search_type = widgets.Dropdown(
+            options=['Name', 'SMILES', 'InChI', 'InChI Key', 'CAS'],
+            value='Name',
+            description='Search by:',
+            layout=widgets.Layout(width="50%")
+        )
+        
+        search_button = widgets.Button(
+            description="Search PubChem",
+            button_style="info",
+            icon="search"
+        )
+        
+        # Create status area
+        self.search_status = widgets.HTML("")
+        
+        # Create results area
+        self.search_results = widgets.VBox([])
+        
+        # Set up search button callback
+        def on_search_click(b):
+            query = self.search_input.value.strip()
+            if not query:
+                self.search_status.value = "<p style='color: orange;'>Please enter a search term</p>"
+                return
+                
+            self.search_status.value = "<p style='color: blue;'>Searching PubChem...</p>"
+            self.search_results.children = ()
+            
+            # Perform the search
+            results = self.search_pubchem(query, search_type.value.lower())
+            
+            if not results:
+                self.search_status.value = "<p style='color: red;'>No results found</p>"
+                return
+                
+            self.search_status.value = f"<p style='color: green;'>Found {len(results)} results</p>"
+            
+            # Create result widgets
+            result_widgets = []
+            for compound in results:
+                result_widgets.append(self.create_search_result_widget(compound))
+                
+            self.search_results.children = tuple(result_widgets)
+            
+        search_button.on_click(on_search_click)
+        
+        # Input area arrangement
+        input_area = widgets.VBox([
+            widgets.HBox([self.search_input, search_type]), 
+            search_button,
+            self.search_status
+        ], layout=widgets.Layout(margin="10px 0"))
+        
+        # Results area with scrolling
+        results_container = widgets.VBox([
+            widgets.HTML("<h4>Search Results</h4>"),
+            self.search_results
+        ], layout=widgets.Layout(
+            border="1px solid #ddd",
+            padding="10px",
+            margin="10px 0",
+            max_height="500px",
+            overflow_y="auto"
+        ))
+        
+        # Return the complete tab content
+        return widgets.VBox([
+            widgets.HTML("<h4>Search Chemical Databases</h4>"),
+            input_area,
+            results_container
+        ], layout=widgets.Layout(padding="10px"))
+    
+    def search_pubchem(self, query: str, search_type: str) -> List[Dict[str, Any]]:
+        """Search PubChem database and return results."""
+        base_url = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
+        
+        # Check if result is in cache
+        cache_key = f"{search_type}:{query}"
+        if cache_key in self.pubchem_cache:
+            return self.pubchem_cache[cache_key]
+        
+        try:
+            # Map search type to PubChem's input types
+            input_type = {
+                'name': 'name',
+                'smiles': 'smiles',
+                'inchi': 'inchi',
+                'inchi key': 'inchikey',
+                'cas': 'xref/rn'
+            }.get(search_type, 'name')
+            
+            # Different endpoint based on search type
+            if input_type.startswith('xref'):
+                parts = input_type.split('/')
+                url = f"{base_url}/{parts[0]}/{parts[1]}/{query}/cids/JSON"
+            else:
+                url = f"{base_url}/compound/{input_type}/{query}/cids/JSON"
+            
+            # Get compound IDs
+            response = requests.get(url)
+            response.raise_for_status()
+            
+            data = response.json()
+            if 'IdentifierList' not in data:
+                return []
+                
+            cids = data['IdentifierList']['CID'][:5]  # Limit to first 5 results
+            
+            # Get compound data for each CID
+            results = []
+            for cid in cids:
+                # Get properties
+                prop_url = f"{base_url}/compound/cid/{cid}/property/IUPACName,MolecularFormula,MolecularWeight,InChI,InChIKey,CanonicalSMILES/JSON"
+                prop_response = requests.get(prop_url)
+                prop_response.raise_for_status()
+                
+                props = prop_response.json()['PropertyTable']['Properties'][0]
+                
+                # Create result object
+                compound = {
+                    'cid': cid,
+                    'name': props.get('IUPACName', ''),
+                    'formula': props.get('MolecularFormula', ''),
+                    'molecular_weight': float(props.get('MolecularWeight', 0)),
+                    'inchi': props.get('InChI', ''),
+                    'inchikey': props.get('InChIKey', ''),
+                    'smiles': props.get('CanonicalSMILES', '')
+                }
+                
+                results.append(compound)
+            
+            # Cache results
+            self.pubchem_cache[cache_key] = results
+            return results
+            
+        except Exception as e:
+            print(f"PubChem search error: {e}")
+            return []
+    
+    def create_search_result_widget(self, compound: Dict[str, Any]) -> widgets.Widget:
+        """Create a widget to display a search result with import button."""
+        # Generate structure image if RDKit is available
+        structure_img = None
+        if rdkit_available and compound['smiles']:
+            try:
+                mol = Chem.MolFromSmiles(compound['smiles'])
+                if mol:
+                    img = Draw.MolToImage(mol, size=(150, 150))
+                    
+                    # Convert PIL image to widget
+                    buffer = io.BytesIO()
+                    img.save(buffer, format='PNG')
+                    buffer.seek(0)
+                    
+                    structure_img = widgets.Image(
+                        value=buffer.getvalue(),
+                        format='png',
+                        width=150,
+                        height=150
+                    )
+            except Exception as e:
+                print(f"Error rendering structure: {e}")
+        
+        # Create info widget
+        info_html = f"""
+        <div style="padding-left: 10px;">
+            <h4>{compound['name'] or 'Unknown'}</h4>
+            <p><b>Formula:</b> {compound['formula']}</p>
+            <p><b>Molecular Weight:</b> {compound['molecular_weight']} g/mol</p>
+            <p><b>InChI Key:</b> {compound['inchikey']}</p>
+            <p><b>SMILES:</b> {compound['smiles']}</p>
+        </div>
+        """
+        
+        info_widget = widgets.HTML(info_html)
+        
+        # Create import buttons
+        import_solid_button = widgets.Button(
+            description="Import as Solid",
+            button_style="success",
+            style={"button_color": "#3F704D"}
+        )
+        
+        import_liquid_button = widgets.Button(
+            description="Import as Liquid",
+            button_style="info",
+            style={"button_color": "#3A5D9F"}
+        )
+        
+        # Import button callbacks
+        def import_as_solid(b):
+            self.import_from_pubchem(compound, "solid")
+            
+        def import_as_liquid(b):
+            self.import_from_pubchem(compound, "liquid")
+            
+        import_solid_button.on_click(import_as_solid)
+        import_liquid_button.on_click(import_as_liquid)
+        
+        # Arrange buttons
+        buttons = widgets.VBox([
+            import_solid_button,
+            import_liquid_button
+        ])
+        
+        # Create result container with structure + info + buttons
+        if structure_img:
+            result = widgets.HBox([
+                structure_img,
+                info_widget,
+                buttons
+            ])
+        else:
+            result = widgets.HBox([
+                info_widget,
+                buttons
+            ])
+        
+        return widgets.VBox([
+            result,
+            widgets.HTML("<hr style='margin: 10px 0;'>")
+        ], layout=widgets.Layout(margin="5px 0"))
+    
+    def import_from_pubchem(self, compound: Dict[str, Any], reagent_type: str) -> None:
+        """Import PubChem data into a new reagent form."""
+        # Switch to Add Reagents tab
+        self.tab_container.selected_index = 0
+        
+        # Select the appropriate accordion section
+        accordion_index = 0 if reagent_type == "solid" else 1
+        accordion = self.add_reagents_tab.children[1]  # Get the accordion widget
+        accordion.selected_index = accordion_index
+        
+        # Get the form
+        form = accordion.children[accordion_index]
+        
+        # Find the input widgets within the form
+        for child in form.children:
+            if isinstance(child, widgets.VBox):
+                for input_child in child.children:
+                    if isinstance(input_child, widgets.Text) or isinstance(input_child, widgets.FloatText):
+                        # Set values based on input description
+                        if hasattr(input_child, 'description'):
+                            if input_child.description == "Name:":
+                                input_child.value = compound['name']
+                            elif input_child.description == "InChi:":
+                                input_child.value = compound['inchi']
+                            elif input_child.description == "SMILES:":
+                                input_child.value = compound['smiles']
+                            elif input_child.description == "InChi Key:":
+                                input_child.value = compound['inchikey']
+                            elif input_child.description == "MW (g/mol):":
+                                input_child.value = compound['molecular_weight']
+                            # Default equivalents to 1.0 for convenience
+                            elif input_child.description == "Equivalents:":
+                                input_child.value = 1.0
+        
+        # Display success message
+        self.search_status.value = f"<p style='color: green;'>Data imported as {reagent_type}. Please complete any remaining fields.</p>"
+
     def update_reagent_list(self) -> None:
         """Update the display of reagent items with grouped and styled items."""
         items = []
@@ -459,6 +831,28 @@ class ReagentInputForm:
         # Create a more detailed display with grouping by color
         is_solid = reagent in self.data["solid reagents"]
         bg_color = "#F0F7F4" if is_solid else "#EFF7FF"  # Light green for solids, light blue for liquids
+        
+        # Create structure visualization if possible
+        structure_widget = None
+        if rdkit_available and reagent["SMILES"]:
+            try:
+                mol = Chem.MolFromSmiles(reagent["SMILES"])
+                if mol:
+                    img = Draw.MolToImage(mol, size=(120, 120))
+                    
+                    # Convert PIL image to widget
+                    buffer = io.BytesIO()
+                    img.save(buffer, format='PNG')
+                    buffer.seek(0)
+                    
+                    structure_widget = widgets.Image(
+                        value=buffer.getvalue(),
+                        format='png',
+                        width=120,
+                        height=120
+                    )
+            except Exception as e:
+                print(f"Error rendering structure: {e}")
         
         # Style for reagent item
         item_style = f"""
@@ -505,17 +899,29 @@ class ReagentInputForm:
             layout=widgets.Layout(margin="0 0 0 10px", align_items="flex-start")
         )
         
-        # Return an HBox containing the HTML and buttons
-        return widgets.HBox(
-            [html_widget, button_container],
-            layout=widgets.Layout(
-                margin="2px 0",
-                align_items="center",
-                border=f"1px solid {'#90BE6D' if is_solid else '#577590'}",
-                border_radius="5px",
-                padding="5px"
+        # Return an HBox containing the structure, HTML and buttons
+        if structure_widget:
+            return widgets.HBox(
+                [structure_widget, html_widget, button_container],
+                layout=widgets.Layout(
+                    margin="2px 0",
+                    align_items="center",
+                    border=f"1px solid {'#90BE6D' if is_solid else '#577590'}",
+                    border_radius="5px",
+                    padding="5px"
+                )
             )
-        )
+        else:
+            return widgets.HBox(
+                [html_widget, button_container],
+                layout=widgets.Layout(
+                    margin="2px 0",
+                    align_items="center",
+                    border=f"1px solid {'#90BE6D' if is_solid else '#577590'}",
+                    border_radius="5px",
+                    padding="5px"
+                )
+            )
 
     def validate_reagent(self, data: Dict[str, Any], reagent_type: str) -> Dict[str, str]:
         """Validate reagent data and return a dictionary of errors."""
