@@ -1,4 +1,3 @@
-import json
 import ipywidgets as widgets
 from IPython.display import display, clear_output
 
@@ -7,8 +6,6 @@ from mechwolf.DataEntry.ReagentUI.DataManager import ReagentDataManager
 from mechwolf.DataEntry.ReagentUI.PubChemService import PubChemService
 from mechwolf.DataEntry.ReagentUI.UIComponents import UIComponents
 from mechwolf.DataEntry.ReagentUI.FormHandlers import ReagentFormHandler, FinalDetailsFormHandler
-from mechwolf.DataEntry.ReagentUI.StructureVisualization import StructureVisualizer
-from mechwolf.DataEntry.ReagentUI.utils import is_rdkit_available, suppress_stderr
 
 class ReagentInputForm:
     def __init__(self, data_file: str) -> None:

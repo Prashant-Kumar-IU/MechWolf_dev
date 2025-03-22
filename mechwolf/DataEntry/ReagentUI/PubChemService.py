@@ -1,7 +1,7 @@
 """PubChem API service for chemical data retrieval."""
 import requests
 from typing import Dict, Any, List, Optional
-from mechwolf.DataEntry.ReagentUI.utils import validate_smiles, suppress_stderr, safe_mol_from_smiles
+from mechwolf.DataEntry.ReagentUI.ReagentUtils import validate_smiles, suppress_stderr, safe_mol_from_smiles
 
 class PubChemService:
     """Service for interacting with the PubChem API."""

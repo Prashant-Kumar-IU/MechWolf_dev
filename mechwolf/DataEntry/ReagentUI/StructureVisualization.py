@@ -1,7 +1,7 @@
 """Structure visualization utilities for chemical structures."""
 import io
 from typing import Optional, Tuple, Union, Any
-from mechwolf.DataEntry.ReagentUI.utils import is_rdkit_available, safe_mol_from_smiles
+from mechwolf.DataEntry.ReagentUI.ReagentUtils import is_rdkit_available, safe_mol_from_smiles
 import ipywidgets as widgets
 
 class StructureVisualizer:

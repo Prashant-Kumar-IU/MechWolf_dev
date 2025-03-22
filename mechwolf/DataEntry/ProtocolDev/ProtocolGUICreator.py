@@ -40,7 +40,7 @@ Methods:
 import ipywidgets as widgets
 from IPython.display import display, clear_output
 import mechwolf as mw
-from typing import List, Dict, Any, Optional, Union, Tuple
+from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from .protocol_data_manager import ProtocolDataManager
 

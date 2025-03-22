@@ -2,7 +2,7 @@
 import ipywidgets as widgets
 from typing import Dict, Any, Optional, Callable
 from .StructureVisualization import StructureVisualizer
-from mechwolf.DataEntry.ReagentUI.utils import validate_reagent_data
+from mechwolf.DataEntry.ReagentUI.ReagentUtils import validate_reagent_data
 
 class ReagentFormHandler:
     """Handler for reagent entry forms."""

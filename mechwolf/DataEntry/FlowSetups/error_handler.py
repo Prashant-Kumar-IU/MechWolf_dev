@@ -1,5 +1,5 @@
 from typing import Dict, Any, List, Tuple
-from .utils import convert_dimension_to_float
+from .FlowSetupUtils import convert_dimension_to_float
 
 
 class SetupError(Exception):
