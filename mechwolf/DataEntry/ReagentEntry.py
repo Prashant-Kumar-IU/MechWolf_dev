@@ -86,15 +86,13 @@ class ReagentInputForm:
         # Create solid reagent form
         solid_form = ReagentFormHandler.create_reagent_form(
             "solid", 
-            on_save=self.save_reagent,
-            on_lookup=self.lookup_chemical
+            on_save=self.save_reagent
         )
         
         # Create liquid reagent form
         liquid_form = ReagentFormHandler.create_reagent_form(
             "liquid", 
-            on_save=self.save_reagent,
-            on_lookup=self.lookup_chemical
+            on_save=self.save_reagent
         )
         
         # Set accordion children and titles
@@ -363,8 +361,7 @@ class ReagentInputForm:
         form = ReagentFormHandler.create_reagent_form(
             reagent_type, 
             reagent=reagent,
-            on_save=self.save_reagent,
-            on_lookup=self.lookup_chemical
+            on_save=self.save_reagent
         )
         
         # Replace the existing form by creating a new tuple
@@ -435,7 +432,6 @@ class ReagentInputForm:
             reagent_type, 
             reagent=new_reagent,
             on_save=lambda new, old=None: self.save_reagent(new, old, specified_type=reagent_type),
-            on_lookup=self.lookup_chemical,
             warning_message=warning_message  # Pass warning message to form
         )
         

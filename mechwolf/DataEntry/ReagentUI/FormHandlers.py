@@ -11,7 +11,6 @@ class ReagentFormHandler:
     def create_reagent_form(reagent_type: str, 
                            reagent: Optional[Dict[str, Any]] = None,
                            on_save: Callable = None,
-                           on_lookup: Callable = None,
                            warning_message: str = None) -> widgets.Widget:
         """
         Create a form for adding or editing a reagent.
@@ -24,8 +23,6 @@ class ReagentFormHandler:
             Existing reagent data for editing
         on_save : callable
             Callback for save button
-        on_lookup : callable
-            Callback for lookup button
         warning_message : str, optional
             Warning message to display in the form
             
@@ -34,6 +31,10 @@ class ReagentFormHandler:
         ipywidgets.Widget
             Form widget
         """
+        # Initialize these variables to None to avoid NameError
+        density_input = None
+        density_tooltip = None
+        
         # Set background color based on reagent type
         bg_color = "#F0F7F4" if reagent_type == "solid" else "#EFF7FF"
         
@@ -142,21 +143,7 @@ class ReagentFormHandler:
         # Connect update to SMILES field
         smiles_input.observe(update_structure, names='value')
         
-        # Add lookup button for structure
-        lookup_button = widgets.Button(
-            description="Lookup Structure",
-            button_style="info",
-            icon="search",
-            layout=widgets.Layout(width="auto")
-        )
-        
-        if on_lookup:
-            lookup_button.on_click(lambda b: on_lookup(name_input.value, smiles_input, inchi_input, inchikey_input, mw_input, update_structure))
-        
         # Add density field for liquid reagents
-        density_input = None
-        density_tooltip = None
-        
         if reagent_type == "liquid":
             density_input = widgets.FloatText(
                 value=reagent["density (in g/mL)"] if reagent else 0,
@@ -183,7 +170,9 @@ class ReagentFormHandler:
             style={"button_color": "#3F704D" if reagent_type == "solid" else "#3A5D9F"}
         )
         
-        # Create form fields list with tooltips
+        # Remove the lookup button as it's redundant with the search tab functionality
+        
+        # Add structure visualization to form fields
         form_fields = [
             form_title,
             error_area
@@ -210,8 +199,7 @@ class ReagentFormHandler:
         # Add structure visualization
         form_fields.append(widgets.VBox([
             widgets.HTML("<h4>Structure Preview</h4>"),
-            structure_area,
-            lookup_button
+            structure_area
         ], layout=widgets.Layout(
             align_items="center",
             border="1px solid #ddd",
