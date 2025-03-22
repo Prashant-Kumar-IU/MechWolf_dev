@@ -59,6 +59,13 @@ class ReagentInputForm:
         self.tab_container.set_title(2, "Search Chemical")
         self.tab_container.set_title(3, "Final Details")
         
+        # Add tab selection handler to refresh the final details tab when selected
+        def on_tab_selected(change):
+            if change['new'] == 3:  # Final Details tab index
+                self.refresh_final_details_tab()
+                
+        self.tab_container.observe(on_tab_selected, names='selected_index')
+        
         # Main container with tabs
         self.main_container = widgets.VBox([
             widgets.HTML("<h3>Reagent Entry Form</h3>"),
@@ -265,24 +272,72 @@ class ReagentInputForm:
         # Update the reagent list with the items
         self.reagent_list.children = tuple(items)
 
-    def save_reagent(self, new_reagent, old_reagent=None):
+    def save_reagent(self, new_reagent, old_reagent=None, specified_type=None):
         """Save a reagent to the data."""
-        reagent_type = self.data_manager.get_reagent_type(old_reagent) if old_reagent else \
-                      ("solid" if self.tab_container.selected_index == 0 and \
-                       self.add_reagents_tab.children[1].selected_index == 0 else "liquid")
-        
-        if old_reagent:
-            self.data_manager.update_reagent(old_reagent, new_reagent, reagent_type)
-        else:
-            self.data_manager.add_reagent(new_reagent, reagent_type)
-        
-        # Update the reagent list
-        self.update_reagent_list()
-        
-        # Switch to Current Reagents tab to show the new reagent
-        self.tab_container.selected_index = 1
-        
-        return True
+        try:
+            # Validate we have the minimum required fields
+            required_fields = ["name", "inChi", "molecular weight (in g/mol)", "eq", "syringe"]
+            missing_fields = [field for field in required_fields if field not in new_reagent]
+            
+            if missing_fields:
+                return False
+                
+            if new_reagent["name"].strip() == "":
+                return False
+            
+            # Determine reagent type with better error handling
+            reagent_type = None
+            
+            if specified_type:
+                # Use explicitly specified type (from PubChem import)
+                reagent_type = specified_type
+            elif old_reagent:
+                # For editing, get the type from data manager
+                reagent_type = self.data_manager.get_reagent_type(old_reagent)
+            else:
+                # For new reagent, check if it has a density field
+                reagent_type = "liquid" if "density (in g/mL)" in new_reagent else "solid"
+            
+            # Remove special type field if it exists
+            if "_reagent_type" in new_reagent:
+                del new_reagent["_reagent_type"]
+                
+            # Create a deep copy of the reagent to avoid reference issues
+            import copy
+            reagent_copy = copy.deepcopy(new_reagent)
+            
+            # Force the values to be the correct types
+            reagent_copy["molecular weight (in g/mol)"] = float(reagent_copy["molecular weight (in g/mol)"])
+            reagent_copy["eq"] = float(reagent_copy["eq"])
+            reagent_copy["syringe"] = int(reagent_copy["syringe"])
+            if "density (in g/mL)" in reagent_copy:
+                reagent_copy["density (in g/mL)"] = float(reagent_copy["density (in g/mL)"])
+            
+            # Ensure we have a valid reagent type
+            if reagent_type not in ["solid", "liquid"]:
+                return False
+            
+            # Add or update the reagent in the data manager
+            if old_reagent:
+                self.data_manager.update_reagent(old_reagent, reagent_copy, reagent_type)
+            else:
+                self.data_manager.add_reagent(reagent_copy, reagent_type)
+            
+            # Update the reagent list
+            self.update_reagent_list()
+            
+            # Refresh the final details tab with updated data
+            self.refresh_final_details_tab()
+            
+            # Switch to Current Reagents tab to show the new reagent
+            self.tab_container.selected_index = 1
+            
+            return True
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return False
 
     def delete_reagent(self, reagent):
         """Remove a reagent from the data."""
@@ -359,21 +414,29 @@ class ReagentInputForm:
             "molecular weight (in g/mol)": compound['molecular_weight'],
             "eq": 1.0,  # Default to 1.0 equivalents
             "syringe": 1,  # Default syringe number
+            "_reagent_type": reagent_type  # Add explicit type marking
         }
         
         # Add density for liquids (from PubChem if available, otherwise default)
+        has_density = False
+        warning_message = None
+        
         if reagent_type == "liquid":
             if compound.get('density') and compound['density'] > 0:
                 new_reagent["density (in g/mL)"] = compound['density']
+                has_density = True
             else:
                 new_reagent["density (in g/mL)"] = 1.0
+                # Set warning message for liquid with no density
+                warning_message = "No density value found in PubChem, using default (1.0 g/mL). Please change this accordingly!"
         
         # Create a new form with the compound data
         form = ReagentFormHandler.create_reagent_form(
             reagent_type, 
             reagent=new_reagent,
-            on_save=self.save_reagent,
-            on_lookup=self.lookup_chemical
+            on_save=lambda new, old=None: self.save_reagent(new, old, specified_type=reagent_type),
+            on_lookup=self.lookup_chemical,
+            warning_message=warning_message  # Pass warning message to form
         )
         
         # Replace the existing form with a new tuple
@@ -381,15 +444,17 @@ class ReagentInputForm:
         new_children[accordion_index] = form
         accordion.children = tuple(new_children)
         
-        # Display success message
-        density_message = ""
+        # Display success message - simplified to avoid redundant density warning
         if reagent_type == "liquid":
-            if compound.get('density') and compound['density'] > 0:
+            if has_density:
                 density_message = f" Density value ({compound['density']} g/mL) retrieved from PubChem."
+                self.search_status.value = f"<p style='color: green;'>Data imported as {reagent_type}.{density_message} Please complete any remaining fields.</p>"
             else:
-                density_message = " No density value found in PubChem, using default (1.0 g/mL)."
-                
-        self.search_status.value = f"<p style='color: green;'>Data imported as {reagent_type}.{density_message} Please complete any remaining fields.</p>"
+                # Simplified message without the density warning (now shown in the form instead)
+                self.search_status.value = f"<p style='color: green;'>Data imported as {reagent_type}. Please complete any remaining fields.</p>"
+        else:
+            # Normal message for solids
+            self.search_status.value = f"<p style='color: green;'>Data imported as {reagent_type}. Please complete any remaining fields.</p>"
 
     def process_final_details(self, mass_scale, concentration, solvent, message_area):
         """Process the final details and submit the data."""
@@ -424,6 +489,20 @@ class ReagentInputForm:
             # Display error message
             message_area.value = f"<p style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'>Error: {str(e)}</p>"
             return False
+
+    def refresh_final_details_tab(self):
+        """Refresh the final details tab with current data."""
+        # Create a new final details form with the latest data
+        new_form = FinalDetailsFormHandler.create_final_details_form(
+            self.data_manager.data,
+            on_submit=self.process_final_details
+        )
+        
+        # Replace the existing form
+        self.final_details_tab.children = (
+            widgets.HTML("<h4>Final Details and Submission</h4>"),
+            new_form
+        )
 
     def run(self) -> None:
         """Run the application."""

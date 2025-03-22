@@ -1,6 +1,6 @@
 """Form handlers for reagent entry forms."""
 import ipywidgets as widgets
-from typing import Dict, Any, Optional, Callable, List, Tuple
+from typing import Dict, Any, Optional, Callable
 from .StructureVisualization import StructureVisualizer
 from mechwolf.DataEntry.ReagentUI.utils import validate_reagent_data
 
@@ -11,7 +11,8 @@ class ReagentFormHandler:
     def create_reagent_form(reagent_type: str, 
                            reagent: Optional[Dict[str, Any]] = None,
                            on_save: Callable = None,
-                           on_lookup: Callable = None) -> widgets.Widget:
+                           on_lookup: Callable = None,
+                           warning_message: str = None) -> widgets.Widget:
         """
         Create a form for adding or editing a reagent.
         
@@ -25,6 +26,8 @@ class ReagentFormHandler:
             Callback for save button
         on_lookup : callable
             Callback for lookup button
+        warning_message : str, optional
+            Warning message to display in the form
             
         Returns:
         --------
@@ -41,6 +44,17 @@ class ReagentFormHandler:
         
         # Error message area
         error_area = widgets.HTML("")
+        
+        # Warning message area (if provided)
+        warning_area = widgets.HTML("")
+        if warning_message and reagent_type == "liquid":
+            warning_area.value = f"""
+            <div style='color: red; font-weight: bold; background-color: #FFEEEE; 
+                        padding: 8px; margin: 10px 0; border-radius: 4px; 
+                        border: 1px solid #FFD2D2;'>
+              Warning: {warning_message}
+            </div>
+            """
         
         # Create input fields with validation styles
         name_input = widgets.Text(
@@ -149,9 +163,17 @@ class ReagentFormHandler:
                 description="Density (g/mL):",
                 layout=widgets.Layout(width="80%")
             )
-            density_tooltip = widgets.HTML(
-                "<span style='font-size: 0.8em; color: #666;'>Required for liquids: Must be > 0</span>"
-            )
+            
+            # Add more noticeable styling if there's a warning
+            if warning_message:
+                density_input.layout.border = "2px solid red"
+                density_tooltip = widgets.HTML(
+                    "<span style='font-size: 0.8em; color: red; font-weight: bold;'>Required for liquids: Please update this value!</span>"
+                )
+            else:
+                density_tooltip = widgets.HTML(
+                    "<span style='font-size: 0.8em; color: #666;'>Required for liquids: Must be > 0</span>"
+                )
         
         # Create save button
         save_button = widgets.Button(
@@ -164,14 +186,21 @@ class ReagentFormHandler:
         # Create form fields list with tooltips
         form_fields = [
             form_title,
-            error_area,
+            error_area
+        ]
+        
+        # Add warning area if there's a warning message
+        if warning_message and reagent_type == "liquid":
+            form_fields.append(warning_area)
+            
+        form_fields.extend([
             widgets.VBox([name_input, name_tooltip]),
             widgets.VBox([inchi_input, inchi_tooltip]),
             widgets.VBox([smiles_input, smiles_tooltip]),
             widgets.VBox([inchikey_input, inchikey_tooltip]),
             widgets.VBox([mw_input, mw_tooltip]),
             widgets.VBox([eq_input, eq_tooltip])
-        ]
+        ])
         
         if density_input and density_tooltip:
             form_fields.append(widgets.VBox([density_input, density_tooltip]))
@@ -190,7 +219,8 @@ class ReagentFormHandler:
             padding="10px"
         )))
         
-        form_fields.append(widgets.HBox([save_button]))
+        # Just add the save button (removed debug button)
+        form_fields.append(save_button)
         
         # Create form container with color coding
         form = widgets.VBox(
@@ -241,23 +271,34 @@ class ReagentFormHandler:
                     error_area.value = error_html
                     return
                 
-                # Call the save callback with the new reagent and old reagent (if editing)
-                success = on_save(new_reagent, reagent)
-                
-                if success:
-                    # Show success message
-                    error_area.value = "<div style='color: green; padding: 10px; background-color: #EEFFEE; border-radius: 5px; margin-bottom: 10px;'><b>Reagent saved successfully!</b></div>"
+                try:
+                    # Clear any existing error message
+                    error_area.value = ""
                     
-                    # Clear the form inputs for next entry
-                    name_input.value = ""
-                    inchi_input.value = ""
-                    smiles_input.value = ""
-                    inchikey_input.value = ""
-                    mw_input.value = 0
-                    eq_input.value = 0
-                    syringe_input.value = 0
-                    if density_input:
-                        density_input.value = 0
+                    # Call the save callback with the new reagent and old reagent (if editing)
+                    success = on_save(new_reagent, reagent)
+                    
+                    if success:
+                        # Show success message
+                        error_area.value = "<div style='color: green; padding: 10px; background-color: #EEFFEE; border-radius: 5px; margin-bottom: 10px;'><b>Reagent saved successfully!</b></div>"
+                        
+                        # Avoid clearing the form when editing (only clear for new entries)
+                        if not reagent:  # Only clear if this is a new entry (not editing)
+                            name_input.value = ""
+                            inchi_input.value = ""
+                            smiles_input.value = ""
+                            inchikey_input.value = ""
+                            mw_input.value = 0
+                            eq_input.value = 0
+                            syringe_input.value = 0
+                            if density_input:
+                                density_input.value = 0
+                    else:
+                        error_area.value = "<div style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px; margin-bottom: 10px;'><b>Failed to save reagent. Check console for errors.</b></div>"
+                except Exception as e:
+                    error_area.value = f"<div style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px; margin-bottom: 10px;'><b>Error: {str(e)}</b></div>"
+                    import traceback
+                    traceback.print_exc()
             
             save_button.on_click(validate_and_save)
         

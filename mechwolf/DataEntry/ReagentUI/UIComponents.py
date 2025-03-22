@@ -1,6 +1,6 @@
 """UI components for reagent entry forms."""
 import ipywidgets as widgets
-from typing import Dict, Any, Callable, Optional, List
+from typing import Dict, Any, Callable
 from .StructureVisualization import StructureVisualizer
 
 class UIComponents:

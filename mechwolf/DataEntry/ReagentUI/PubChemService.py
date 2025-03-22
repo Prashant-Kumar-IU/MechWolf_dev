@@ -101,13 +101,10 @@ class PubChemService:
             return results
             
         except requests.exceptions.Timeout:
-            print("PubChem search timed out. Please try again later.")
             return []
         except requests.exceptions.RequestException as e:
-            print(f"Network error during PubChem search: {e}")
             return []
         except Exception as e:
-            print(f"PubChem search error: {e}")
             return []
             
     def get_density(self, cid: str) -> Optional[float]:
@@ -201,5 +198,4 @@ class PubChemService:
             return None
             
         except Exception as e:
-            print(f"Error retrieving density: {e}")
             return None
