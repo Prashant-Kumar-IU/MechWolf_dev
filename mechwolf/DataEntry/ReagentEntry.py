@@ -1,18 +1,55 @@
 import json
 import ipywidgets as widgets
 from IPython.display import display, clear_output, Image
-from mechwolf.DataEntry.ProcessData import process_data
+from mechwolf.DataEntry.Reagents.ProcessData import process_data
+from mechwolf.DataEntry.Reagents.utils import validate_smiles  # Import the validation function
 from typing import Dict, Any, Optional, List, Callable, Union
 import requests
 import io
 import base64
+import sys
+import os
+from contextlib import contextmanager
 from PIL import Image as PILImage
+
+# Context manager to suppress stdout/stderr
+@contextmanager
+def suppress_stderr():
+    # Save the original stderr
+    old_stderr = sys.stderr
+    # Redirect stderr to devnull
+    sys.stderr = open(os.devnull, 'w')
+    try:
+        yield
+    finally:
+        # Restore stderr
+        sys.stderr.close()
+        sys.stderr = old_stderr
+
 try:
     from rdkit import Chem
     from rdkit.Chem import Draw
+    from rdkit import RDLogger
+    # Disable RDKit logging as much as possible
+    RDLogger.DisableLog('rdApp')
+    RDLogger.DisableLog('rdKit')
     rdkit_available = True
 except ImportError:
     rdkit_available = False
+
+# Create a safe version of MolFromSmiles to suppress errors
+def safe_mol_from_smiles(smiles):
+    with suppress_stderr():
+        try:
+            mol = Chem.MolFromSmiles(smiles, sanitize=False)
+            if mol is not None:
+                try:
+                    Chem.SanitizeMol(mol)
+                except:
+                    pass
+            return mol
+        except:
+            return None
 
 class ReagentInputForm:
     def __init__(self, data_file: str) -> None:
@@ -226,15 +263,16 @@ class ReagentInputForm:
                 
             try:
                 with structure_area:
-                    mol = Chem.MolFromSmiles(smiles)
+                    # Use safe_mol_from_smiles to avoid error messages
+                    mol = safe_mol_from_smiles(smiles)
                     if mol:
                         img = Draw.MolToImage(mol, size=(180, 180))
                         display(img)
                     else:
-                        print("Invalid SMILES")
-            except Exception as e:
+                        print("Could not render structure. Please check SMILES format.")
+            except Exception:
                 with structure_area:
-                    print(f"Error: {e}")
+                    print("Could not render structure. Please check SMILES format.")
         
         # Connect update to SMILES field
         smiles_input.observe(update_structure, names='value')
@@ -509,7 +547,7 @@ class ReagentInputForm:
                 
                 # Process the fresh data to ensure the table shows the latest information
                 from importlib import reload
-                from mechwolf.DataEntry import ProcessData
+                from mechwolf.DataEntry.Reagents import ProcessData
                 reload(ProcessData)  # Reload the module to avoid any caching issues
                 ProcessData.process_data(self.data_file)
                 
@@ -617,6 +655,11 @@ class ReagentInputForm:
             return self.pubchem_cache[cache_key]
         
         try:
+            # Validate input before sending to PubChem
+            if search_type == 'smiles' and not validate_smiles(query):
+                # Silently fail instead of printing
+                return []
+            
             # Map search type to PubChem's input types
             input_type = {
                 'name': 'name',
@@ -633,8 +676,8 @@ class ReagentInputForm:
             else:
                 url = f"{base_url}/compound/{input_type}/{query}/cids/JSON"
             
-            # Get compound IDs
-            response = requests.get(url)
+            # Get compound IDs with timeout and error handling
+            response = requests.get(url, timeout=10)
             response.raise_for_status()
             
             data = response.json()
@@ -648,10 +691,18 @@ class ReagentInputForm:
             for cid in cids:
                 # Get properties
                 prop_url = f"{base_url}/compound/cid/{cid}/property/IUPACName,MolecularFormula,MolecularWeight,InChI,InChIKey,CanonicalSMILES/JSON"
-                prop_response = requests.get(prop_url)
+                prop_response = requests.get(prop_url, timeout=10)
                 prop_response.raise_for_status()
                 
                 props = prop_response.json()['PropertyTable']['Properties'][0]
+                
+                # Validate SMILES before including in result
+                smiles = props.get('CanonicalSMILES', '')
+                if rdkit_available and smiles:
+                    # Use safe mol creation that doesn't print errors
+                    with suppress_stderr():
+                        if not safe_mol_from_smiles(smiles):
+                            smiles = ''  # Invalid SMILES, clear it
                 
                 # Create result object
                 compound = {
@@ -661,7 +712,7 @@ class ReagentInputForm:
                     'molecular_weight': float(props.get('MolecularWeight', 0)),
                     'inchi': props.get('InChI', ''),
                     'inchikey': props.get('InChIKey', ''),
-                    'smiles': props.get('CanonicalSMILES', '')
+                    'smiles': smiles
                 }
                 
                 results.append(compound)
@@ -670,17 +721,24 @@ class ReagentInputForm:
             self.pubchem_cache[cache_key] = results
             return results
             
+        except requests.exceptions.Timeout:
+            print("PubChem search timed out. Please try again later.")
+            return []
+        except requests.exceptions.RequestException as e:
+            print(f"Network error during PubChem search: {e}")
+            return []
         except Exception as e:
             print(f"PubChem search error: {e}")
             return []
-    
+
     def create_search_result_widget(self, compound: Dict[str, Any]) -> widgets.Widget:
         """Create a widget to display a search result with import button."""
         # Generate structure image if RDKit is available
         structure_img = None
         if rdkit_available and compound['smiles']:
             try:
-                mol = Chem.MolFromSmiles(compound['smiles'])
+                # Use safe_mol_from_smiles to avoid error messages
+                mol = safe_mol_from_smiles(compound['smiles'])
                 if mol:
                     img = Draw.MolToImage(mol, size=(150, 150))
                     
@@ -695,8 +753,9 @@ class ReagentInputForm:
                         width=150,
                         height=150
                     )
-            except Exception as e:
-                print(f"Error rendering structure: {e}")
+            except Exception:
+                # Silently fail without error messages
+                pass
         
         # Create info widget
         info_html = f"""
@@ -836,7 +895,9 @@ class ReagentInputForm:
         structure_widget = None
         if rdkit_available and reagent["SMILES"]:
             try:
-                mol = Chem.MolFromSmiles(reagent["SMILES"])
+                # Use safe_mol_from_smiles function to avoid error messages
+                smiles = reagent["SMILES"]
+                mol = safe_mol_from_smiles(smiles)
                 if mol:
                     img = Draw.MolToImage(mol, size=(120, 120))
                     
@@ -851,8 +912,9 @@ class ReagentInputForm:
                         width=120,
                         height=120
                     )
-            except Exception as e:
-                print(f"Error rendering structure: {e}")
+            except Exception:
+                # Silently fail without error messages
+                pass
         
         # Style for reagent item
         item_style = f"""
@@ -976,11 +1038,43 @@ class ReagentInputForm:
 
     def edit_reagent(self, reagent: Dict[str, Any]) -> None:
         """Open the form to edit an existing reagent."""
+        # Determine reagent type
         reagent_type = "solid" if reagent in self.data["solid reagents"] else "liquid"
-        self.show_reagent_form(reagent_type, reagent)
         
         # Switch to the Add Reagents tab
         self.tab_container.selected_index = 0
+        
+        # Select the appropriate accordion section
+        accordion_index = 0 if reagent_type == "solid" else 1
+        accordion = self.add_reagents_tab.children[1]  # Get the accordion widget
+        accordion.selected_index = accordion_index
+        
+        # Get the form
+        form = accordion.children[accordion_index]
+        
+        # Find and update the input widgets within the form
+        for child in form.children:
+            if isinstance(child, widgets.VBox):
+                for input_child in child.children:
+                    if isinstance(input_child, widgets.Text) or isinstance(input_child, widgets.FloatText) or isinstance(input_child, widgets.IntText):
+                        # Set values based on input description
+                        if hasattr(input_child, 'description'):
+                            if input_child.description == "Name:":
+                                input_child.value = reagent['name']
+                            elif input_child.description == "InChi:":
+                                input_child.value = reagent['inChi']
+                            elif input_child.description == "SMILES:":
+                                input_child.value = reagent['SMILES']
+                            elif input_child.description == "InChi Key:":
+                                input_child.value = reagent['inChi Key']
+                            elif input_child.description == "MW (g/mol):":
+                                input_child.value = reagent['molecular weight (in g/mol)']
+                            elif input_child.description == "Equivalents:":
+                                input_child.value = reagent['eq']
+                            elif input_child.description == "Syringe:":
+                                input_child.value = reagent['syringe']
+                            elif input_child.description == "Density (g/mL):" and reagent_type == "liquid":
+                                input_child.value = reagent['density (in g/mL)']
 
     def clear_form_area(self) -> None:
         """Clear any forms from the form area."""
@@ -994,7 +1088,7 @@ class ReagentInputForm:
             self.setup_ui()
         else:
             # First show the current data as a table
-            from mechwolf.DataEntry import ProcessData
+            from mechwolf.DataEntry.Reagents import ProcessData
             ProcessData.process_data(self.data_file)
             
             # Then ask if user wants to edit or proceed
