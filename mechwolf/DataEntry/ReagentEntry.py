@@ -441,16 +441,11 @@ class ReagentInputForm:
         accordion.children = tuple(new_children)
         
         # Display success message - simplified to avoid redundant density warning
-        if reagent_type == "liquid":
-            if has_density:
-                density_message = f" Density value ({compound['density']} g/mL) retrieved from PubChem."
-                self.search_status.value = f"<p style='color: green;'>Data imported as {reagent_type}.{density_message} Please complete any remaining fields.</p>"
-            else:
-                # Simplified message without the density warning (now shown in the form instead)
-                self.search_status.value = f"<p style='color: green;'>Data imported as {reagent_type}. Please complete any remaining fields.</p>"
-        else:
-            # Normal message for solids
-            self.search_status.value = f"<p style='color: green;'>Data imported as {reagent_type}. Please complete any remaining fields.</p>"
+        success_message = f"<p style='color: green;'>Data imported as {reagent_type}."
+        if reagent_type == "liquid" and has_density:
+            success_message += f" Density value ({compound['density']} g/mL) retrieved from PubChem."
+        success_message += " Please complete any remaining fields.</p>"
+        self.search_status.value = success_message
 
     def process_final_details(self, mass_scale, concentration, solvent, message_area):
         """Process the final details and submit the data."""

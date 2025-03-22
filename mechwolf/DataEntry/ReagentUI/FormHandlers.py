@@ -8,6 +8,41 @@ class ReagentFormHandler:
     """Handler for reagent entry forms."""
     
     @staticmethod
+    def create_form_field(
+        widget: widgets.Widget, 
+        tooltip_text: str, 
+        error_style: bool = False
+    ) -> widgets.VBox:
+        """
+        Create a form field with tooltip.
+        
+        Parameters:
+        -----------
+        widget : widgets.Widget
+            Input widget
+        tooltip_text : str
+            Text for tooltip
+        error_style : bool
+            Whether to style the tooltip as an error
+            
+        Returns:
+        --------
+        widgets.VBox
+            Container with widget and tooltip
+        """
+        tooltip_color = "red" if error_style else "#666"
+        tooltip_weight = "bold" if error_style else "normal"
+        
+        tooltip = widgets.HTML(
+            f"<span style='font-size: 0.8em; color: {tooltip_color}; font-weight: {tooltip_weight};'>{tooltip_text}</span>"
+        )
+        
+        if error_style:
+            widget.layout.border = "2px solid red"
+            
+        return widgets.VBox([widget, tooltip])
+    
+    @staticmethod
     def create_reagent_form(reagent_type: str, 
                            reagent: Optional[Dict[str, Any]] = None,
                            on_save: Callable = None,
@@ -31,10 +66,6 @@ class ReagentFormHandler:
         ipywidgets.Widget
             Form widget
         """
-        # Initialize these variables to None to avoid NameError
-        density_input = None
-        density_tooltip = None
-        
         # Set background color based on reagent type
         bg_color = "#F0F7F4" if reagent_type == "solid" else "#EFF7FF"
         
@@ -63,17 +94,11 @@ class ReagentFormHandler:
             description="Name:",
             layout=widgets.Layout(width="80%")
         )
-        name_tooltip = widgets.HTML(
-            "<span style='font-size: 0.8em; color: #666;'>Required: Chemical name</span>"
-        )
         
         inchi_input = widgets.Text(
             value=reagent["inChi"] if reagent else "",
             description="InChi:",
             layout=widgets.Layout(width="80%")
-        )
-        inchi_tooltip = widgets.HTML(
-            "<span style='font-size: 0.8em; color: #666;'>Example: InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3</span>"
         )
         
         smiles_input = widgets.Text(
@@ -81,17 +106,11 @@ class ReagentFormHandler:
             description="SMILES:",
             layout=widgets.Layout(width="80%")
         )
-        smiles_tooltip = widgets.HTML(
-            "<span style='font-size: 0.8em; color: #666;'>Example: CCO (ethanol)</span>"
-        )
         
         inchikey_input = widgets.Text(
             value=reagent["inChi Key"] if reagent else "",
             description="InChi Key:",
             layout=widgets.Layout(width="80%")
-        )
-        inchikey_tooltip = widgets.HTML(
-            "<span style='font-size: 0.8em; color: #666;'>Example: LFQSCWFLJHTTHZ-UHFFFAOYSA-N</span>"
         )
         
         mw_input = widgets.FloatText(
@@ -99,17 +118,11 @@ class ReagentFormHandler:
             description="MW (g/mol):",
             layout=widgets.Layout(width="80%")
         )
-        mw_tooltip = widgets.HTML(
-            "<span style='font-size: 0.8em; color: #666;'>Required: Must be > 0</span>"
-        )
         
         eq_input = widgets.FloatText(
             value=reagent["eq"] if reagent else 0,
             description="Equivalents:",
             layout=widgets.Layout(width="80%")
-        )
-        eq_tooltip = widgets.HTML(
-            "<span style='font-size: 0.8em; color: #666;'>Required: Must be > 0. Set to 1.0 for limiting reagent.</span>"
         )
         
         syringe_input = widgets.IntText(
@@ -117,9 +130,50 @@ class ReagentFormHandler:
             description="Syringe:",
             layout=widgets.Layout(width="80%")
         )
-        syringe_tooltip = widgets.HTML(
-            "<span style='font-size: 0.8em; color: #666;'>Required: Must be > 0</span>"
-        )
+        
+        # Create form fields with tooltips using the helper method
+        form_fields = [
+            form_title,
+            error_area
+        ]
+        
+        # Add warning area if there's a warning message
+        if warning_message and reagent_type == "liquid":
+            form_fields.append(warning_area)
+            
+        # Add standard form fields with tooltips
+        form_fields.extend([
+            ReagentFormHandler.create_form_field(
+                name_input, "Required: Chemical name"),
+            ReagentFormHandler.create_form_field(
+                inchi_input, "Example: InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"),
+            ReagentFormHandler.create_form_field(
+                smiles_input, "Example: O=C[C@@H]([C@H]([C@@H]([C@@H](CO)O)O)O)O (glucose)"),
+            ReagentFormHandler.create_form_field(
+                inchikey_input, "Example: LFQSCWFLJHTTHZ-UHFFFAOYSA-N"),
+            ReagentFormHandler.create_form_field(
+                mw_input, "Required: Must be > 0"),
+            ReagentFormHandler.create_form_field(
+                eq_input, "Required: Must be > 0. Set to 1.0 for limiting reagent."),
+            ReagentFormHandler.create_form_field(
+                syringe_input, "Required: Must be > 0")
+        ])
+        
+        # Add density field for liquid reagents
+        if reagent_type == "liquid":
+            density_input = widgets.FloatText(
+                value=reagent["density (in g/mL)"] if reagent else 0,
+                description="Density (g/mL):",
+                layout=widgets.Layout(width="80%")
+            )
+            
+            # Add density field with appropriate styling based on warning status
+            density_tooltip = "Required for liquids: Please update this value!" if warning_message else "Required for liquids: Must be > 0"
+            form_fields.append(
+                ReagentFormHandler.create_form_field(
+                    density_input, density_tooltip, error_style=bool(warning_message)
+                )
+            )
         
         # Add structure visualization area
         structure_area = widgets.Output(
@@ -143,59 +197,6 @@ class ReagentFormHandler:
         # Connect update to SMILES field
         smiles_input.observe(update_structure, names='value')
         
-        # Add density field for liquid reagents
-        if reagent_type == "liquid":
-            density_input = widgets.FloatText(
-                value=reagent["density (in g/mL)"] if reagent else 0,
-                description="Density (g/mL):",
-                layout=widgets.Layout(width="80%")
-            )
-            
-            # Add more noticeable styling if there's a warning
-            if warning_message:
-                density_input.layout.border = "2px solid red"
-                density_tooltip = widgets.HTML(
-                    "<span style='font-size: 0.8em; color: red; font-weight: bold;'>Required for liquids: Please update this value!</span>"
-                )
-            else:
-                density_tooltip = widgets.HTML(
-                    "<span style='font-size: 0.8em; color: #666;'>Required for liquids: Must be > 0</span>"
-                )
-        
-        # Create save button
-        save_button = widgets.Button(
-            description="Save Reagent",
-            button_style="success",
-            layout=widgets.Layout(width="auto"),
-            style={"button_color": "#3F704D" if reagent_type == "solid" else "#3A5D9F"}
-        )
-        
-        # Remove the lookup button as it's redundant with the search tab functionality
-        
-        # Add structure visualization to form fields
-        form_fields = [
-            form_title,
-            error_area
-        ]
-        
-        # Add warning area if there's a warning message
-        if warning_message and reagent_type == "liquid":
-            form_fields.append(warning_area)
-            
-        form_fields.extend([
-            widgets.VBox([name_input, name_tooltip]),
-            widgets.VBox([inchi_input, inchi_tooltip]),
-            widgets.VBox([smiles_input, smiles_tooltip]),
-            widgets.VBox([inchikey_input, inchikey_tooltip]),
-            widgets.VBox([mw_input, mw_tooltip]),
-            widgets.VBox([eq_input, eq_tooltip])
-        ])
-        
-        if density_input and density_tooltip:
-            form_fields.append(widgets.VBox([density_input, density_tooltip]))
-            
-        form_fields.append(widgets.VBox([syringe_input, syringe_tooltip]))
-        
         # Add structure visualization
         form_fields.append(widgets.VBox([
             widgets.HTML("<h4>Structure Preview</h4>"),
@@ -206,6 +207,14 @@ class ReagentFormHandler:
             margin="10px 0",
             padding="10px"
         )))
+        
+        # Create save button
+        save_button = widgets.Button(
+            description="Save Reagent",
+            button_style="success",
+            layout=widgets.Layout(width="auto"),
+            style={"button_color": "#3F704D" if reagent_type == "solid" else "#3A5D9F"}
+        )
         
         # Just add the save button (removed debug button)
         form_fields.append(save_button)
@@ -240,7 +249,7 @@ class ReagentFormHandler:
                 }
                 
                 # Add density for liquid reagents
-                if reagent_type == "liquid" and density_input:
+                if reagent_type == "liquid" and 'density_input' in locals():
                     new_reagent["density (in g/mL)"] = density_input.value
                 
                 # Validate data
@@ -279,7 +288,7 @@ class ReagentFormHandler:
                             mw_input.value = 0
                             eq_input.value = 0
                             syringe_input.value = 0
-                            if density_input:
+                            if reagent_type == "liquid" and 'density_input' in locals():
                                 density_input.value = 0
                     else:
                         error_area.value = "<div style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px; margin-bottom: 10px;'><b>Failed to save reagent. Check console for errors.</b></div>"
