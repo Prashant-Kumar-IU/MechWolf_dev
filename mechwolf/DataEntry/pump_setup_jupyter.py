@@ -1,4 +1,3 @@
-import os
 import ipywidgets as widgets
 from IPython.display import display, clear_output
 from .SerialPortViewer import SerialPortViewer
@@ -172,7 +171,7 @@ class PumpCodeGenerator:
     def show_serial_ports(self, _):
         """Display available serial ports"""
         with self.serial_ports_output:
-            clear_output()
+            clear_output(wait=True)  # Use wait parameter for compatibility
             print("Scanning for available serial ports...")
             # Redirect stdout to capture the output from SerialPortViewer
             import io
@@ -197,31 +196,30 @@ class PumpCodeGenerator:
     
     def display_ui(self):
         """Display the user interface"""
-        display(self.header)
-        
-        # Pump configuration section
-        config_section = widgets.VBox([
-            widgets.HTML("<h3>Configure Pump</h3>"),
-            self.pump_type_dropdown,
-            self.param_box,
-            self.add_pump_button
+        # Create a single container for all UI elements for better compatibility
+        ui_container = widgets.VBox([
+            self.header,
+            # Pump configuration section
+            widgets.VBox([
+                widgets.HTML("<h3>Configure Pump</h3>"),
+                self.pump_type_dropdown,
+                self.param_box,
+                self.add_pump_button
+            ]),
+            # Pump list section
+            widgets.VBox([
+                widgets.HTML("<h3>Configured Pumps</h3>"),
+                self.pump_list_output
+            ]),
+            # Code generation section
+            widgets.VBox([
+                widgets.HTML("<h3>Generated Code</h3>"),
+                widgets.HBox([self.generate_code_button, self.clear_all_button]),
+                self.code_output
+            ])
         ])
-        display(config_section)
         
-        # Pump list section
-        pump_list_section = widgets.VBox([
-            widgets.HTML("<h3>Configured Pumps</h3>"),
-            self.pump_list_output
-        ])
-        display(pump_list_section)
-        
-        # Code generation section
-        code_section = widgets.VBox([
-            widgets.HTML("<h3>Generated Code</h3>"),
-            widgets.HBox([self.generate_code_button, self.clear_all_button]),
-            self.code_output
-        ])
-        display(code_section)
+        display(ui_container)
     
     def add_pump(self, _):
         """Add a pump with the current configuration to the list"""
@@ -258,7 +256,7 @@ class PumpCodeGenerator:
     def update_pump_list(self):
         """Update the pump list display"""
         with self.pump_list_output:
-            clear_output()
+            clear_output(wait=True)  # Use wait parameter for compatibility
             
             if not self.pumps:
                 print("No pumps configured yet. Add pumps using the form above.")
@@ -315,7 +313,7 @@ class PumpCodeGenerator:
     def generate_code(self, _):
         """Generate Python code for initializing the configured pumps"""
         with self.code_output:
-            clear_output()
+            clear_output(wait=True)  # Use wait parameter for compatibility
             
             if not self.pumps:
                 print("# No pumps configured yet. Add pumps using the form above.")
@@ -385,7 +383,7 @@ class PumpCodeGenerator:
         self.update_pump_list()
         
         with self.code_output:
-            clear_output()
+            clear_output(wait=True)  # Use wait parameter for compatibility
             print("# All pumps cleared. Add new pumps using the form above.")
 
 # Example usage

@@ -14,8 +14,6 @@ def get_notebook_json_name(save_dir: Optional[str] = None) -> Optional[str]:
         import json
         from IPython import get_ipython
         import requests
-        import re
-        import urllib.parse
 
         # Set the save directory to the current working directory if not provided
         if save_dir is None:

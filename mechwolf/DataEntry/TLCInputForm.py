@@ -2,7 +2,6 @@ import ipywidgets as widgets
 from IPython.display import display, clear_output
 from typing import List
 
-
 class TLCInputForm:
     """
     A class to create and manage a TLC (Thin Layer Chromatography) input form using ipywidgets.
@@ -49,17 +48,19 @@ class TLCInputForm:
             if num_spots <= 0:
                 raise ValueError("Please enter a positive number")
 
-            clear_output()
+            # Use wait parameter for compatibility across versions
+            clear_output(wait=True)
 
             # Create headers with bigger font and bold styling
+            # Use HTML styling that works in both v6 and v7
             headers: widgets.HBox = widgets.HBox(
                 [
                     widgets.HTML(
-                        value='<h2 style="font-size: 16px; margin: 0;">Identity of spot</h2>',
+                        value='<div style="font-size: 16px; font-weight: bold; margin: 0;">Identity of spot</div>',
                         layout=widgets.Layout(width="200px"),
                     ),
                     widgets.HTML(
-                        value='<h2 style="font-size: 16px; margin: 0;">Distance from baseline (cm)</h2>',
+                        value='<div style="font-size: 16px; font-weight: bold; margin: 0;">Distance from baseline (cm)</div>',
                         layout=widgets.Layout(width="200px"),
                     ),
                 ],
@@ -90,12 +91,12 @@ class TLCInputForm:
             solvent_distance: widgets.VBox = widgets.VBox(
                 [
                     widgets.HTML(
-                        value='<h2 style="font-size: 16px; margin: 5;">Distance travelled by solvent front (cm)</h2>',
-                        layout=widgets.Layout(width="200px"),
+                        value='<div style="font-size: 16px; font-weight: bold; margin: 5px 0;">Distance travelled by solvent front (cm)</div>',
+                        layout=widgets.Layout(width="300px"),
                     ),
                     widgets.FloatText(layout=widgets.Layout(width="200px")),
                 ],
-                layout=widgets.Layout(margin="0px 0 20px 0"),
+                layout=widgets.Layout(margin="10px 0 20px 0"),
             )  # Add top margin for spacing
 
             calc_button: widgets.Button = widgets.Button(
@@ -108,7 +109,7 @@ class TLCInputForm:
 
             def on_calculate(b: widgets.Button) -> None:
                 with result_output:
-                    clear_output()
+                    clear_output(wait=True)
                     try:
                         solvent_dist: float = solvent_distance.children[1].value
                         if solvent_dist == 0:
@@ -126,17 +127,19 @@ class TLCInputForm:
 
             calc_button.on_click(on_calculate)
 
-            display(
-                widgets.VBox(
-                    [
-                        headers,
-                        widgets.VBox(inputs),
-                        solvent_distance,
-                        calc_button,
-                        result_output,
-                    ]
-                )
+            # Use a slightly different display approach for v7
+            form_container = widgets.VBox(
+                [
+                    headers,
+                    widgets.VBox(inputs),
+                    solvent_distance,
+                    calc_button,
+                    result_output,
+                ]
             )
+            
+            # Make sure display works properly in both versions
+            display(form_container)
 
         except Exception as e:
             print(f"Error: {e}")
