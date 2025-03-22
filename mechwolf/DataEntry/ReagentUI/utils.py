@@ -110,3 +110,92 @@ def try_sanitize_smiles(smiles_string):
             sanitized = sanitized[:indices[0]] + sanitized[indices[0]+1:]
     
     return sanitized if validate_smiles(sanitized) else ""
+
+# Add new utility functions for RDKit operations
+def safe_mol_from_smiles(smiles):
+    """
+    Create a molecule from SMILES with error suppression.
+    
+    Parameters:
+    -----------
+    smiles : str
+        The SMILES string to convert
+        
+    Returns:
+    --------
+    RDKit.Chem.Mol or None
+        Molecule object if successful, None otherwise
+    """
+    try:
+        from rdkit import Chem
+        from rdkit import RDLogger
+        # Disable RDKit logging
+        RDLogger.DisableLog('rdApp')
+        
+        with suppress_stderr():
+            mol = Chem.MolFromSmiles(smiles, sanitize=False)
+            if mol is not None:
+                try:
+                    Chem.SanitizeMol(mol)
+                except:
+                    pass
+            return mol
+    except ImportError:
+        return None
+    except:
+        return None
+
+def is_rdkit_available():
+    """
+    Check if RDKit is available in the environment.
+    
+    Returns:
+    --------
+    bool
+        True if RDKit is available, False otherwise
+    """
+    try:
+        import rdkit
+        return True
+    except ImportError:
+        return False
+
+def validate_reagent_data(data, reagent_type):
+    """
+    Validate reagent data and return a dictionary of errors.
+    
+    Parameters:
+    -----------
+    data : dict
+        Dictionary containing reagent data
+    reagent_type : str
+        Type of reagent ('solid' or 'liquid')
+        
+    Returns:
+    --------
+    dict
+        Dictionary of validation errors, empty if valid
+    """
+    errors = {}
+    
+    # Name validation
+    if not data.get("name") or data["name"].strip() == "":
+        errors["name"] = "Name is required"
+    
+    # Equivalents validation
+    if data.get("eq", 0) <= 0:
+        errors["eq"] = "Equivalents must be greater than 0"
+        
+    # Molecular weight validation
+    if data.get("molecular weight (in g/mol)", 0) <= 0:
+        errors["mw"] = "Molecular weight must be greater than 0"
+    
+    # Density validation for liquids
+    if reagent_type == "liquid" and data.get("density (in g/mL)", 0) <= 0:
+        errors["density"] = "Density must be greater than 0"
+    
+    # Syringe validation - must be an integer > 0
+    if data.get("syringe", 0) <= 0:
+        errors["syringe"] = "Syringe must be greater than 0"
+    
+    return errors
