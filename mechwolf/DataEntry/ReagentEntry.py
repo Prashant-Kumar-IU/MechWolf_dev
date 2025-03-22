@@ -80,49 +80,222 @@ class ReagentInputForm:
         self.update_reagent_list()
     
     def create_add_reagents_tab(self) -> widgets.Widget:
-        """Create the tab content for adding reagents with accordion."""
-        # Create accordion for different reagent types
+        """Create the tab content for adding reagents with forms directly displayed."""
+        # Create an accordion for organizing solid and liquid forms
         reagent_accordion = widgets.Accordion()
         
-        # Create solid reagent form button
-        add_solid_button = widgets.Button(
-            description="Add Solid Reagent",
-            layout=widgets.Layout(width="auto"),
-            style={"button_color": "#90BE6D"}
-        )
-        add_solid_button.on_click(lambda b: self.show_reagent_form("solid"))
+        # Create solid reagent form directly
+        solid_form = self.create_reagent_form("solid")
         
-        # Create liquid reagent form button
-        add_liquid_button = widgets.Button(
-            description="Add Liquid Reagent",
-            layout=widgets.Layout(width="auto"),
-            style={"button_color": "#577590"}
-        )
-        add_liquid_button.on_click(lambda b: self.show_reagent_form("liquid"))
-        
-        # Create containers for buttons
-        solid_form_container = widgets.VBox([add_solid_button])
-        liquid_form_container = widgets.VBox([add_liquid_button])
+        # Create liquid reagent form directly
+        liquid_form = self.create_reagent_form("liquid")
         
         # Set accordion children and titles
-        reagent_accordion.children = [solid_form_container, liquid_form_container]
+        reagent_accordion.children = [solid_form, liquid_form]
         reagent_accordion.set_title(0, "Solid Reagent")
         reagent_accordion.set_title(1, "Liquid Reagent")
         
-        # Create form area for displaying the actual forms
-        self.form_area = widgets.VBox(
+        # Return the complete tab content
+        return widgets.VBox([
+            widgets.HTML("<h4>Add New Reagents</h4>"),
+            reagent_accordion
+        ], layout=widgets.Layout(padding="10px"))
+    
+    def create_reagent_form(self, reagent_type: str, reagent: Optional[Dict[str, Any]] = None) -> widgets.Widget:
+        """Create a form for adding or editing a reagent."""
+        # Set background color based on reagent type
+        bg_color = "#F0F7F4" if reagent_type == "solid" else "#EFF7FF"
+        
+        # Create form widgets
+        form_title = widgets.HTML(
+            f"<h4 style='color: {'#3F704D' if reagent_type == 'solid' else '#3A5D9F'};'>{'Edit' if reagent else 'Add'} {reagent_type.capitalize()} Reagent</h4>"
+        )
+        
+        # Error message area
+        error_area = widgets.HTML("")
+        
+        # Create input fields with validation styles
+        name_input = widgets.Text(
+            value=reagent["name"] if reagent else "",
+            description="Name:",
+            layout=widgets.Layout(width="80%")
+        )
+        name_tooltip = widgets.HTML(
+            "<span style='font-size: 0.8em; color: #666;'>Required: Chemical name</span>"
+        )
+        
+        inchi_input = widgets.Text(
+            value=reagent["inChi"] if reagent else "",
+            description="InChi:",
+            layout=widgets.Layout(width="80%")
+        )
+        inchi_tooltip = widgets.HTML(
+            "<span style='font-size: 0.8em; color: #666;'>Example: InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3</span>"
+        )
+        
+        smiles_input = widgets.Text(
+            value=reagent["SMILES"] if reagent else "",
+            description="SMILES:",
+            layout=widgets.Layout(width="80%")
+        )
+        smiles_tooltip = widgets.HTML(
+            "<span style='font-size: 0.8em; color: #666;'>Example: CCO (ethanol)</span>"
+        )
+        
+        inchikey_input = widgets.Text(
+            value=reagent["inChi Key"] if reagent else "",
+            description="InChi Key:",
+            layout=widgets.Layout(width="80%")
+        )
+        inchikey_tooltip = widgets.HTML(
+            "<span style='font-size: 0.8em; color: #666;'>Example: LFQSCWFLJHTTHZ-UHFFFAOYSA-N</span>"
+        )
+        
+        mw_input = widgets.FloatText(
+            value=reagent["molecular weight (in g/mol)"] if reagent else 0,
+            description="MW (g/mol):",
+            layout=widgets.Layout(width="80%")
+        )
+        mw_tooltip = widgets.HTML(
+            "<span style='font-size: 0.8em; color: #666;'>Required: Must be > 0</span>"
+        )
+        
+        eq_input = widgets.FloatText(
+            value=reagent["eq"] if reagent else 0,
+            description="Equivalents:",
+            layout=widgets.Layout(width="80%")
+        )
+        eq_tooltip = widgets.HTML(
+            "<span style='font-size: 0.8em; color: #666;'>Required: Must be > 0. Set to 1.0 for limiting reagent.</span>"
+        )
+        
+        syringe_input = widgets.IntText(
+            value=reagent["syringe"] if reagent else 0,
+            description="Syringe:",
+            layout=widgets.Layout(width="80%")
+        )
+        syringe_tooltip = widgets.HTML(
+            "<span style='font-size: 0.8em; color: #666;'>Required: Must be > 0</span>"
+        )
+        
+        # Add density field for liquid reagents
+        density_input = None
+        density_tooltip = None
+        form_fields = []
+        
+        if reagent_type == "liquid":
+            density_input = widgets.FloatText(
+                value=reagent["density (in g/mL)"] if reagent else 0,
+                description="Density (g/mL):",
+                layout=widgets.Layout(width="80%")
+            )
+            density_tooltip = widgets.HTML(
+                "<span style='font-size: 0.8em; color: #666;'>Required for liquids: Must be > 0</span>"
+            )
+        
+        # Create save button
+        save_button = widgets.Button(
+            description="Save Reagent",
+            button_style="success",
+            layout=widgets.Layout(width="auto"),
+            style={"button_color": "#3F704D" if reagent_type == "solid" else "#3A5D9F"}
+        )
+        
+        # Create form fields list with tooltips
+        form_fields = [
+            form_title,
+            error_area,
+            widgets.VBox([name_input, name_tooltip]),
+            widgets.VBox([inchi_input, inchi_tooltip]),
+            widgets.VBox([smiles_input, smiles_tooltip]),
+            widgets.VBox([inchikey_input, inchikey_tooltip]),
+            widgets.VBox([mw_input, mw_tooltip]),
+            widgets.VBox([eq_input, eq_tooltip])
+        ]
+        
+        if density_input and density_tooltip:
+            form_fields.append(widgets.VBox([density_input, density_tooltip]))
+            
+        form_fields.append(widgets.VBox([syringe_input, syringe_tooltip]))
+        form_fields.append(widgets.HBox([save_button]))
+        
+        # Create form container with color coding
+        form = widgets.VBox(
+            form_fields,
             layout=widgets.Layout(
-                margin="10px 0 10px 0",
-                min_height="100px"
+                border=f"1px solid {'#90BE6D' if reagent_type == 'solid' else '#577590'}",
+                padding="15px",
+                margin="10px 0",
+                background_color=bg_color
             )
         )
         
-        # Return the complete tab content
-        return widgets.VBox([
-            widgets.HTML("<h4>Add a New Reagent</h4>"),
-            reagent_accordion,
-            self.form_area
-        ], layout=widgets.Layout(padding="10px"))
+        # Validation function
+        def validate_and_save(b):
+            # Collect form data
+            new_reagent = {
+                "name": name_input.value,
+                "inChi": inchi_input.value,
+                "SMILES": smiles_input.value,
+                "inChi Key": inchikey_input.value,
+                "molecular weight (in g/mol)": mw_input.value,
+                "eq": eq_input.value,
+                "syringe": syringe_input.value
+            }
+            
+            # Add density for liquid reagents
+            if reagent_type == "liquid" and density_input:
+                new_reagent["density (in g/mL)"] = density_input.value
+            
+            # Validate data
+            validation_errors = self.validate_reagent(new_reagent, reagent_type)
+            
+            # Reset error displays
+            error_area.value = ""
+            
+            # If errors, show them
+            if validation_errors:
+                error_html = "<div style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px; margin-bottom: 10px;'>"
+                error_html += "<b>Please correct the following errors:</b><ul>"
+                for field, message in validation_errors.items():
+                    error_html += f"<li>{message}</li>"
+                error_html += "</ul></div>"
+                error_area.value = error_html
+                return
+            
+            # Update data structure
+            key = f"{reagent_type} reagents"
+            if reagent:
+                self.data[key].remove(reagent)
+            self.data[key].append(new_reagent)
+            
+            # Save to file
+            self.save_data()
+            
+            # Show success message
+            error_area.value = "<div style='color: green; padding: 10px; background-color: #EEFFEE; border-radius: 5px; margin-bottom: 10px;'><b>Reagent saved successfully!</b></div>"
+            
+            # Clear the form inputs for next entry
+            name_input.value = ""
+            inchi_input.value = ""
+            smiles_input.value = ""
+            inchikey_input.value = ""
+            mw_input.value = 0
+            eq_input.value = 0
+            syringe_input.value = 0
+            if density_input:
+                density_input.value = 0
+            
+            # Update the reagent list
+            self.update_reagent_list()
+            
+            # Switch to Current Reagents tab to show the new reagent
+            self.tab_container.selected_index = 1
+        
+        # Set up button callback
+        save_button.on_click(validate_and_save)
+        
+        return form
     
     def create_current_reagents_tab(self) -> widgets.Widget:
         """Create the tab content for viewing current reagents."""
@@ -143,29 +316,111 @@ class ReagentInputForm:
         ], layout=widgets.Layout(padding="10px"))
     
     def create_final_details_tab(self) -> widgets.Widget:
-        """Create the tab content for entering final details and submission."""
-        # Create a button to show the submission form
-        submit_button = widgets.Button(
-            description="Enter Final Details",
-            button_style="success",
-            layout=widgets.Layout(width="auto"),
-            style={"button_color": "#007F5F"}
-        )
-        submit_button.on_click(self.show_submit_form)
+        """Create the tab content for entering final details with form directly displayed."""
+        # Get existing values if any
+        mass_scale_value = self.data.get("mass scale (in mg)", None)
+        concentration_value = self.data.get("concentration (in mM)", None)
+        solvent_value = self.data.get("solvent", "")
         
-        # Create a container for the final details form
-        self.final_details_form = widgets.VBox(
+        # Create form widgets
+        form_title = widgets.HTML("<h4>Final Details</h4>")
+        
+        mass_scale_input = widgets.FloatText(
+            value=mass_scale_value,
+            description="Mass scale (mg):",
+            layout=widgets.Layout(width="80%")
+        )
+        
+        concentration_input = widgets.FloatText(
+            value=concentration_value,
+            description="Concentration (mM):",
+            layout=widgets.Layout(width="80%")
+        )
+        
+        solvent_input = widgets.Text(
+            value=solvent_value,
+            description="Solvents:",
+            layout=widgets.Layout(width="80%")
+        )
+        
+        submit_button = widgets.Button(
+            description="Process Data",
+            button_style="success",
+            layout=widgets.Layout(width="auto")
+        )
+        
+        # Error/message display area
+        message_area = widgets.HTML("")
+        
+        # Create form container
+        form = widgets.VBox(
+            [
+                form_title,
+                message_area,
+                mass_scale_input,
+                concentration_input,
+                solvent_input,
+                submit_button
+            ],
             layout=widgets.Layout(
-                margin="10px 0 10px 0",
-                min_height="100px"
+                border="1px solid #ddd",
+                padding="10px",
+                margin="10px 0"
             )
         )
+        
+        # Set up button callback
+        def submit_handler(b):
+            try:
+                # Update data with form values
+                self.data["mass scale (in mg)"] = mass_scale_input.value
+                self.data["concentration (in mM)"] = concentration_input.value
+                self.data["solvent"] = solvent_input.value
+                
+                # Validate that at least one reagent has eq=1.0
+                if not any(
+                    abs(reagent["eq"] - 1.0) < 1e-6
+                    for reagent in self.data["solid reagents"] + self.data["liquid reagents"]
+                ):
+                    raise ValueError("At least one reagent must have an equivalent (eq) value of 1.0")
+                
+                # Save data
+                self.save_data()
+                
+                # Remove the form widgets first
+                self.main_container.layout.display = 'none'
+                
+                # Process data without relying on clear_output
+                import IPython.display as display
+                import time
+                
+                # Force a complete reset of output
+                display.clear_output(wait=True)
+                display.display(display.HTML("<h3>Processing Data:</h3>"))
+                
+                # Small delay to ensure file operations complete
+                time.sleep(0.5)
+                
+                # Force reload from disk to get fresh data
+                with open(self.data_file, "r") as f:
+                    fresh_data = json.load(f)
+                
+                # Process the fresh data to ensure the table shows the latest information
+                from importlib import reload
+                from mechwolf.DataEntry import ProcessData
+                reload(ProcessData)  # Reload the module to avoid any caching issues
+                ProcessData.process_data(self.data_file)
+                
+            except ValueError as e:
+                # Display error message
+                message_area.value = f"<p style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'>Error: {str(e)}</p>"
+        
+        submit_button.on_click(submit_handler)
         
         # Return the complete tab content
         return widgets.VBox([
             widgets.HTML("<h4>Final Details and Submission</h4>"),
-            submit_button,
-            self.final_details_form
+            form
         ], layout=widgets.Layout(padding="10px"))
 
     def update_reagent_list(self) -> None:
@@ -288,242 +543,6 @@ class ReagentInputForm:
         
         return errors
 
-    def show_reagent_form(self, reagent_type: str, reagent: Optional[Dict[str, Any]] = None) -> None:
-        """Display a form for adding or editing a reagent with validation."""
-        # Clear any existing form
-        self.clear_form_area()
-        
-        # Set background color based on reagent type
-        bg_color = "#F0F7F4" if reagent_type == "solid" else "#EFF7FF"
-        
-        # Create form widgets
-        form_title = widgets.HTML(
-            f"<h4 style='color: {'#3F704D' if reagent_type == 'solid' else '#3A5D9F'};'>{'Edit' if reagent else 'Add'} {reagent_type.capitalize()} Reagent</h4>"
-        )
-        
-        # Error message area
-        error_area = widgets.HTML("")
-        
-        # Create input fields with validation styles
-        name_input = widgets.Text(
-            value=reagent["name"] if reagent else "",
-            description="Name:",
-            layout=widgets.Layout(width="80%")
-        )
-        name_tooltip = widgets.HTML(
-            "<span style='font-size: 0.8em; color: #666;'>Required: Chemical name</span>"
-        )
-        
-        inchi_input = widgets.Text(
-            value=reagent["inChi"] if reagent else "",
-            description="InChi:",
-            layout=widgets.Layout(width="80%")
-        )
-        inchi_tooltip = widgets.HTML(
-            "<span style='font-size: 0.8em; color: #666;'>Example: InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3</span>"
-        )
-        
-        smiles_input = widgets.Text(
-            value=reagent["SMILES"] if reagent else "",
-            description="SMILES:",
-            layout=widgets.Layout(width="80%")
-        )
-        smiles_tooltip = widgets.HTML(
-            "<span style='font-size: 0.8em; color: #666;'>Example: CCO (ethanol)</span>"
-        )
-        
-        inchikey_input = widgets.Text(
-            value=reagent["inChi Key"] if reagent else "",
-            description="InChi Key:",
-            layout=widgets.Layout(width="80%")
-        )
-        inchikey_tooltip = widgets.HTML(
-            "<span style='font-size: 0.8em; color: #666;'>Example: LFQSCWFLJHTTHZ-UHFFFAOYSA-N</span>"
-        )
-        
-        mw_input = widgets.FloatText(
-            value=reagent["molecular weight (in g/mol)"] if reagent else 0,
-            description="MW (g/mol):",
-            layout=widgets.Layout(width="80%")
-        )
-        mw_tooltip = widgets.HTML(
-            "<span style='font-size: 0.8em; color: #666;'>Required: Must be > 0</span>"
-        )
-        
-        eq_input = widgets.FloatText(
-            value=reagent["eq"] if reagent else 0,
-            description="Equivalents:",
-            layout=widgets.Layout(width="80%")
-        )
-        eq_tooltip = widgets.HTML(
-            "<span style='font-size: 0.8em; color: #666;'>Required: Must be > 0. Set to 1.0 for limiting reagent.</span>"
-        )
-        
-        syringe_input = widgets.IntText(
-            value=reagent["syringe"] if reagent else 0,
-            description="Syringe:",
-            layout=widgets.Layout(width="80%")
-        )
-        syringe_tooltip = widgets.HTML(
-            "<span style='font-size: 0.8em; color: #666;'>Required: Must be > 0</span>"
-        )
-        
-        # Add density field for liquid reagents
-        density_input = None
-        density_tooltip = None
-        if reagent_type == "liquid":
-            density_input = widgets.FloatText(
-                value=reagent["density (in g/mL)"] if reagent else 0,
-                description="Density (g/mL):",
-                layout=widgets.Layout(width="80%")
-            )
-            density_tooltip = widgets.HTML(
-                "<span style='font-size: 0.8em; color: #666;'>Required for liquids: Must be > 0</span>"
-            )
-        
-        # Create buttons
-        save_button = widgets.Button(
-            description="Save Reagent",
-            button_style="success",
-            layout=widgets.Layout(width="auto"),
-            style={"button_color": "#3F704D" if reagent_type == "solid" else "#3A5D9F"}
-        )
-        
-        cancel_button = widgets.Button(
-            description="Cancel",
-            button_style="warning",
-            layout=widgets.Layout(width="auto")
-        )
-        
-        # Function to update field style based on validation
-        def update_field_style(field, has_error):
-            if has_error:
-                field.style = {"description_width": "initial"}
-                field.layout.border = "1px solid red"
-            else:
-                field.style = {}
-                field.layout.border = ""
-        
-        # Create form fields list with tooltips
-        form_fields = [
-            form_title,
-            error_area,
-            widgets.VBox([name_input, name_tooltip]),
-            widgets.VBox([inchi_input, inchi_tooltip]),
-            widgets.VBox([smiles_input, smiles_tooltip]),
-            widgets.VBox([inchikey_input, inchikey_tooltip]),
-            widgets.VBox([mw_input, mw_tooltip]),
-            widgets.VBox([eq_input, eq_tooltip])
-        ]
-        
-        if density_input and density_tooltip:
-            form_fields.append(widgets.VBox([density_input, density_tooltip]))
-            
-        form_fields.append(widgets.VBox([syringe_input, syringe_tooltip]))
-        form_fields.append(widgets.HBox([save_button, cancel_button]))
-        
-        # Create form container with color coding
-        form = widgets.VBox(
-            form_fields,
-            layout=widgets.Layout(
-                border=f"1px solid {'#90BE6D' if reagent_type == 'solid' else '#577590'}",
-                padding="15px",
-                margin="10px 0",
-                background_color=bg_color
-            )
-        )
-        
-        # Validation function
-        def validate_and_save():
-            # Collect form data
-            new_reagent = {
-                "name": name_input.value,
-                "inChi": inchi_input.value,
-                "SMILES": smiles_input.value,
-                "inChi Key": inchikey_input.value,
-                "molecular weight (in g/mol)": mw_input.value,
-                "eq": eq_input.value,
-                "syringe": syringe_input.value
-            }
-            
-            # Add density for liquid reagents
-            if reagent_type == "liquid" and density_input:
-                new_reagent["density (in g/mL)"] = density_input.value
-            
-            # Validate data
-            validation_errors = self.validate_reagent(new_reagent, reagent_type)
-            
-            # Reset styles
-            update_field_style(name_input, False)
-            update_field_style(mw_input, False)
-            update_field_style(eq_input, False)
-            update_field_style(syringe_input, False)
-            if density_input:
-                update_field_style(density_input, False)
-            
-            # If errors, show them and highlight fields
-            if validation_errors:
-                error_html = "<div style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px; margin-bottom: 10px;'>"
-                error_html += "<b>Please correct the following errors:</b><ul>"
-                for field, message in validation_errors.items():
-                    error_html += f"<li>{message}</li>"
-                    # Highlight fields with errors
-                    if field == "name":
-                        update_field_style(name_input, True)
-                    elif field == "mw":
-                        update_field_style(mw_input, True)
-                    elif field == "eq":
-                        update_field_style(eq_input, True)
-                    elif field == "syringe":
-                        update_field_style(syringe_input, True)
-                    elif field == "density" and density_input:
-                        update_field_style(density_input, True)
-                error_html += "</ul></div>"
-                error_area.value = error_html
-                return False
-            
-            # Clear any error messages
-            error_area.value = ""
-            return new_reagent
-        
-        # Set up button callbacks
-        def save_handler(b):
-            new_reagent = validate_and_save()
-            if new_reagent:
-                # Update data structure
-                key = f"{reagent_type} reagents"
-                if reagent:
-                    self.data[key].remove(reagent)
-                self.data[key].append(new_reagent)
-                
-                # Save to show the auto-save feature
-                self.save_data()
-                
-                # Show success message
-                error_area.value = "<div style='color: green; padding: 10px; background-color: #EEFFEE; border-radius: 5px; margin-bottom: 10px;'><b>Reagent saved successfully!</b></div>"
-                
-                # Clear the form and update the display after a brief delay
-                import threading
-                def delayed_clear():
-                    import time
-                    time.sleep(1)  # Show success message for 1 second
-                    self.clear_form_area()
-                    self.update_reagent_list()
-                    # Switch to Current Reagents tab to show the new reagent
-                    self.tab_container.selected_index = 1
-                
-                threading.Thread(target=delayed_clear).start()
-                
-        save_button.on_click(save_handler)
-        cancel_button.on_click(lambda b: self.clear_form_area())
-        
-        # Display the form
-        self.form_area.children = (form,)
-        self.current_form = form
-        
-        # Switch to the Add Reagents tab if not already there
-        self.tab_container.selected_index = 0
-
     def update_submit_button(self) -> None:
         """Show or hide the submit button based on whether reagents exist."""
         has_reagents = bool(self.data["solid reagents"] or self.data["liquid reagents"])
@@ -561,125 +580,6 @@ class ReagentInputForm:
         """Clear any forms from the form area."""
         self.form_area.children = ()
         self.current_form = None
-
-    def show_submit_form(self, b: widgets.Button) -> None:
-        """Display the final submission form."""
-        # Get existing values if any
-        mass_scale_value = self.data.get("mass scale (in mg)", None)
-        concentration_value = self.data.get("concentration (in mM)", None)
-        solvent_value = self.data.get("solvent", "")
-        
-        # Create form widgets
-        form_title = widgets.HTML("<h4>Final Details</h4>")
-        
-        mass_scale_input = widgets.FloatText(
-            value=mass_scale_value,
-            description="Mass scale (mg):",
-            layout=widgets.Layout(width="80%")
-        )
-        
-        concentration_input = widgets.FloatText(
-            value=concentration_value,
-            description="Concentration (mM):",
-            layout=widgets.Layout(width="80%")
-        )
-        
-        solvent_input = widgets.Text(
-            value=solvent_value,
-            description="Solvents:",
-            layout=widgets.Layout(width="80%")
-        )
-        
-        submit_button = widgets.Button(
-            description="Process Data",
-            button_style="success",
-            layout=widgets.Layout(width="auto")
-        )
-        
-        cancel_button = widgets.Button(
-            description="Cancel",
-            button_style="warning",
-            layout=widgets.Layout(width="auto")
-        )
-        
-        # Create form container
-        form = widgets.VBox(
-            [
-                form_title,
-                mass_scale_input,
-                concentration_input,
-                solvent_input,
-                widgets.HBox([submit_button, cancel_button])
-            ],
-            layout=widgets.Layout(
-                border="1px solid #ddd",
-                padding="10px",
-                margin="10px 0"
-            )
-        )
-        
-        # Set up button callbacks
-        def submit_handler(b):
-            try:
-                # Update data with form values
-                self.data["mass scale (in mg)"] = mass_scale_input.value
-                self.data["concentration (in mM)"] = concentration_input.value
-                self.data["solvent"] = solvent_input.value
-                
-                # Validate that at least one reagent has eq=1.0
-                if not any(
-                    abs(reagent["eq"] - 1.0) < 1e-6
-                    for reagent in self.data["solid reagents"] + self.data["liquid reagents"]
-                ):
-                    raise ValueError("At least one reagent must have an equivalent (eq) value of 1.0")
-                
-                # Save data
-                self.save_data()
-                
-                # Remove the form widgets first
-                self.main_container.layout.display = 'none'
-                
-                # Process data without relying on clear_output
-                import IPython.display as display
-                import time
-                
-                # Force a complete reset of output
-                display.clear_output(wait=True)
-                display.display(display.HTML("<h3>Processing Data:</h3>"))
-                
-                # Small delay to ensure file operations complete
-                time.sleep(0.5)
-                
-                # Force reload from disk to get fresh data
-                with open(self.data_file, "r") as f:
-                    fresh_data = json.load(f)
-                
-                # Process the fresh data to ensure the table shows the latest information
-                from importlib import reload
-                from mechwolf.DataEntry import ProcessData
-                reload(ProcessData)  # Reload the module to avoid any caching issues
-                ProcessData.process_data(self.data_file)
-                
-            except ValueError as e:
-                # Display error message
-                error_widget = widgets.HTML(
-                    f"<p style='color: red'>Error: {str(e)}</p>"
-                )
-                self.final_details_form.children = (widgets.VBox([error_widget, form]),)
-        
-        submit_button.on_click(submit_handler)
-        
-        def clear_final_form(b):
-            self.final_details_form.children = ()
-            
-        cancel_button.on_click(clear_final_form)
-        
-        # Display the form in the final details tab
-        self.final_details_form.children = (form,)
-        self.current_form = form
-        
-        # Switch to the Final Details tab
-        self.tab_container.selected_index = 2
 
     def run(self) -> None:
         """Run the application."""
