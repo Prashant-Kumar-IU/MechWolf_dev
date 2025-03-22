@@ -294,6 +294,24 @@ class FinalDetailsFormHandler:
         # Error/message display area
         message_area = widgets.HTML("")
         
+        # Find the limiting reagent (eq = 1.0)
+        limiting_reagent = None
+        limiting_reagent_mw = None
+        
+        for reagent in data.get("solid reagents", []) + data.get("liquid reagents", []):
+            if abs(reagent.get("eq", 0) - 1.0) < 1e-6:
+                limiting_reagent = reagent["name"]
+                limiting_reagent_mw = reagent["molecular weight (in g/mol)"]
+                break
+        
+        # Display the limiting reagent - Fix the f-string syntax
+        if limiting_reagent:
+            reagent_html = f"<p><b>Limiting Reagent:</b> {limiting_reagent}</p>"
+        else:
+            reagent_html = "<p><b>Limiting Reagent:</b> <span style=\"color:red\">None selected (set eq=1.0 for limiting reagent)</span></p>"
+        
+        limiting_reagent_display = widgets.HTML(value=reagent_html)
+        
         mass_scale_input = widgets.FloatText(
             value=mass_scale_value,
             description="Mass scale (mg):",
@@ -305,6 +323,35 @@ class FinalDetailsFormHandler:
             description="Concentration (mM):",
             layout=widgets.Layout(width="80%")
         )
+        
+        # Add display for calculated volume
+        volume_display = widgets.HTML(
+            value="<p><b>Volume needed:</b> Calculate by entering values above</p>"
+        )
+        
+        # Function to calculate and update volume
+        def update_volume(*args):
+            try:
+                mass_scale = mass_scale_input.value
+                concentration = concentration_input.value
+                
+                if not limiting_reagent_mw or mass_scale <= 0 or concentration <= 0:
+                    volume_display.value = "<p><b>Volume needed:</b> Please enter valid mass scale and concentration values</p>"
+                    return
+                
+                # Calculate moles of limiting reagent (mg to mmol)
+                moles_limiting = mass_scale / limiting_reagent_mw
+                
+                # Calculate volume in mL (convert from mM to M)
+                volume_solution = moles_limiting / (concentration / 1000)
+                
+                volume_display.value = f"<p><b>Volume needed:</b> {volume_solution:.4f} mL</p>"
+            except Exception as e:
+                volume_display.value = f"<p><b>Volume needed:</b> Error in calculation: {str(e)}</p>"
+        
+        # Observe changes to update volume calculation
+        mass_scale_input.observe(update_volume, names='value')
+        concentration_input.observe(update_volume, names='value')
         
         solvent_input = widgets.Text(
             value=solvent_value,
@@ -323,8 +370,10 @@ class FinalDetailsFormHandler:
             [
                 form_title,
                 message_area,
+                limiting_reagent_display,
                 mass_scale_input,
                 concentration_input,
+                volume_display,
                 solvent_input,
                 submit_button
             ],
@@ -354,4 +403,9 @@ class FinalDetailsFormHandler:
         
         submit_button.on_click(submit_handler)
         
+        # Initial volume calculation if all values are available
+        if mass_scale_value and concentration_value and limiting_reagent_mw:
+            update_volume()
+        
         return form
+
