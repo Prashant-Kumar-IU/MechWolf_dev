@@ -687,23 +687,36 @@ class ReagentInputForm:
         if not self.data["solid reagents"] and not self.data["liquid reagents"]:
             self.setup_ui()
         else:
-            # Ask if user wants to edit or process
-            display(widgets.HTML("<h3>Existing reagent data found</h3>"))
-            process_btn = widgets.Button(description="Process Data", button_style="success")
-            edit_btn = widgets.Button(description="Edit Data", button_style="info")
+            # First show the current data as a table
+            from mechwolf.DataEntry import ProcessData
+            ProcessData.process_data(self.data_file)
             
-            def on_process(b):
-                clear_output(wait=True)
-                process_data(self.data_file)
-                
+            # Then ask if user wants to edit or proceed
+            display(widgets.HTML("<h3>What would you like to do with this data?</h3>"))
+            edit_btn = widgets.Button(
+                description="Edit Data", 
+                button_style="info",
+                style={"button_color": "#3A5D9F"}
+            )
+            continue_btn = widgets.Button(
+                description="Continue without editing", 
+                button_style="success",
+                style={"button_color": "#3F704D"}
+            )
+            
             def on_edit(b):
                 clear_output(wait=True)
                 self.setup_ui()
             
-            process_btn.on_click(on_process)
+            def on_continue(b):
+                # User chooses to use data as is
+                pass  # You can add additional actions if needed
+                
             edit_btn.on_click(on_edit)
+            continue_btn.on_click(on_continue)
             
-            display(widgets.HBox([process_btn, edit_btn]))
+            display(widgets.HBox([edit_btn, continue_btn], 
+                                layout=widgets.Layout(margin="20px 0")))
 
 if __name__ == "__main__":
     data_file = input("Enter the JSON file name: ").strip()
