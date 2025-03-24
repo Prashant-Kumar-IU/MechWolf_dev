@@ -84,6 +84,14 @@ class JupyterCalibrationTool:
             icon='plug'
         )
         
+        # Add disconnect button
+        self.disconnect_button = widgets.Button(
+            description='Disconnect Port',
+            button_style='warning',
+            icon='unlink',
+            disabled=True  # Initially disabled since no port is connected
+        )
+        
         # MCU profile management widgets
         self.mcu_dropdown = widgets.Dropdown(
             description='MCU Profile:',
@@ -429,6 +437,7 @@ class JupyterCalibrationTool:
         # Add button event handlers - Move all these after all widgets are created
         self.refresh_ports_button.on_click(self.refresh_ports)
         self.connect_button.on_click(self.connect_port)
+        self.disconnect_button.on_click(self.disconnect_port)  # Add handler for disconnect button
         self.refresh_mcus_button.on_click(self.refresh_mcus)
         self.add_mcu_button.on_click(self.add_mcu)
         self.refresh_motors_button.on_click(self.refresh_motors)
@@ -479,7 +488,7 @@ class JupyterCalibrationTool:
         connection_tab = widgets.VBox([
             self.storage_info,
             widgets.HTML("<h3>Serial Port Connection</h3>"),
-            widgets.HBox([self.port_dropdown, self.refresh_ports_button, self.connect_button])
+            widgets.HBox([self.port_dropdown, self.refresh_ports_button, self.connect_button, self.disconnect_button])
         ])
         
         # MCU Profiles tab
@@ -608,6 +617,10 @@ class JupyterCalibrationTool:
         self.port_dropdown.options = [('Select Port', None)] + [(p['path'], p['path']) for p in ports]
         self.port_dropdown.value = None
         
+        # Disable disconnect button when refreshing ports
+        self.disconnect_button.disabled = True
+        self.selected_port = None
+        
         self.log(f"Found {len(ports)} ports")
     
     def refresh_mcus(self, _=None):
@@ -708,8 +721,40 @@ class JupyterCalibrationTool:
         if self.controller.connect_port(port):
             self.selected_port = port
             self.log(f"Connected to {port} successfully")
+            # Enable disconnect button after successful connection
+            self.disconnect_button.disabled = False
         else:
             self.log(f"Failed to connect to {port}")
+    
+    def disconnect_port(self, _):
+        """Disconnect from the currently connected port"""
+        if not self.selected_port:
+            self.log("No port is currently connected", clear=True)
+            return
+        
+        port = self.selected_port
+        self.log(f"Disconnecting from {port}...", clear=True)
+        
+        # Try to stop any motors first to avoid leaving them running
+        if self.selected_mcu and self.selected_motor:
+            try:
+                self.controller.stop_command(self.selected_port, self.selected_mcu, self.selected_motor)
+                time.sleep(0.5)  # Give time for stop command to process
+            except Exception as e:
+                self.log(f"Warning: Failed to stop motors: {str(e)}")
+        
+        # Now disconnect from the port
+        if self.controller.disconnect_port(self.selected_port):
+            self.log(f"Disconnected from {port} successfully")
+            self.selected_port = None
+            # Disable disconnect button after disconnection
+            self.disconnect_button.disabled = True
+            
+            # Also disable run buttons since no port is connected
+            self.run_first_trial_button.disabled = True
+            self.run_second_trial_button.disabled = True
+        else:
+            self.log(f"Failed to disconnect from {port}")
     
     def run_calibration_trial(self, trial_name):
         """Run a calibration trial"""
@@ -1427,7 +1472,9 @@ class JupyterCalibrationTool:
         # Close all ports properly
         if self.selected_port:
             self.controller.disconnect_port(self.selected_port)
-            
+            self.selected_port = None
+            self.disconnect_button.disabled = True
+        
         # Clean up controller resources
         self.controller.cleanup()
         self.log("Resources cleaned up", clear=True)
