@@ -6,7 +6,8 @@ protocols involving pumps and vessels in a laboratory automation setup.
 Classes:
     ProtocolAlgorithm: Manages protocol creation and validation for pumps and vessels.
 Methods:
-    __init__(self, protocol: Protocol, *components: ActiveComponent, data_file: str) -> None:
+    __init__(self, protocol: Protocol, pumps_or_pump: Union[List[ActiveComponent], ActiveComponent, Tuple[ActiveComponent, ...]], 
+             *additional_components: ActiveComponent, data_file: str) -> None:
         Initializes the ProtocolAlgorithm with the given protocol, components, and data file.
     _get_pump_vessel_mapping(self) -> List[Dict[str, Any]]:
         Retrieves the predefined pump-vessel mapping from the apparatus.
@@ -24,24 +25,33 @@ Methods:
         Creates and returns a protocol based on the validated inputs and pump configurations.
 """
 from mechwolf.core.protocol import Protocol
-from mechwolf.components import ActiveComponent, Vessel
+from mechwolf.components import ActiveComponent
 from .ProtocolGUICreator import ProtocolGUI, PumpConfig
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union, Tuple, Optional
 
 
 class ProtocolAlgorithm:
     def __init__(
-        self, protocol: Protocol, *components: ActiveComponent, data_file: str
+        self, protocol: Protocol, pumps_or_pump: Union[List[ActiveComponent], ActiveComponent, Tuple[ActiveComponent, ...]], 
+        *additional_components: ActiveComponent, data_file: Optional[str] = None
     ) -> None:
         self.protocol = protocol
-        self.components = components
+        
+        # Handle the case where pumps is a list or an individual pump
+        if isinstance(pumps_or_pump, list) or isinstance(pumps_or_pump, tuple):
+            self.components = list(pumps_or_pump) + list(additional_components)
+        else:
+            self.components = [pumps_or_pump] + list(additional_components)
+            
         self.apparatus = protocol.apparatus
 
         if data_file is None:
             raise ValueError(
                 "data_file parameter is required. Please provide the JSON file path.\n"
                 "Example usage:\n"
+                "algorithm = ProtocolAlgorithm(P, pumps, data_file='your_config.json')\n"
+                "or\n"
                 "algorithm = ProtocolAlgorithm(P, pump_1, pump_2, pump_3, data_file='your_config.json')"
             )
 

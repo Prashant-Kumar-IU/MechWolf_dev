@@ -32,7 +32,7 @@ from IPython.display import display, clear_output
 import mechwolf as mw
 from mechwolf.components.contrib.harvardpump import HarvardSyringePump
 from typing import Any, Dict, List, Optional
-from .utils import (
+from .FlowSetupUtils import (
     parse_tube_dimension,
     parse_numeric_foot,
     validate_required_fields_with_rmv,

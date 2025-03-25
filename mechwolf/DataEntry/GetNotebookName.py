@@ -11,7 +11,6 @@ def get_notebook_json_name(save_dir: Optional[str] = None) -> Optional[str]:
     """
     try:
         import os
-        import json
         from notebook import notebookapp
         from IPython import get_ipython
         import requests
@@ -63,8 +62,13 @@ def get_notebook_json_name(save_dir: Optional[str] = None) -> Optional[str]:
                         notebook_name = os.path.basename(notebook_path)
                         # Replace the .ipynb extension with .json
                         json_name = notebook_name.replace(".ipynb", ".json")
+                        # Create the full path to the JSON file
+                        full_json_path = os.path.join(save_dir, json_name)
+                        # Print information about the file for the user
+                        print(f"Found notebook: {notebook_name}")
+                        print(f"JSON file will be saved as: {full_json_path}")
                         # Return the full path to the JSON file
-                        return os.path.join(save_dir, json_name)
+                        return full_json_path
             except requests.RequestException as e:
                 print(f"Error getting notebook server information: {e}")
             except (KeyError, TypeError) as e:

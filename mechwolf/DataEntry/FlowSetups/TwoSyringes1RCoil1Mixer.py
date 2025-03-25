@@ -28,12 +28,11 @@ ApparatusCreator:
     create_apparatus(self) -> mw.Apparatus:
         Creates and returns an apparatus based on the saved configuration.
 """
-import ipywidgets as widgets
-from IPython.display import display, clear_output
+from IPython.display import clear_output
 import mechwolf as mw
 from mechwolf.components.contrib.harvardpump import HarvardSyringePump
 from typing import List, Dict, Any, Optional, Tuple
-from .utils import parse_tube_dimension, parse_numeric_foot, validate_required_fields
+from .FlowSetupUtils import parse_tube_dimension, parse_numeric_foot
 from .error_handler import ErrorHandler, ValidationError
 from .data_manager import DataManager
 from .widget_manager import WidgetManager

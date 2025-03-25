@@ -48,7 +48,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from IPython.display import clear_output
 import mechwolf as mw
 from mechwolf.components.contrib.harvardpump import HarvardSyringePump
-from .utils import parse_tube_dimension, parse_numeric_foot, check_required_fields
+from .FlowSetupUtils import parse_tube_dimension, parse_numeric_foot, check_required_fields
 from .error_handler import ErrorHandler
 from .data_manager import DataManager
 from .widget_manager import WidgetManager

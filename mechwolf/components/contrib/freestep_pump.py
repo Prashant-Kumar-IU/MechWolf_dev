@@ -2,6 +2,10 @@ import mechwolf as mw
 import time
 from mechwolf.components.contrib.freestep_3DSyringePump_controller import FreeStepController
 
+# Shared controller instance and port tracking for all FreeStepPump instances
+_shared_controllers = {}  # port -> controller
+_port_users = {}  # port -> list of pump instances
+
 class FreeStepPump(mw.Pump):
     """
     A MechWolf component for controlling FreeStep 3D syringe pumps.
@@ -36,19 +40,33 @@ class FreeStepPump(mw.Pump):
         self.motor_id = motor_id
         self.syringe_volume = mw._ureg.parse_expression(syringe_volume)
         self.syringe_diameter = mw._ureg.parse_expression(syringe_diameter)
-        self._controller = None
         self._mcu_profile = None
         self._motor_profile = None
+        self._port_initialized = False
+        self._last_rate = 0
         
     def __enter__(self):
-        # Initialize the FreeStep controller - this is key to making it work like the calibration tool
-        self._controller = FreeStepController()
+        global _shared_controllers, _port_users
         
-        print(f"Connecting {self.name} to {self.serial_port}...")
-        # Connect to the port
-        if not self._controller.connect_port(self.serial_port):
-            raise RuntimeError(f"Failed to connect to {self.serial_port}")
-            
+        print(f"Initializing {self.name} on {self.serial_port}...")
+        
+        # Add this pump to port users
+        if self.serial_port not in _port_users:
+            _port_users[self.serial_port] = []
+        _port_users[self.serial_port].append(self)
+        
+        # Check if we already have a controller for this port
+        if self.serial_port in _shared_controllers:
+            print(f"Using existing connection to {self.serial_port} for {self.name}")
+            self._controller = _shared_controllers[self.serial_port]
+        else:
+            # Create a new controller and connect to the port
+            print(f"Creating new connection to {self.serial_port} for {self.name}")
+            self._controller = FreeStepController()
+            if not self._controller.connect_port(self.serial_port):
+                raise RuntimeError(f"Failed to connect to {self.serial_port}")
+            _shared_controllers[self.serial_port] = self._controller
+        
         # Get MCU and motor profiles
         mcus = self._controller.get_mcus()
         motors = self._controller.get_motors()
@@ -79,31 +97,41 @@ class FreeStepPump(mw.Pump):
         
         # Stop the pump initially to make sure it's in a known state
         self._controller.stop_command(self.serial_port, self._mcu_profile, self._motor_profile)
-        
-        # Initialize last_rate to track rate changes
-        self._last_rate = 0
+        self._port_initialized = True
         
         print(f"FreeStepPump {self.name} initialized on {self.serial_port}")
         return self
         
     def __exit__(self, exc_type, exc_value, traceback):
-        if self._controller:
-            try:
-                # Stop the pump before closing
-                if self._mcu_profile and self._motor_profile:
-                    self._controller.stop_command(self.serial_port, self._mcu_profile, self._motor_profile)
+        global _shared_controllers, _port_users
+        
+        try:
+            # Stop the pump before closing
+            if self._port_initialized and self._mcu_profile and self._motor_profile:
+                self._controller.stop_command(self.serial_port, self._mcu_profile, self._motor_profile)
+                print(f"FreeStepPump {self.name} stopped")
+            
+            # Remove this pump from port users
+            if self.serial_port in _port_users:
+                if self in _port_users[self.serial_port]:
+                    _port_users[self.serial_port].remove(self)
                 
-                # Disconnect and clean up
-                self._controller.disconnect_port(self.serial_port)
-                self._controller.cleanup()
-                print(f"FreeStepPump {self.name} stopped and disconnected")
-            except Exception as e:
-                print(f"Error during cleanup: {e}")
+                # Only close port if this was the last pump using it
+                if not _port_users[self.serial_port] and self.serial_port in _shared_controllers:
+                    print(f"Closing port {self.serial_port} - last pump disconnected")
+                    controller = _shared_controllers[self.serial_port]
+                    controller.disconnect_port(self.serial_port)
+                    controller.cleanup()
+                    del _shared_controllers[self.serial_port]
+                else:
+                    print(f"Keeping port {self.serial_port} open for other pumps")
+        except Exception as e:
+            print(f"Error during cleanup for {self.name}: {e}")
 
     async def _update(self):
         """Update pump flow rate - called by MechWolf"""
-        if not self._controller or not self._mcu_profile or not self._motor_profile:
-            raise RuntimeError("Pump not properly initialized")
+        if not self._port_initialized or not self._mcu_profile or not self._motor_profile:
+            raise RuntimeError(f"Pump {self.name} not properly initialized")
             
         # Convert flow rate to mL/min
         rate_mlmin = self.rate.to(mw._ureg.ml / mw._ureg.min).magnitude
