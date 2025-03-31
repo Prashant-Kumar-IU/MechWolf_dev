@@ -22,7 +22,6 @@ import time
 import random
 import string
 import threading
-from pathlib import Path
 import serial
 import serial.tools.list_ports
 
