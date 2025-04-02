@@ -26,7 +26,7 @@ Methods:
 """
 from mechwolf.core.protocol import Protocol
 from mechwolf.components import ActiveComponent
-from .ProtocolGUICreator import ProtocolGUI, PumpConfig
+from .ProtocolNSyringesGUICreator import ProtocolGUI, PumpConfig
 import re
 from typing import List, Dict, Any, Union, Tuple, Optional
 

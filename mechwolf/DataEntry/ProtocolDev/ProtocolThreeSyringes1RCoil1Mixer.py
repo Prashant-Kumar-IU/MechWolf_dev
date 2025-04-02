@@ -182,7 +182,7 @@ class ProtocolAlgorithm:
                 rate=f"{pump_rate} mL/min",
             )
 
-        current += active_time + switch
+        current += active_time + rinse_time
 
         print(f"TOTAL TIME: {current}")
         return self.protocol
