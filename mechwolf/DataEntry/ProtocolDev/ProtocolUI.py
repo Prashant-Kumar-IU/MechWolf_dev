@@ -88,24 +88,16 @@ class ProtocolUI:
         
         # Help texts for common fields
         help_texts = {
-            "flow_rate": '<p style="color:#666;font-style:italic;margin:0px 0px 15px 10px;">Final flow rate. Negative values indicate withdrawal.</p>',
-            "solvent_volume": '<p style="color:#666;font-style:italic;margin:0px 0px 15px 10px;">Volume of solvent to be used.</p>',
-            "rinse_volume": '<p style="color:#666;font-style:italic;margin:0px 0px 15px 10px;">Volume of rinse solvent.</p>',
-            "switch_time": '<p style="color:#666;font-style:italic;margin:0px 0px 15px 10px;">Stall time to allow for syringe switching.</p>',
-            "delay_time": '<p style="color:#666;font-style:italic;margin:0px 0px 15px 10px;">Delay time between pumps.</p>'
+            "flow_rate": '<p style="color:#666;font-style:italic;margin:0px 0px 15px 10px;"><b>Final flow rate. Negative values indicate withdrawal.</b></p>',
+            "solvent_volume": '<p style="color:#666;font-style:italic;margin:0px 0px 15px 10px;"><b>Volume of solution in the syringe containing the limiting reagent.</b></p>',
+            "rinse_volume": '<p style="color:#666;font-style:italic;margin:0px 0px 15px 10px;"><b>Volume of rinse solvent that replaces the limiting reagent solution.</b></p>',
+            "switch_time": '<p style="color:#666;font-style:italic;margin:0px 0px 15px 10px;"><b>Stall time to allow for syringe switching.</b></p>',
+            "delay_time": '<p style="color:#666;font-style:italic;margin:0px 0px 15px 10px;"><b>Delay time between pumps. If none then keep this 0 s.</b></p>'
         }
         
         # Input widgets
         ui_elements = []
         widgets_dict = {}
-        
-        # Add last run info if available
-        last_run_info = widgets.HTML(value='')
-        if last_run_timestamp:
-            last_run_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(last_run_timestamp))
-            last_run_info.value = f'<p style="color:#666;font-style:italic;">Last run: {last_run_time}</p>'
-        ui_elements.append(last_run_info)
-        widgets_dict["last_run_info"] = last_run_info
         
         # Create flow rate input with direction indicator
         if "flow_rate" in inputs:
@@ -128,8 +120,9 @@ class ProtocolUI:
         
         # Create remaining inputs
         for key, value in inputs.items():
-            if key == "flow_rate":
-                continue  # Already handled above
+            # Skip non-user input fields
+            if key in ["flow_rate", "timestamp"]:
+                continue
                 
             if key == "solvent_volume":
                 box, widget = ProtocolUI.create_float_input("Solvent Volume:", value, "mL")

@@ -5,13 +5,12 @@ This module provides base classes and utilities for creating MechWolf protocols
 with consistent interfaces and parameter persistence.
 """
 from datetime import timedelta
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, Tuple, Any
 import time
 import re
 
 from mechwolf.core.protocol import Protocol
 from mechwolf.components import ActiveComponent
-from mechwolf.components.contrib.harvardpump import HarvardSyringePump
 from mechwolf.DataEntry.ProtocolDev.ProtocolDataManager import ProtocolDataManager
 
 
@@ -157,6 +156,7 @@ class ProtocolUtils:
         Returns:
             Tuple of (active_time, rinse_time) as timedelta objects
         """
+        # Always use absolute value of flow rate for time calculations
         abs_flow_rate = abs(flow_rate)
         active_time = timedelta(seconds=(volume / abs_flow_rate * 60))
         rinse_time = timedelta(seconds=(rinse_volume / abs_flow_rate * 60))

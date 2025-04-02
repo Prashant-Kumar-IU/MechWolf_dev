@@ -5,17 +5,16 @@ This module defines a class `ProtocolAlgorithm` that creates a protocol for cont
 with a user-friendly interface and parameter storage capabilities.
 """
 from datetime import timedelta
-from typing import Dict, Any, Optional
-import time
+from typing import Dict, Optional
 
-from IPython.display import display, HTML
-import ipywidgets as widgets
+from IPython.display import display
 
 from mechwolf.core.protocol import Protocol
 from mechwolf.components import ActiveComponent
 from mechwolf.components.contrib.harvardpump import HarvardSyringePump
 from mechwolf.DataEntry.ProtocolDev.ProtocolBase import BaseProtocolAlgorithm
 from mechwolf.DataEntry.ProtocolDev.ProtocolUI import ProtocolUI
+from mechwolf.DataEntry.ProtocolDev.ProtocolCommon import ProtocolCommon
 
 
 class ProtocolAlgorithm(BaseProtocolAlgorithm):
@@ -172,54 +171,12 @@ class ProtocolAlgorithm(BaseProtocolAlgorithm):
         
     def _on_submit_clicked(self, b, ui_widgets, form, output_widget):
         """Handle submit button click."""
-        # Hide the form when protocol is created
-        form.layout.display = 'none'
-        
-        with output_widget:
-            output_widget.clear_output()
-            
-            # Get values from widgets
-            values = {
-                "flow_rate": ui_widgets["flow_rate"].value,
-                "solvent_volume": ui_widgets["solvent_volume"].value,
-                "rinse_volume": ui_widgets["rinse_volume"].value,
-                "switch_time": ui_widgets["switch_time"].value
-            }
-            
-            # Validate inputs
-            error = self._validate_inputs(values)
-            if error:
-                # Show the form again if there's an error
-                form.layout.display = 'block'
-                display(HTML(f'<p style="color:red;font-weight:bold">Error: {error}</p>'))
-                return
-            
-            try:
-                # Determine if infusing or withdrawing
-                direction = "infusing" if values["flow_rate"] > 0 else "withdrawing"
-                
-                # Save the protocol config
-                self._save_protocol_config(
-                    "TwoSyringes1RCoil1Mixer",
-                    "Protocol for two syringes with one reactor coil and one mixer",
-                    values
-                )
-                
-                # Display confirmation
-                display(HTML(f'<h3 style="color:green">Processing Protocol with:</h3>'))
-                display(HTML(f'''<ul>
-                    <li>Flow Rate: {values["flow_rate"]} mL/min ({direction})</li>
-                    <li>Solvent Volume: {values["solvent_volume"]} mL</li>
-                    <li>Rinse Volume: {values["rinse_volume"]} mL</li>
-                    <li>Switch Time: {values["switch_time"]} seconds</li>
-                </ul>'''))
-                
-                # Build the protocol
-                self._build_protocol(values)
-                
-                display(HTML(f'<p style="color:green;font-weight:bold">Protocol successfully created!</p>'))
-                
-            except Exception as e:
-                # Show the form again if there's an error
-                form.layout.display = 'block'
-                display(HTML(f'<p style="color:red;font-weight:bold">Error: {str(e)}</p>'))
+        ProtocolCommon.handle_submit_click(
+            self,
+            b, 
+            ui_widgets, 
+            form, 
+            output_widget, 
+            "TwoSyringes1RCoil1Mixer",
+            "Protocol for two syringes with one reactor coil and one mixer"
+        )
