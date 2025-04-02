@@ -9,6 +9,7 @@ from mechwolf.components.contrib.harvardpump import HarvardSyringePump
 from mechwolf.DataEntry.ProtocolDev.ProtocolBase import BaseProtocolAlgorithm, ProtocolUtils
 from mechwolf.DataEntry.ProtocolDev.ProtocolUI import ProtocolUI
 from mechwolf.DataEntry.ProtocolDev.ProtocolCommon import ProtocolCommon
+from mechwolf.DataEntry.ProtocolDev.ProtocolRinse import ProtocolRinse
 
 
 class ProtocolAlgorithm(BaseProtocolAlgorithm):
@@ -81,7 +82,12 @@ class ProtocolAlgorithm(BaseProtocolAlgorithm):
 
         # Use absolute values for time calculations but preserve rate sign
         abs_pump_rate = abs(pump_rate)
-        rinse_time = timedelta(seconds=(values["rinse_volume"] / abs_pump_rate * 60))
+        # Calculate rinse time using ProtocolRinse
+        rinse_time = ProtocolRinse.calculate_rinse_time(
+            rinse_volume=values["rinse_volume"],
+            flow_rate=pump_rate,
+            num_channels=1
+        )
         active_time = timedelta(seconds=(values["solvent_volume"] / abs_pump_rate * 60))
 
         print("active_time =", active_time)
@@ -124,42 +130,16 @@ class ProtocolAlgorithm(BaseProtocolAlgorithm):
 
         current += active_time + switch_time
 
-        if isinstance(self.components[0], HarvardSyringePump):
-            # Dual-channel pumps
-            self.protocol.add(
-                self.components[0],
-                start=current,
-                duration=rinse_time,
-                rate=f"{pump_rate} mL/min",
-            )
-            self.protocol.add(
-                self.components[1],
-                start=current,
-                duration=rinse_time,
-                rate=f"{pump_rate} mL/min",
-            )
-        else:
-            # Single-channel pumps
-            self.protocol.add(
-                self.components[0],
-                start=current,
-                duration=rinse_time,
-                rate=f"{pump_rate} mL/min",
-            )
-            self.protocol.add(
-                self.components[1],
-                start=current,
-                duration=rinse_time,
-                rate=f"{pump_rate} mL/min",
-            )
-            self.protocol.add(
-                self.components[2],
-                start=current,
-                duration=rinse_time,
-                rate=f"{pump_rate} mL/min",
-            )
-
-        current += rinse_time
+        # Use the ProtocolRinse module for the rinse step
+        is_dual_channel = isinstance(self.components[0], HarvardSyringePump)
+        current = ProtocolRinse.add_rinse_step(
+            protocol=self.protocol,
+            components=self.components[:2] if is_dual_channel else self.components,
+            current_time=current,
+            rinse_time=rinse_time,
+            pump_rate=pump_rate,
+            is_dual_channel=is_dual_channel
+        )
 
         print(f"TOTAL TIME: {current}")
 
