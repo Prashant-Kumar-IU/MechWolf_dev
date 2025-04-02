@@ -44,50 +44,42 @@ class ProtocolDataManager:
         """Save protocol configuration while preserving ALL existing data"""
         try:
             # Read existing data
-            with open(self.json_file, "r") as f:
-                data = json.load(f)
-            print(f"Successfully read existing data from {self.json_file}")
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            print(f"Creating new data file due to: {str(e)}")
-            data = {}
+            try:
+                with open(self.json_file, "r") as f:
+                    data = json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError):
+                # Silently create new data file without printing messages
+                data = {}
 
-        # Create new protocol entry
-        new_entry = {
-            "name": protocol_config.get(
-                "name", ""
-            ),  # Default to empty string if not provided
-            "description": protocol_config.get(
-                "description", ""
-            ),  # Default to empty string if not provided
-            "pump_entries": protocol_config["pump_entries"],
-        }
+            # Create new protocol entry
+            new_entry = {
+                "name": protocol_config.get("name", ""),
+                "description": protocol_config.get("description", ""),
+                "pump_entries": protocol_config["pump_entries"],
+            }
 
-        # Ensure protocol_configs exists
-        if "protocol_configs" not in data:
-            data["protocol_configs"] = []
-            print("Created new protocol_configs section")
+            # Ensure protocol_configs exists
+            if "protocol_configs" not in data:
+                data["protocol_configs"] = []
 
-        # Update or append protocol
-        found = False
-        for i, existing_protocol in enumerate(data["protocol_configs"]):
-            if existing_protocol.get("name") == new_entry["name"]:
-                data["protocol_configs"][i] = new_entry
-                found = True
-                print(f"Updated existing protocol: {new_entry['name']}")
-                break
+            # Update or append protocol
+            found = False
+            for i, existing_protocol in enumerate(data["protocol_configs"]):
+                if existing_protocol.get("name") == new_entry["name"]:
+                    data["protocol_configs"][i] = new_entry
+                    found = True
+                    break
 
-        if not found:
-            data["protocol_configs"].append(new_entry)
-            print(f"Added new protocol: {new_entry['name']}")
+            if not found:
+                data["protocol_configs"].append(new_entry)
 
-        # Write back to file with proper formatting
-        try:
+            # Write back to file with proper formatting
             with open(self.json_file, "w") as f:
                 json.dump(data, f, indent=4)
-            print(f"Successfully wrote data to {self.json_file}")
-            print(
-                f"Protocol '{new_entry['name']}' saved with {len(new_entry['pump_entries'])} entries"
-            )
+                
+            # Single simple confirmation instead of multiple messages
+            print(f"Protocol configuration saved successfully.")
+            
         except Exception as e:
-            print(f"Error writing to file: {str(e)}")
+            print(f"Error saving protocol: {str(e)}")
             raise

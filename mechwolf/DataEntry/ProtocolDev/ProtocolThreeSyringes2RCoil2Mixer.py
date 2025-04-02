@@ -41,11 +41,11 @@ class ProtocolAlgorithm(BaseProtocolAlgorithm):
         
         # Return defaults if no saved values are found
         return {
-            "flow_rate": prev_values.get("flow_rate", 5.0),
-            "solvent_volume": prev_values.get("solvent_volume", 10.0),
-            "rinse_volume": prev_values.get("rinse_volume", 5.0),
-            "switch_time": prev_values.get("switch_time", 30.0),
-            "delay_time": prev_values.get("delay_time", 10.0),
+            "flow_rate": prev_values.get("flow_rate", 1.0),
+            "solvent_volume": prev_values.get("solvent_volume", 1.0),
+            "rinse_volume": prev_values.get("rinse_volume", 1.0),
+            "switch_time": prev_values.get("switch_time", 1.0),
+            "delay_time": prev_values.get("delay_time", 1.0),
             "timestamp": prev_values.get("timestamp", None)
         }
     
