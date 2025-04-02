@@ -1,6 +1,7 @@
 from datetime import timedelta
 import ipywidgets as widgets
 from IPython.display import display, HTML
+import time
 
 """
 This module defines a class `ProtocolAlgorithm` that creates a protocol for controlling syringe pumps.
@@ -18,14 +19,41 @@ from mechwolf.core.protocol import Protocol
 from mechwolf.components import ActiveComponent
 from mechwolf.components.contrib.harvardpump import HarvardSyringePump
 import re
+# Import the existing protocol data manager
+from mechwolf.DataEntry.ProtocolDev.protocol_data_manager import ProtocolDataManager
 
 
 class ProtocolAlgorithm:
-    def __init__(self, protocol: Protocol, *components: ActiveComponent) -> None:
+    def __init__(self, protocol: Protocol, *components: ActiveComponent, data_file) -> None:
+        """
+        Initialize the ProtocolAlgorithm with a protocol and components.
+        
+        Args:
+            protocol (Protocol): The protocol to be populated
+            *components (ActiveComponent): Components to be used in the protocol
+            data_file (str): Path to the data file for saving/loading protocol parameters.
+        """
         self.protocol = protocol
         self.components = components
+        self.data_manager = ProtocolDataManager(data_file)
 
     def create_protocol(self) -> Protocol:
+        # Load previous protocol parameters if available
+        saved_config = self.data_manager.load_protocol_config()
+        
+        # Extract previous values or use defaults
+        prev_values = {}
+        if saved_config and "pump_entries" in saved_config:
+            entries = saved_config["pump_entries"]
+            if entries:
+                prev_values = entries[-1]  # Get the most recent entry
+        
+        # Defaults if no saved values are found
+        default_flow_rate = prev_values.get("flow_rate", 5.0)
+        default_solvent_volume = prev_values.get("solvent_volume", 10.0)
+        default_rinse_volume = prev_values.get("rinse_volume", 5.0)
+        default_switch_time = prev_values.get("switch_time", 30.0)
+        
         # Create improved widgets with better styling
         style = {'description_width': '150px'}
         layout = widgets.Layout(width='350px', margin='10px 0px 10px 0px')
@@ -33,18 +61,22 @@ class ProtocolAlgorithm:
         # Display title
         display(HTML('<h2 style="color:#4682B4;">Protocol Parameters</h2>'))
         
-        # Create widgets with numeric inputs and units
+        # Create widgets with numeric inputs and units - pre-filled with saved data
         flow_rate_widget = widgets.FloatText(
             description='Flow Rate:',
             style=style,
             layout=layout,
-            value=5.0
+            value=default_flow_rate
         )
         flow_rate_unit = widgets.Label(value='mL/min')
         
-        # Add a dynamic indicator for flow direction
+        # Add a dynamic indicator for flow direction - set initial state based on default value
+        initial_direction = '<span style="color:green;font-weight:bold">→ Infusing</span>' if default_flow_rate > 0 else \
+                            '<span style="color:blue;font-weight:bold">← Withdrawing</span>' if default_flow_rate < 0 else \
+                            '<span style="color:gray;font-weight:bold">○ Stopped</span>'
+        
         flow_direction_indicator = widgets.HTML(
-            value='<span style="color:green;font-weight:bold">→ Infusing</span>',
+            value=initial_direction,
             layout=widgets.Layout(margin='0px 0px 0px 10px')
         )
         
@@ -52,7 +84,7 @@ class ProtocolAlgorithm:
             description='Solvent Volume:',
             style=style,
             layout=layout,
-            value=10.0
+            value=default_solvent_volume
         )
         solvent_unit = widgets.Label(value='mL')
         
@@ -60,7 +92,7 @@ class ProtocolAlgorithm:
             description='Rinse Volume:',
             style=style,
             layout=layout,
-            value=5.0
+            value=default_rinse_volume
         )
         rinse_unit = widgets.Label(value='mL')
         
@@ -68,9 +100,17 @@ class ProtocolAlgorithm:
             description='Switch Time:',
             style=style,
             layout=layout,
-            value=30.0
+            value=default_switch_time
         )
         switch_time_unit = widgets.Label(value='seconds')
+        
+        # Display last run information if available
+        last_run_info = widgets.HTML(
+            value=''
+        )
+        if saved_config and "timestamp" in prev_values:
+            last_run_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(prev_values["timestamp"]))
+            last_run_info.value = f'<p style="color:#666;font-style:italic;">Last run: {last_run_time}</p>'
         
         # Create better output and button widgets
         output_widget = widgets.Output(layout=widgets.Layout(border='1px solid #ddd', padding='10px', margin='10px 0'))
@@ -102,6 +142,7 @@ class ProtocolAlgorithm:
         
         # Create a container for the form
         form = widgets.VBox([
+            last_run_info,
             flow_section, 
             solvent_section, 
             rinse_section, 
@@ -154,6 +195,22 @@ class ProtocolAlgorithm:
                     
                     # Determine if infusing or withdrawing
                     direction = "infusing" if flow_rate > 0 else "withdrawing"
+                    
+                    # Create protocol data to save
+                    protocol_config = {
+                        "name": "TwoSyringes1RCoil1Mixer",
+                        "description": "Protocol for two syringes with one reactor coil and one mixer",
+                        "pump_entries": [{
+                            "flow_rate": flow_rate,
+                            "solvent_volume": solvent_volume,
+                            "rinse_volume": rinse_volume,
+                            "switch_time": switch_time,
+                            "timestamp": time.time()
+                        }]
+                    }
+                    
+                    # Save the protocol config
+                    self.data_manager.save_protocol_config(protocol_config)
                     
                     display(HTML(f'<h3 style="color:green">Processing Protocol with:</h3>'))
                     display(HTML(f'<ul><li>Flow Rate: {flow_rate} mL/min ({direction})</li><li>Solvent Volume: {solvent_volume} mL</li><li>Rinse Volume: {rinse_volume} mL</li><li>Switch Time: {switch_time} seconds</li></ul>'))
