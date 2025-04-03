@@ -214,12 +214,46 @@ class ComponentApp:
                 }
             },
             "coils": [
-                {"length": self.data["coil_a_length"]},
-                {"length": self.data["coil_x_length"]},
-                {"length": self.data["coil_b_length"]},
-                {"length": self.data["coil_y_length"]},
+                {"length": self.data["coil_a_length"], "index": "a"},
+                {"length": self.data["coil_x_length"], "index": "x"},
+                {"length": self.data["coil_b_length"], "index": "b"},
+                {"length": self.data["coil_y_length"], "index": "y"},
             ],
             "using_mixer": self.data["using_mixer"],
+            # Add network structure for the 2 mixer setup
+            "network": {
+                "pumps": [
+                    {"id": "pump1", "connected_to": "vessel1"},
+                    {"id": "pump2", "connected_to": "vessel2"},
+                    {"id": "pump3", "connected_to": "vessel3"},
+                ],
+                "mixers": [
+                    {"id": "T1", "inputs": ["vessel1", "vessel2"], "output": "T2"},
+                    {"id": "T2", "inputs": ["T1", "vessel3"], "output": "product_vessel"}
+                ],
+                "connections": [
+                    {"from": "vessel1", "to": "T1", "via": "coil_a"},
+                    {"from": "vessel2", "to": "T1", "via": "coil_a"},
+                    {"from": "vessel3", "to": "T2", "via": "coil_b"},
+                    {"from": "T1", "to": "T2", "via": "coil_x"},
+                    {"from": "T2", "to": "product_vessel", "via": "coil_y"}
+                ],
+                "topology": "3in-2mixer-1out",
+                "flow_distribution": {
+                    "description": "Flow division for pump rates calculation",
+                    "T2": {
+                        "inputs": 2,  # T2 has 2 input streams
+                        "output_fraction": 1.0  # T2 outputs 100% of final flow rate
+                    },
+                    "T1": {
+                        "inputs": 2,  # T1 has 2 input streams
+                        "output_fraction": 0.5  # T1 outputs 50% of final flow rate (one input to T2)
+                    },
+                    "vessel1": {"fraction": 0.25},  # 25% of final flow
+                    "vessel2": {"fraction": 0.25},  # 25% of final flow
+                    "vessel3": {"fraction": 0.5}    # 50% of final flow
+                }
+            }
         }
 
         if self.data["using_mixer"]:
@@ -230,9 +264,6 @@ class ComponentApp:
             }
 
         return config
-
-
-# ...rest of the file remains unchanged...
 
 
 class ApparatusCreator:
@@ -277,46 +308,69 @@ class ApparatusCreator:
         config = self._load_config()
         A = mw.Apparatus(config["apparatus_name"])
 
-        # Create vessels
-        vessels = [
-            mw.Vessel(v["description"], name=v["name"]) for v in config["vessels"]
-        ]
-        vessel1, vessel2, vessel3, product_vessel = vessels
+        # Create vessels dictionary
+        vessels_dict = {}
+        for i, v in enumerate(config["vessels"]):
+            vessel = mw.Vessel(v["description"], name=v["name"])
+            vessel_key = f"vessel{i+1}" if i < len(config["vessels"]) - 1 else "product_vessel"
+            vessels_dict[vessel_key] = vessel
 
-        # Create tubes and coils
-        coil_a = self._make_tube(
-            config["tubes"]["reaction"], config["coils"][0]["length"]
-        )
-        coil_x = self._make_tube(
-            config["tubes"]["reaction"], config["coils"][1]["length"]
-        )
-        coil_b = self._make_tube(
-            config["tubes"]["reaction"], config["coils"][2]["length"]
-        )
-        coil_y = self._make_tube(
-            config["tubes"]["reaction"], config["coils"][3]["length"]
-        )
+        # Create tube factory function
+        def make_tube(tube_config: Dict[str, Any], length: float) -> mw.Tube:
+            return mw.Tube(
+                length=length,
+                ID=tube_config["ID"],
+                OD=tube_config["OD"],
+                material=tube_config["material"],
+            )
 
-        # Create mixers
-        T1 = mw.TMixer(name=coil_x)
-        T2 = mw.TMixer(name=coil_y)
+        # Create coils dictionary
+        coils_dict = {}
+        for coil in config["coils"]:
+            coil_id = f"coil_{coil['index']}"
+            coils_dict[coil_id] = make_tube(config["tubes"]["reaction"], coil["length"])
+
+        # Create mixers dictionary
+        mixers_dict = {}
+        for mixer in config["network"]["mixers"]:
+            mixers_dict[mixer["id"]] = mw.TMixer(name=mixer["id"])
 
         # Add pump connections based on type
+        pump_connections = config["network"]["pumps"]
+        
         if self.pump_type == "single-channel":
-            A.add(self.pumps[0], vessel1, coil_a)
-            A.add(self.pumps[1], vessel2, coil_a)
-            A.add(self.pumps[2], vessel3, coil_b)
+            for i, conn in enumerate(pump_connections):
+                if i < len(self.pumps):
+                    vessel_key = conn["connected_to"]
+                    via_coil = "coil_a" if i < 2 else "coil_b"
+                    A.add(self.pumps[i], vessels_dict[vessel_key], coils_dict[via_coil])
         else:  # dual-channel
-            A.add(self.pumps[0], vessel1, coil_a)
-            A.add(self.pumps[0], vessel2, coil_a)
-            A.add(self.pumps[1], vessel3, coil_b)
+            # For dual channel, first pump connects to first two vessels, second pump to third vessel
+            A.add(self.pumps[0], vessels_dict["vessel1"], coils_dict["coil_a"])
+            A.add(self.pumps[0], vessels_dict["vessel2"], coils_dict["coil_a"])
+            if len(self.pumps) > 1:
+                A.add(self.pumps[1], vessels_dict["vessel3"], coils_dict["coil_b"])
 
-        # Add mixer and coil connections
-        A.add(vessel1, T1, coil_a)
-        A.add(vessel2, T1, coil_a)
-        A.add(vessel3, T2, coil_b)
-        A.add(T1, T2, coil_x)
-        A.add(T2, product_vessel, coil_y)
+        # Add all other connections from the network configuration
+        for conn in config["network"]["connections"]:
+            from_comp = None
+            to_comp = None
+            
+            # Determine the correct component types
+            if conn["from"].startswith("vessel"):
+                from_comp = vessels_dict[conn["from"]]
+            elif conn["from"] in mixers_dict:
+                from_comp = mixers_dict[conn["from"]]
+                
+            if conn["to"].startswith("vessel") or conn["to"] == "product_vessel":
+                to_comp = vessels_dict[conn["to"]]
+            elif conn["to"] in mixers_dict:
+                to_comp = mixers_dict[conn["to"]]
+                
+            # Add connection if components were found
+            if from_comp and to_comp:
+                via_coil = coils_dict[conn["via"]]
+                A.add(from_comp, to_comp, via_coil)
 
         return A
 

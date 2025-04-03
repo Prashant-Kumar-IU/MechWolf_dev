@@ -43,6 +43,22 @@ class DataManager:
                     idx: int = apparatus_config["coils"].index(coil)
                     coil["index"] = ["a", "x", "b", "y"][idx]
 
+        # Ensure network structure exists
+        if "network" not in apparatus_config:
+            # Create a default network structure based on number of vessels
+            vessels = apparatus_config.get("vessels", [])
+            num_vessels = len(vessels) - 1  # Subtract one for product vessel
+            
+            if num_vessels == 2:
+                apparatus_config["network"] = self._create_default_network_2vessels()
+            elif num_vessels == 3:
+                # Check if we have 2 or 4 coils to determine setup type
+                coils = apparatus_config.get("coils", [])
+                if len(coils) >= 4:
+                    apparatus_config["network"] = self._create_default_network_3vessels_2mixers()
+                else:
+                    apparatus_config["network"] = self._create_default_network_3vessels_1mixer()
+
         # Preserve specific reaction setup data if it exists
         reaction_fields = [
             "solid reagents",
@@ -55,3 +71,86 @@ class DataManager:
         # Write back all data
         with open(self.json_file, "w") as f:
             json.dump(existing_data, f, indent=4)
+
+    def _create_default_network_2vessels(self) -> Dict[str, Any]:
+        """Create default network structure for 2 vessel setup"""
+        return {
+            "pumps": [
+                {"id": "pump1", "connected_to": "vessel1"},
+                {"id": "pump2", "connected_to": "vessel2"},
+            ],
+            "mixers": [
+                {"id": "T1", "inputs": ["vessel1", "vessel2"], "output": "product_vessel"}
+            ],
+            "connections": [
+                {"from": "vessel1", "to": "T1", "via": "coil_a"},
+                {"from": "vessel2", "to": "T1", "via": "coil_a"},
+                {"from": "T1", "to": "product_vessel", "via": "coil_x"}
+            ],
+            "topology": "2in-1mixer-1out",
+            "flow_distribution": {
+                "vessel1": {"fraction": 0.5},
+                "vessel2": {"fraction": 0.5}
+            }
+        }
+
+    def _create_default_network_3vessels_1mixer(self) -> Dict[str, Any]:
+        """Create default network structure for 3 vessel setup with 1 mixer"""
+        return {
+            "pumps": [
+                {"id": "pump1", "connected_to": "vessel1"},
+                {"id": "pump2", "connected_to": "vessel2"},
+                {"id": "pump3", "connected_to": "vessel3"},
+            ],
+            "mixers": [
+                {"id": "T1", "inputs": ["vessel1", "vessel2", "vessel3"], "output": "product_vessel"}
+            ],
+            "connections": [
+                {"from": "vessel1", "to": "T1", "via": "coil_a"},
+                {"from": "vessel2", "to": "T1", "via": "coil_a"},
+                {"from": "vessel3", "to": "T1", "via": "coil_a"},
+                {"from": "T1", "to": "product_vessel", "via": "coil_x"}
+            ],
+            "topology": "3in-1mixer-1out",
+            "flow_distribution": {
+                "vessel1": {"fraction": 1/3},
+                "vessel2": {"fraction": 1/3},
+                "vessel3": {"fraction": 1/3}
+            }
+        }
+
+    def _create_default_network_3vessels_2mixers(self) -> Dict[str, Any]:
+        """Create default network structure for 3 vessel setup with 2 mixers"""
+        return {
+            "pumps": [
+                {"id": "pump1", "connected_to": "vessel1"},
+                {"id": "pump2", "connected_to": "vessel2"},
+                {"id": "pump3", "connected_to": "vessel3"},
+            ],
+            "mixers": [
+                {"id": "T1", "inputs": ["vessel1", "vessel2"], "output": "T2"},
+                {"id": "T2", "inputs": ["T1", "vessel3"], "output": "product_vessel"}
+            ],
+            "connections": [
+                {"from": "vessel1", "to": "T1", "via": "coil_a"},
+                {"from": "vessel2", "to": "T1", "via": "coil_a"},
+                {"from": "vessel3", "to": "T2", "via": "coil_b"},
+                {"from": "T1", "to": "T2", "via": "coil_x"},
+                {"from": "T2", "to": "product_vessel", "via": "coil_y"}
+            ],
+            "topology": "3in-2mixer-1out",
+            "flow_distribution": {
+                "description": "Flow division for pump rates calculation",
+                "T2": {
+                    "inputs": 2,
+                    "output_fraction": 1.0
+                },
+                "T1": {
+                    "inputs": 2, 
+                    "output_fraction": 0.5
+                },
+                "vessel1": {"fraction": 0.25},
+                "vessel2": {"fraction": 0.25},
+                "vessel3": {"fraction": 0.5}
+            }
+        }
