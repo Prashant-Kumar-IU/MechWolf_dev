@@ -1,8 +1,8 @@
 """
-Module providing standardized rinse functionality for MechWolf protocols.
+Module providing standardized operations for MechWolf protocols.
 
-This module contains reusable functions for performing rinse steps in various protocols,
-allowing for consistent implementation across different protocol types.
+This module contains reusable functions for performing common operations in protocols,
+such as rinse steps, allowing for consistent implementation across different protocol types.
 """
 from datetime import timedelta
 from typing import List, Union, Optional, Tuple, Dict, Any

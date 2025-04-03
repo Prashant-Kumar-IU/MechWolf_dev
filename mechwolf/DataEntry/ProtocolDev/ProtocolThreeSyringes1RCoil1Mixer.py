@@ -1,19 +1,14 @@
 from datetime import timedelta
-from typing import Dict, Optional
-
-from IPython.display import display
-
+from typing import List, Dict, Any, Optional
 from mechwolf.core.protocol import Protocol
 from mechwolf.components import ActiveComponent
-from mechwolf.components.contrib.harvardpump import HarvardSyringePump
-from mechwolf.DataEntry.ProtocolDev.ProtocolBase import BaseProtocolAlgorithm, ProtocolUtils
-from mechwolf.DataEntry.ProtocolDev.ProtocolUI import ProtocolUI
-from mechwolf.DataEntry.ProtocolDev.ProtocolCommon import ProtocolCommon
-from mechwolf.DataEntry.ProtocolDev.ProtocolRinse import ProtocolRinse
+from mechwolf.DataEntry.ProtocolDev.standard_protocol import StandardProtocolAlgorithm
 
 
-class ProtocolAlgorithm(BaseProtocolAlgorithm):
-    """Creates and manages protocols for three syringe pumps with one reactor coil and one mixer."""
+class ProtocolAlgorithm(StandardProtocolAlgorithm):
+    """
+    Class to create a protocol for controlling three syringe pumps with 1 reactor coil and 1 mixer.
+    """
     
     def __init__(self, protocol: Protocol, *components: ActiveComponent, data_file: str = None) -> None:
         """
@@ -26,155 +21,98 @@ class ProtocolAlgorithm(BaseProtocolAlgorithm):
         """
         # Default data file if not provided
         if data_file is None:
-            data_file = "three_syringes_protocol_data.json"
-        super().__init__(protocol, *components, data_file=data_file)
+            data_file = "three_syringes_1rcoil_protocol_data.json"
+            
+        super().__init__(
+            protocol, 
+            *components, 
+            data_file=data_file,
+            protocol_name="ThreeSyringes1RCoil1Mixer",
+            protocol_description="Protocol for three syringes with one reactor coil and one mixer",
+            display_title="Three Syringes Protocol with 1 Reactor Coil and 1 Mixer",
+            channels_per_pump=1,   # Number of channels per pump
+            num_active_pumps=3,    # Number of pumps for active phase
+            with_delay=True,       # Include delay_time parameter
+            use_modified_rates=True  # Use different rates for pumps
+        )
     
-    def _get_default_values(self) -> Dict[str, float]:
+    def get_pump_rates(self, base_rate: float) -> List[float]:
         """
-        Load previous protocol parameters if available.
-        
-        Returns:
-            Dictionary containing default values for UI widgets
-        """
-        prev_values = super()._get_default_values()
-        
-        # Return defaults if no saved values are found
-        return {
-            "flow_rate": prev_values.get("flow_rate", 1.0),
-            "solvent_volume": prev_values.get("solvent_volume", 1.0),
-            "rinse_volume": prev_values.get("rinse_volume", 1.0),
-            "switch_time": prev_values.get("switch_time", 1.0),
-            "timestamp": prev_values.get("timestamp", None)
-        }
-    
-    def _validate_inputs(self, values: Dict[str, float]) -> Optional[str]:
-        """
-        Validate input parameters.
+        Calculate pump rates based on the flow network structure.
+        Uses the flow_distribution from the network config if available.
         
         Args:
-            values: Dictionary of parameter values
+            base_rate: The base pump rate (final_flow_rate / num_active_pumps)
             
         Returns:
-            Error message string if validation fails, None if valid
+            List of pump rates for each component
         """
-        if values["flow_rate"] == 0:
-            return "Flow rate cannot be zero"
-        if values["solvent_volume"] <= 0:
-            return "Solvent volume must be positive"
-        if values["rinse_volume"] <= 0:
-            return "Rinse volume must be positive"
-        if values["switch_time"] < 0:
-            return "Switch time cannot be negative"
-        return None
-    
-    def _build_protocol(self, values: Dict[str, float]) -> None:
-        """
-        Build the protocol with the specified parameters.
+        # Try to get network flow distribution from the config
+        network_flow = self._get_flow_distribution_from_config()
         
-        Args:
-            values: Dictionary of parameter values
+        if network_flow:
+            # Use flow distribution from the network configuration
+            final_flow_rate = base_rate * self.num_active_pumps
+            pump_rates = []
+            
+            # Get pump rate for each vessel based on its fraction
+            for i in range(self.num_active_pumps):
+                vessel_key = f"vessel{i+1}"
+                fraction = network_flow.get(vessel_key, {}).get("fraction", 1/self.num_active_pumps)
+                pump_rates.append(final_flow_rate * fraction)
+                
+            return pump_rates
+            
+        # Default calculation if network flow distribution is not available
+        # In this specific setup with 1 mixer and 3 inputs, we typically have equal flow rates
+        return [base_rate, base_rate, base_rate]
+        
+    def _get_flow_distribution_from_config(self) -> Optional[Dict[str, Any]]:
         """
-        switch_time = timedelta(seconds=values["switch_time"])
-        current = timedelta(seconds=0)
-
-        # Three syringes are being used so dividing by 3
-        pump_rate = values["flow_rate"] / 3
-
-        # Use absolute values for time calculations but preserve rate sign
-        abs_pump_rate = abs(pump_rate)
-        # Calculate rinse time using ProtocolRinse
-        rinse_time = ProtocolRinse.calculate_rinse_time(
-            rinse_volume=values["rinse_volume"],
-            flow_rate=pump_rate,
-            num_channels=1
-        )
-        active_time = timedelta(seconds=(values["solvent_volume"] / abs_pump_rate * 60))
-
-        print("active_time =", active_time)
-        print("rinse_time =", rinse_time)
-
-        if isinstance(self.components[0], HarvardSyringePump):
-            # Dual-channel pumps
-            self.protocol.add(
-                self.components[0],
-                start=current,
-                duration=active_time,
-                rate=f"{pump_rate} mL/min",
-            )
-            self.protocol.add(
-                self.components[1],
-                start=current,
-                duration=active_time,
-                rate=f"{pump_rate} mL/min",
-            )
-        else:
-            # Single-channel pumps
-            self.protocol.add(
-                self.components[0],
-                start=current,
-                duration=active_time,
-                rate=f"{pump_rate} mL/min",
-            )
-            self.protocol.add(
-                self.components[1],
-                start=current,
-                duration=active_time,
-                rate=f"{pump_rate} mL/min",
-            )
-            self.protocol.add(
-                self.components[2],
-                start=current,
-                duration=active_time,
-                rate=f"{pump_rate} mL/min",
-            )
-
-        current += active_time + switch_time
-
-        # Use the ProtocolRinse module for the rinse step
-        is_dual_channel = isinstance(self.components[0], HarvardSyringePump)
-        current = ProtocolRinse.add_rinse_step(
-            protocol=self.protocol,
-            components=self.components[:2] if is_dual_channel else self.components,
-            current_time=current,
-            rinse_time=rinse_time,
-            pump_rate=pump_rate,
-            is_dual_channel=is_dual_channel
-        )
-
-        print(f"TOTAL TIME: {current}")
-
-    def create_protocol(self) -> Protocol:
-        """
-        Create a protocol based on user input and display the UI.
+        Get the flow distribution from the loaded configuration.
         
         Returns:
-            Protocol: The created protocol with the specified parameters.
+            Dict with flow distribution information or None if not available
         """
-        # Get default values
-        defaults = self._get_default_values()
+        try:
+            # Load the configuration data
+            config = self._load_config()
+            
+            if config and "apparatus_config" in config:
+                apparatus_config = config["apparatus_config"]
+                if "network" in apparatus_config and "flow_distribution" in apparatus_config["network"]:
+                    return apparatus_config["network"]["flow_distribution"]
+        except Exception:
+            # Silently handle any errors in getting flow distribution
+            pass
+            
+        return None
         
-        # Create UI components
-        ui_widgets, form, output_widget = ProtocolUI.create_protocol_form(
-            defaults,
-            lambda b: self._on_submit_clicked(b, ui_widgets, form, output_widget),
-            defaults.get("timestamp"),
-            "Three Syringes Protocol Parameters"
-        )
+    def add_delay_phase(self, current_time: timedelta, delay_time: timedelta, pump_rates: List[float]) -> timedelta:
+        """
+        Add a delay phase to the protocol.
         
-        # Display the form and output
-        display(form, output_widget)
-        
-        # Return the protocol but now it will be populated after the user clicks the submit button
-        return self.protocol
-    
-    def _on_submit_clicked(self, b, ui_widgets, form, output_widget):
-        """Handle submit button click."""
-        ProtocolCommon.handle_submit_click(
-            self,
-            b, 
-            ui_widgets, 
-            form, 
-            output_widget, 
-            "ThreeSyringes1RCoil1Mixer",
-            "Protocol for three syringes with one reactor coil and one mixer"
-        )
+        Args:
+            current_time: Current time in the protocol
+            delay_time: Duration of the delay
+            pump_rates: List of pump rates
+            
+        Returns:
+            Updated current time
+        """
+        # Skip if delay time is zero
+        if delay_time.total_seconds() == 0:
+            return current_time
+            
+        # Add pumps with their respective rates
+        for i, component in enumerate(self.components):
+            if i < len(pump_rates):
+                self.protocol.add(
+                    component,
+                    start=current_time,
+                    duration=delay_time,
+                    rate=f"{pump_rates[i]} mL/min",
+                )
+                
+        # Return updated time (delay + switch time)
+        return current_time + delay_time + self.switch_time
