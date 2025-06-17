@@ -30,18 +30,26 @@ class DataManager:
             with open(self.json_file, "r") as f:
                 existing_data: Dict[str, Any] = json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
-            existing_data = {}
-
-        # Preserve all existing data except apparatus config
+            existing_data = {}        # Preserve all existing data except apparatus config
         existing_data["apparatus_config"] = apparatus_config
-
-        # Ensure coils have both length and index if not already present
+        
+        # Add version info for future compatibility
+        existing_data["version"] = "2.0.0"
+        
+        # Add timestamp for record keeping
+        from datetime import datetime
+        existing_data["last_updated"] = datetime.now().isoformat()# Ensure coils have both length and letter/index if not already present
         if "coils" in apparatus_config:
             for coil in apparatus_config["coils"]:
-                if "index" not in coil and "length" in coil:
-                    # If index is missing but we have order, infer index
+                # Handle backward compatibility for old "index" field
+                if "index" not in coil and "letter" not in coil and "length" in coil:
+                    # If both index and letter are missing but we have order, infer letter
                     idx: int = apparatus_config["coils"].index(coil)
-                    coil["index"] = ["a", "x", "b", "y"][idx]
+                    coil["letter"] = ["a", "x", "b", "y"][idx]
+                    coil["index"] = coil["letter"]  # For backward compatibility
+                elif "letter" in coil and "index" not in coil:
+                    # Add index for backward compatibility
+                    coil["index"] = coil["letter"]
 
         # Preserve specific reaction setup data if it exists
         reaction_fields = [

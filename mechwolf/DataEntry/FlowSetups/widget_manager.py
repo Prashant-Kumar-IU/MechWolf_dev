@@ -1,5 +1,5 @@
 import ipywidgets as widgets
-from typing import Any, Dict, Union
+from typing import Any, Dict, Union, List
 
 """
 Manages the creation and handling of various widgets for a component application.
@@ -95,15 +95,18 @@ class WidgetManager:
                 f"Mixer {i} Tube Material"
             )
 
-    def create_coil_widgets(self, num_coils: int) -> None:
+    def create_coil_widgets(self, num_coils: int, coil_letters: List[str] = None) -> None:
         """Create widgets for variable number of coils using letters"""
-        coil_letters = ["a", "x", "b", "y"]  # Define order of coil letters
+        if coil_letters is None:
+            coil_letters = ["a", "x", "b", "y"]  # Default order of coil letters
+        
         for i in range(num_coils):
-            letter = coil_letters[i]
-            self.widgets[f"coil_{letter}"] = self.create_text_input(
-                f"Coil {letter.upper()} length"
-            )
-            self.widgets[f"coil_{letter}_index"] = letter  # Store the index/letter
+            if i < len(coil_letters):
+                letter = coil_letters[i]
+                self.widgets[f"coil_{letter}"] = self.create_text_input(
+                    f"Coil {letter.upper()} length"
+                )
+                self.widgets[f"coil_{letter}_index"] = letter  # Store the index/letter
 
     def create_setup_button(self) -> widgets.Button:
         """Create the setup button with custom styling"""
@@ -116,7 +119,12 @@ class WidgetManager:
         )
 
     def create_all_widgets(
-        self, num_vessels: int = 3, num_tubes: int = 1, num_coils: int = 2, num_mixers: int = 1
+        self,
+        num_vessels: int = 3,
+        num_tubes: int = 1,
+        num_coils: int = 2,
+        num_mixers: int = 1,
+        coil_letters: List[str] = None,
     ) -> Dict[str, Union[widgets.Widget, Dict[str, int]]]:
         """Create all widgets with configurable numbers of components"""
         # Store component counts
@@ -134,7 +142,7 @@ class WidgetManager:
         self.create_vessel_widgets(num_vessels)
         self.create_tube_widgets(num_tubes)
         self.create_mixer_widgets(num_mixers)
-        self.create_coil_widgets(num_coils)
+        self.create_coil_widgets(num_coils, coil_letters)
 
         # Create setup button
         self.setup_button = self.create_setup_button()
