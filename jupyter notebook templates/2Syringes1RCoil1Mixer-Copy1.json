@@ -1,0 +1,17 @@
+{
+    "solid reagents": [
+        {
+            "name": "diethylamino(difluoro)sulfanium;tetrafluoroborate",
+            "inChi": "1S/C4H10F2NS.BF4/c1-3-7(4-2)8(5)6;2-1(3,4)5/h3-4H2,1-2H3;/q+1;-1",
+            "SMILES": "[B-](F)(F)(F)F.CCN(CC)[S+](F)F",
+            "inChi Key": "YLNKFQWRRIXZPJ-UHFFFAOYSA-N",
+            "molecular weight (in g/mol)": 229.0,
+            "eq": 1.0,
+            "syringe": 1
+        }
+    ],
+    "liquid reagents": [],
+    "mass scale (in mg)": 100.0,
+    "concentration (in mM)": 125.0,
+    "solvent": "MeCN"
+}

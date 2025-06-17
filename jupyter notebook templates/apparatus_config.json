@@ -1,0 +1,47 @@
+{
+    "apparatus_config": {
+        "apparatus_name": "A",
+        "setup_type": "two_syringes_1r_1m",
+        "vessels": [
+            {
+                "name": "V1",
+                "description": "V1"
+            },
+            {
+                "name": "V2",
+                "description": "V2"
+            },
+            {
+                "name": "P",
+                "description": "Pdt"
+            }
+        ],
+        "tubes": {
+            "reaction": {
+                "ID": "0.02 in",
+                "OD": "1/16 in",
+                "material": "PFA"
+            },
+            "mixer": {
+                "ID": "0.0625 in",
+                "OD": "1/8 in",
+                "material": "PTFE"
+            }
+        },
+        "coils": [
+            {
+                "letter": "a",
+                "length": "5.0 foot",
+                "index": "a"
+            },
+            {
+                "letter": "x",
+                "length": "50.0 foot",
+                "index": "x"
+            }
+        ],
+        "using_mixer": true
+    },
+    "version": "2.0.0",
+    "last_updated": "2025-06-17T13:40:02.549883"
+}
