@@ -1,7 +1,27 @@
 include README.md
 include LICENSE
+include CHANGELOG.md
+include CONTRIBUTING.md
+include requirements.txt
+include requirements-dev.txt
+include MANIFEST.in
 recursive-include mechwolf *.py
+recursive-include mechwolf *.md
 recursive-include mechwolf *.yaml
 recursive-include mechwolf *.json
 recursive-include mechwolf *.txt
 recursive-include mechwolf *.csv
+recursive-include mechwolf *.html
+recursive-include mechwolf/DataEntry/FlowSetups/docs *.md
+recursive-include docs *.md *.rst *.txt
+recursive-include examples *.ipynb *.json *.py
+recursive-include logo *.png *.svg *.pdf *.ai
+recursive-include jupyter* *.ipynb *.json *.py *.log
+prune **/__pycache__
+prune **/*.pyc
+prune **/*.pyo
+prune .git*
+prune .pytest_cache
+prune build
+prune dist
+prune *.egg-info

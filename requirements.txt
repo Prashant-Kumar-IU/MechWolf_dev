@@ -1,0 +1,43 @@
+# MechWolf 2.0.0 - Core Dependencies
+# Core scientific computing
+numpy>=1.19.0
+pandas>=1.0.0
+scipy>=1.6.0
+
+# Visualization
+matplotlib>=3.3.0
+plotly>=5.0.0
+bokeh>=2.3.0
+altair>=4.0.0
+vega>=3.0.0
+
+# Jupyter ecosystem
+jupyter>=1.0.0
+ipython>=7.0
+ipywidgets>=7.6.0
+nest-asyncio>=1.0.0
+
+# Flow chemistry and scientific libraries
+pint>=0.17.0
+graphviz>=0.16.0
+networkx>=2.5.0
+PyYAML>=5.4.0
+
+# Async and I/O
+aiofiles>=0.7.0
+aioserial>=1.3.0
+
+# Logging and utilities
+loguru>=0.5.0
+terminaltables>=3.1.0
+xxhash>=2.0.0
+
+# Communication and hardware
+pyserial>=3.5.0
+
+# Image processing (for ReagentUI)
+pillow>=8.0.0
+requests>=2.25.0
+
+# Optional chemistry libraries
+rdkit>=2020.09.1  # Uncomment if using ReagentUI module

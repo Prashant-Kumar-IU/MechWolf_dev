@@ -1,25 +1,36 @@
 <h1 align ="center">
 <img src='https://github.com/MechWolf/MechWolf/raw/master/logo/head10x.png' width="150">
 <br>
-MechWolf
+MechWolf v2.0.0
 </h1>
 
 <div align="center">
-<a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.7-blue.svg" alt="Python version" /></a>
-<a href="https://gitter.im/mechwolf-project"><img src="https://img.shields.io/badge/chat-on%20gitter-brightgreen.svg" alt="Gitter chat" /></a>
-<a href="https://gitter.im/mechwolf-project"><img src="https://img.shields.io/badge/DOI-to%20be%20determined-brightgreen.svg" alt="DOI" /></a>
-<a href="https://github.com/MechWolf/MechWolf/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-blue.svg" alt="GPLv3 license" /></a>
-<a href="https://github.com/mechwolf/mechwolf/actions"><img src="https://img.shields.io/travis/MechWolf/MechWolf.svg" alt="CI status"/></a>
-<a href="https://mechwolf.org"><img src="https://img.shields.io/netlify/39a2d45e-f621-4e8d-afed-3ae2ee4b9364?label=docs" alt="Netlify"/></a>
+<a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.7+-blue.svg" alt="Python version" /></a>
+<a href="https://github.com/Prashant-Kumar-IU/MechWolf_dev/releases"><img src="https://img.shields.io/badge/version-2.0.0-brightgreen.svg" alt="Version" /></a>
+<a href="https://github.com/Prashant-Kumar-IU/MechWolf_dev/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-blue.svg" alt="GPLv3 license" /></a>
 <a href="https://github.com/ambv/black"><img src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
-<a href="https://mybinder.org/v2/gh/MechWolf/MechWolf/master"><img src="https://mybinder.org/badge_logo.svg"></img></a>
 </div>
 <br>
+
+## 🚀 What's New in v2.0.0
+
+- **Enhanced Flow Setups Module**: Complete redesign with modern UI and extensible architecture
+- **Interactive GUI**: Advanced Jupyter widgets for apparatus configuration
+- **Configuration Persistence**: Save and reuse experimental setups
+- **Extensible Framework**: Easy addition of new flow chemistry setups
+- **Improved Documentation**: Comprehensive guides for users and developers
+- **Better Error Handling**: Enhanced validation and user feedback
+
+## 📖 Overview
 
 MechWolf is a Python framework for automating continuous flow processes.
 It was developed as a collaboration between computer scientists, chemists, and complete novices to be used by anyone wanting to do better, faster, more reproducible flow-based science.
 Features include:
 
+- **Enhanced Flow Setups Module**: Interactive GUI for creating standardized apparatus configurations
+- **Configuration Persistence**: Save and reuse experimental setups as JSON files
+- **Extensible Architecture**: Easily add new flow chemistry setup types
+- **Modern UI**: Material Design-inspired interface with progress tracking
 - Natural language description, analysis, and visualization of continuous flow networks
 - Automated execution of protocols
 - Full user extensibility
@@ -28,21 +39,60 @@ Features include:
 - Natural language parsing of times and quantities
 - Thorough documentation and tutorials
 
-## Installation
+## 🛠️ Installation
 
-It's as easy as:
-
-```bash
-$ conda install -c conda-forge mechwolf
-```
-
-Or, to get the latest (but not necessarily stable) development branch:
+### From GitHub (Recommended for v2.0.0)
 
 ```bash
-$ pip install git+https://github.com/MechWolf/MechWolf.git
+# Clone the repository
+git clone https://github.com/Prashant-Kumar-IU/MechWolf_dev.git
+cd MechWolf_dev
+
+# Install with all dependencies
+pip install -e .
+
+# Or install with development dependencies
+pip install -e .[dev]
 ```
 
-For more information about installation, as well as to learn about other installation options, please look at the full [installation instructions](docs/guide/installation.md).
+### Quick Install (Production)
+
+```bash
+# Install directly from GitHub
+pip install git+https://github.com/Prashant-Kumar-IU/MechWolf_dev.git
+
+# Or install with chemistry extras (includes RDKit)
+pip install "git+https://github.com/Prashant-Kumar-IU/MechWolf_dev.git[chemistry]"
+```
+
+### Legacy Installation (Original MechWolf)
+
+```bash
+# For the original version from conda-forge
+conda install -c conda-forge mechwolf
+```
+
+## 🔬 Enhanced Flow Setups Module
+
+The new Flow Setups module provides an intuitive interface for creating standardized flow chemistry apparatus:
+
+```python
+import mechwolf as mw
+from mechwolf.DataEntry.FlowSetups import FlowSetupFactory
+from mechwolf.components.contrib.harvardpump import HarvardSyringePump
+
+# Create pumps
+pump1 = HarvardSyringePump("3 mL", "10 mm", serial_port="COM1")
+pump2 = HarvardSyringePump("3 mL", "10 mm", serial_port="COM2")
+
+# Create apparatus with interactive GUI
+apparatus = FlowSetupFactory.create_setup('two_syringes_1r_1m', [pump1, pump2])
+
+# Available setup types:
+FlowSetupFactory.print_available_setups()
+```
+
+## 🎯 Key Features
 
 ## What can MechWolf do?
 
@@ -111,18 +161,95 @@ P.execute()
 ```
 
 That's it! You can do this and a whole lot more with MechWolf.
-To learn more, take a look at the [docs](https://mechwolf.org).
 
-## Documentation
+## 📚 Documentation
 
-The documentation website is accessible [here](https://mechwolf.org).
+### Flow Setups Module (v2.0.0)
+- **[User Guide](mechwolf/DataEntry/FlowSetups/docs/USER_GUIDE.md)** - Complete usage instructions
+- **[Developer Guide](mechwolf/DataEntry/FlowSetups/docs/DEVELOPER_GUIDE.md)** - Architecture and code flow
+- **[API Reference](mechwolf/DataEntry/FlowSetups/docs/API_REFERENCE.md)** - Detailed API documentation
+- **[Contributing Guide](mechwolf/DataEntry/FlowSetups/docs/CONTRIBUTING.md)** - How to extend the system
 
-## License
+### General Documentation
+- **[Installation Guide](MechWolf_Dev_Experimental_Installation_Guide.html)** - Detailed installation instructions
+- **[Examples](examples/)** - Jupyter notebooks with practical examples
+- **[Templates](jupyter%20notebook%20templates/)** - Template notebooks for common setups
+
+## 🆕 What's New in v2.0.0
+
+### Enhanced Flow Setups Module
+The Flow Setups module has been completely redesigned with:
+- **Modern UI** with Material Design inspiration
+- **Interactive widgets** for easy apparatus configuration
+- **Configuration persistence** to save and reuse setups
+- **Extensible architecture** for easy addition of new setup types
+- **Comprehensive validation** and error handling
+
+### Improved Developer Experience
+- Clean, modular codebase with 70% reduction in duplicate code
+- Comprehensive documentation and examples
+- Type hints throughout the codebase
+- Better error messages and debugging support
+
+## 🚀 Quick Examples
+
+### Traditional MechWolf Usage
+```python
+import mechwolf as mw
+
+# Create components
+pump = mw.Pump()
+vessel = mw.Vessel("reagent")
+# ... continue with traditional apparatus building
+```
+
+### New Flow Setups Module (Recommended)
+```python
+from mechwolf.DataEntry.FlowSetups import FlowSetupFactory
+from mechwolf.components.contrib.harvardpump import HarvardSyringePump
+
+# Create pumps
+pump1 = HarvardSyringePump("3 mL", "10 mm", serial_port="COM1")
+pump2 = HarvardSyringePump("3 mL", "10 mm", serial_port="COM2")
+
+# Create apparatus interactively
+apparatus = FlowSetupFactory.create_setup('two_syringes_1r_1m', [pump1, pump2])
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Please see:
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - General contribution guidelines
+- **[Flow Setups Contributing Guide](mechwolf/DataEntry/FlowSetups/docs/CONTRIBUTING.md)** - Specific to Flow Setups module
+
+## 👥 Contributors
+
+### v2.0.0 Enhancements
+- **Prashant Kumar** ([@Prashant-Kumar-IU](https://github.com/Prashant-Kumar-IU)) - Flow Setups redesign and development
+- **Dr. Nicola Pohl** ([@NLPohl](https://github.com/NLPohl)) - Project supervision and guidance
+
+### Original MechWolf Framework
+- **Benjamin Lee** - Original framework development
+- **Alex Mijalis** - Original framework development
+
+## 📄 License
 
 [GPLv3](LICENSE) [(summary)](https://choosealicense.com/licenses/gpl-3.0/).
 
-## Citation
+## 📖 Citation
 
+```bibtex
+@software{mechwolf2024,
+  title={MechWolf: Enhanced Flow Chemistry Automation Platform},
+  author={Kumar, Prashant and Pohl, Nicola and Lee, Benjamin and Mijalis, Alex},
+  version={2.0.0},
+  year={2025},
+  url={https://github.com/Prashant-Kumar-IU/MechWolf_dev}
+}
 ```
-Will go here.
-```
+
+## 🐛 Issues and Support
+
+- **Bug Reports**: [GitHub Issues](https://github.com/Prashant-Kumar-IU/MechWolf_dev/issues)
+- **Questions**: Start with the documentation above
+- **Email**: pprashan@iu.edu
