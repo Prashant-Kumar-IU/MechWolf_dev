@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mechwolf"
+dynamic = ["version"]
+description = "Python framework for automated continuous flow chemistry"
+readme = "README.md"
+license = {text = "GPL-3.0"}
+authors = [
+    {name = "MechWolf Team", email = "info@mechwolf.org"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
+requires-python = ">=3.7"
+dependencies = [
+    "aiofiles",
+    "aioserial",
+    "altair",
+    "bokeh",
+    "graphviz",
+    "ipython>=7.0",
+    "ipywidgets",
+    "jupyter",
+    "loguru",
+    "nest_asyncio",
+    "networkx",
+    "Pint",
+    "PyYAML",
+    "terminaltables",
+    "vega",
+    "xxhash",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "black",
+    "flake8",
+    "mypy",
+    "pre-commit",
+]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    "myst-parser",
+]
+
+[project.urls]
+Homepage = "https://github.com/MechWolf/MechWolf"
+Documentation = "https://mechwolf.org"
+Repository = "https://github.com/MechWolf/MechWolf.git"
+"Bug Reports" = "https://github.com/MechWolf/MechWolf/issues"
+
+[tool.setuptools_scm]
+write_to = "mechwolf/_version.py"
+
+[tool.black]
+line-length = 88
+target-version = ['py37', 'py38', 'py39', 'py310']
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

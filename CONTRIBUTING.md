@@ -1,32 +1,65 @@
-# Contributing
+# Contributing to MechWolf
 
-Thanks for contributing to MechWolf!
-We appreciate all the help we can get and every little bit counts.
-You don't need to be a technical expert to help out, and credit will always be given.
+Thank you for your interest in contributing to MechWolf! We welcome contributions of all kinds.
 
-There are a bunch of ways that you can contribute to the project:
+## 🐛 Bug Reports
 
-## How to contribute
+Found a bug? Please [open an issue](https://github.com/MechWolf/MechWolf/issues/new?template=bug_report.md) with:
+- Clear description of the problem
+- Steps to reproduce
+- Expected vs actual behavior
+- Environment details (OS, Python version, MechWolf version)
 
-### Bug reports
+## 💡 Feature Requests
 
-The easiest way to help out is to let us know if something is wrong so we can fix it.
-To file a bug report, go to please click [here](https://github.com/MechWolf/MechWolf/issues/new?assignees=&labels=bug&template=bug_report.md&title=) and fill out the form with as much information as you can.
+Have an idea? [Open a feature request](https://github.com/MechWolf/MechWolf/issues/new?template=feature_request.md) describing:
+- The problem you're trying to solve
+- Your proposed solution
+- Any alternatives considered
 
-### Feature requests
+## 🔧 Code Contributions
 
-If you have an idea of way to make MechWolf better (even if you're not sure how to implement it), we want to know!
-In order to help us keep track of feature requests, we ask that you open a [GitHub issue](https://github.com/MechWolf/MechWolf/issues/new?assignees=&labels=&template=feature_request.md&title=) using the feature request form.
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Make** your changes
+4. **Add** tests for new functionality
+5. **Run** tests (`python -m pytest`)
+6. **Commit** changes (`git commit -m 'Add amazing feature'`)
+7. **Push** to branch (`git push origin feature/amazing-feature`)
+8. **Open** a Pull Request
 
-### Write documentation
+## 📝 Documentation
 
-We can always use more and clearer documentation.
-Our docs are written in a combination of [Markdown](https://commonmark.org/help/) (for normal text such as this), [reStructuredText](http://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html) (for technical docs, such as for the API), and [Jupyter notebooks](https://jupyter-notebook.readthedocs.io/en/stable/) (for the interactive tutorials).
+Help improve our docs by:
+- Fixing typos or unclear explanations
+- Adding examples
+- Improving API documentation
+- Creating tutorials
 
-### Fix bugs and implement features
+## 💻 Development Setup
 
-Look through the [GitHub issues](https://github.com/MechWolf/MechWolf/issues/) for unfixed bugs and unimplemented features.
-Anything tagged with "enhancement" and "help wanted" is open to whoever wants to do it.
+```bash
+# Clone your fork
+git clone https://github.com/yourusername/MechWolf.git
+cd MechWolf
+
+# Install in development mode
+pip install -e .[dev]
+
+# Run tests
+python -m pytest
+```
+
+## 📋 Code Style
+
+- Follow [PEP 8](https://pep8.org/)
+- Use [Black](https://black.readthedocs.io/) for code formatting
+- Add type hints where appropriate
+- Write clear, descriptive commit messages
+
+## ❓ Questions
+
+Need help? Feel free to [open a discussion](https://github.com/MechWolf/MechWolf/discussions) or reach out to the maintainers.
 
 ## Get started
 

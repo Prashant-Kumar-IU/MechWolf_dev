@@ -1,23 +1,20 @@
 ---
 home: true
-heroImage: /head10x.png
+heroImage: /head3x.png
 actionText: Get Started →
-actionLink: /about/intro
-footer: GPLv3 Licensed | Copyright © 2017-present MechWolf Team
+actionLink: /guide/getting_started
+footer: GPL v3 Licensed | Copyright © 2017-present MechWolf Team
 ---
 
-<div style="text-align: center">
-  <Bit/>
-</div>
+# MechWolf Documentation
 
-<div class="features">
-  <div class="feature">
-    <h2>Safety</h2>
-    <p>Design, simulate, and analyze experiments <em>in advance</em> to make sure they'll work. If things do end up going wrong, Mechwolf stops the experiment right away.</p>
-  </div>
-  <div class="feature">
-    <h2>Simplicity</h2>
-    <p>Follow the same process as in the lab, except now in Python. Knowing just two commands, you can design an apparatus, create a protocol, and then execute it.</p>
+Python framework for automated continuous flow chemistry.
+
+## Features
+
+- **Safety First** - Design and simulate experiments before execution with built-in error checking
+- **Simple API** - Natural Python interface for apparatus design and protocol creation  
+- **Extensible** - Add custom components and protocols for your specific needs
   </div>
   <div class="feature">
     <h2>Interactivity</h2>

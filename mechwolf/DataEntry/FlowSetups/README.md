@@ -30,20 +30,15 @@ protocol = mw.Protocol(apparatus)
 
 ## Key Features
 
-- **Modern UI Interface**: Clean, professional styling with Material Design inspiration
-- **Interactive GUI**: Fill out apparatus parameters through enhanced Jupyter widgets
-- **Progress Tracking**: Visual progress indicator showing setup completion
-- **Smart Organization**: Grouped sections with clear headers and help text
+- **Interactive GUI**: Fill out apparatus parameters through Jupyter widgets
 - **Configuration Persistence**: Setups are saved to JSON for reuse
 - **Extensible**: Easy to add new setup types
 - **Validation**: Built-in error checking and validation
 - **Type Safety**: Full type hints throughout
-- **Backward Compatible**: Legacy UI still available if needed
 
 ## Documentation
 
 - **[User Guide](docs/USER_GUIDE.md)** - Complete usage instructions and examples
-- **[Modern UI Guide](docs/MODERN_UI_GUIDE.md)** - New modern interface features and styling
 - **[Developer Guide](docs/DEVELOPER_GUIDE.md)** - Architecture and code flow for developers  
 - **[API Reference](docs/API_REFERENCE.md)** - Detailed API documentation
 - **[Contributing Guide](docs/CONTRIBUTING.md)** - How to add new setup types
