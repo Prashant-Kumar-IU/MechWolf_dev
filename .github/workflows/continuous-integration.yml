@@ -8,13 +8,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ["3.7"]
+        python-version: ["3.11"]
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
@@ -25,62 +25,58 @@ jobs:
         run: |
           pip install pytest
           pytest
-
   lint:
     name: Lint the source code with Flake8
     runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/checkout@v1
-      - name: Install Python 3.7
-        uses: actions/setup-python@v1
+      - uses: actions/checkout@v4
+      - name: Install Python 3.11
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.7"
+          python-version: "3.11"
       - name: Lint the source code with Flake8
         run: |
           pip install flake8
           flake8
-
   style-check:
     name: Ensure code style compliance with Black
     runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/checkout@v1
-      - name: Install Python 3.7
-        uses: actions/setup-python@v1
+      - uses: actions/checkout@v4
+      - name: Install Python 3.11
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.7"
+          python-version: "3.11"
       - name: Ensure code style compliance with Black
         run: |
           pip install black
           black --check mechwolf
-
   type-check:
     name: Typecheck with Mypy
     runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/checkout@v1
-      - name: Install Python 3.7
-        uses: actions/setup-python@v1
+      - uses: actions/checkout@v4
+      - name: Install Python 3.11
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.7"
+          python-version: "3.11"
       - name: Typecheck with Mypy
         run: |
           pip install mypy
           mypy mechwolf/ --ignore-missing-import --no-implicit-optional
-
   build-docs:
     name: Verify documentation builds
     runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       - name: Install Node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v4
         with:
-          node-version: 12.x
-      - name: Install Python 3.7
-        uses: actions/setup-python@v1
+          node-version: 18.x
+      - name: Install Python 3.11
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.7"
+          python-version: "3.11"
       - name: Build the actual docs
         run: |
           cd docs
