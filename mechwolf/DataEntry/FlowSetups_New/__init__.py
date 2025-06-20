@@ -13,16 +13,16 @@ Usage:
     app.start()
 
 Modules:
-    1_component_configurator: Component selection and configuration
-    2_apparatus_builder: Connection building and validation  
-    3_data_manager: JSON handling, validation, and export
-    4_orchestrator: Main application orchestration and UI
+    component_configurator: Component selection and configuration
+    apparatus_builder: Connection building and validation  
+    data_manager: JSON handling, validation, and export
+    orchestrator: Main application orchestration and UI
 """
 
-from .4_orchestrator.flow_setup_main import FlowSetupMain
-from .1_component_configurator.component_selector import ComponentSelector
-from .2_apparatus_builder.connection_gui import ConnectionGUI
-from .3_data_manager.json_handler import JSONHandler
+from .orchestrator.flow_setup_main import FlowSetupMain
+from .component_configurator.component_selector import ComponentSelector
+from .apparatus_builder.connection_gui import ConnectionGUI
+from .data_manager.json_handler import JSONHandler
 from .apparatus_factory import ApparatusFactory, create_apparatus_from_config, create_setup
 
 __version__ = "2.0.0"

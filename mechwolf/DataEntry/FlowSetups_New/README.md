@@ -17,10 +17,10 @@ The system is organized into 4 main modules following a clean separation of conc
 
 ```
 FlowSetups_New/
-├── 1_component_configurator/    # Component selection and configuration
-├── 2_apparatus_builder/         # Connection building and validation  
-├── 3_data_manager/             # JSON handling, validation, and export
-└── 4_orchestrator/             # Main application orchestration and UI
+├── component_configurator/    # Component selection and configuration
+├── apparatus_builder/         # Connection building and validation  
+├── data_manager/             # JSON handling, validation, and export
+└── orchestrator/             # Main application orchestration and UI
 ```
 
 ## 🔧 Phase 1: Component Configurator

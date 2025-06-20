@@ -14,8 +14,8 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Union
 import mechwolf as mw
 
-from .3_data_manager.json_handler import JSONHandler
-from .3_data_manager.schema_validator import SchemaValidator
+from .data_manager.json_handler import JSONHandler
+from .data_manager.schema_validator import SchemaValidator
 
 
 class ApparatusFactory:

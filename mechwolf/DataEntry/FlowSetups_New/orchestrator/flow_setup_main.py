@@ -9,9 +9,9 @@ from IPython.display import display, clear_output
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 
-from ..1_component_configurator.component_selector import ComponentSelector
-from ..2_apparatus_builder.connection_gui import ConnectionGUI
-from ..3_data_manager.json_handler import JSONHandler
+from ..component_configurator.component_selector import ComponentSelector
+from ..apparatus_builder.connection_gui import ConnectionGUI
+from ..data_manager.json_handler import JSONHandler
 from .tailwind_components import TailwindComponents
 
 
