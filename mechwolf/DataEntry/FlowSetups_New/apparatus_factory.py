@@ -16,6 +16,7 @@ import mechwolf as mw
 
 from .data_manager.json_handler import JSONHandler
 from .data_manager.schema_validator import SchemaValidator
+from ..experimental_metadata import ExperimentalMetadataManager
 
 
 class ApparatusFactory:
@@ -39,7 +40,21 @@ class ApparatusFactory:
             P = mw.Protocol(A)
             # Continue with protocol definition...
         """
-        # Load and validate configuration
+        try:
+            # Try unified experimental metadata format first
+            experiment = ExperimentalMetadataManager(config_file)
+            apparatus_config = experiment.get_section_data("apparatus_config")
+            
+            if apparatus_config and apparatus_config.get("components"):
+                print("✅ Using unified experimental metadata format")
+                name = apparatus_name or apparatus_config.get("name", "Generated_Apparatus")
+                return cls._build_apparatus_from_config(apparatus_config, name)
+        
+        except Exception as e:
+            print(f"⚠️  Could not load as unified format: {e}")
+        
+        # Fall back to legacy format
+        print("🔄 Attempting legacy format...")
         data_manager = JSONHandler(config_file)
         config = data_manager.load_config()
         
@@ -52,6 +67,27 @@ class ApparatusFactory:
             raise ValueError("No apparatus_config found in configuration file")
         
         # Create apparatus
+        name = apparatus_name or apparatus_config.get("name", "Generated_Apparatus")
+        return cls._build_apparatus_from_config(apparatus_config, name)
+    
+    @classmethod
+    def create_apparatus_from_experiment(cls, experiment: ExperimentalMetadataManager,
+                                       apparatus_name: Optional[str] = None) -> mw.Apparatus:
+        """
+        Create a MechWolf Apparatus from unified experimental metadata
+        
+        Args:
+            experiment: ExperimentalMetadataManager instance
+            apparatus_name: Optional name for the apparatus (overrides config)
+            
+        Returns:
+            Fully configured MechWolf Apparatus ready for use
+        """
+        apparatus_config = experiment.get_section_data("apparatus_config")
+        
+        if not apparatus_config or not apparatus_config.get("components"):
+            raise ValueError("No apparatus configuration found in experimental metadata")
+        
         name = apparatus_name or apparatus_config.get("name", "Generated_Apparatus")
         return cls._build_apparatus_from_config(apparatus_config, name)
     

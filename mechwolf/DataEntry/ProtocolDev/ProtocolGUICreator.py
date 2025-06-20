@@ -18,7 +18,7 @@ ProtocolGUI:
         setup_complete (bool): A flag indicating whether the setup is complete.
         temp_entries (List[Dict[str, Any]]): A temporary list of pump entries.
         current_mapping_index (int): The current index in the pump-vessel mapping.
-        data_manager (Optional[ProtocolDataManager]): An optional data manager for handling protocol data.
+        data_manager (Optional[ExperimentalMetadataManager]): An optional data manager for handling protocol data.
         full_config (Optional[Dict[str, Any]]): The full configuration loaded from the JSON file.
         existing_config (Optional[Dict[str, Any]]): The existing protocol configuration loaded from the JSON file.
         save_setup_button (widgets.Button): A button for saving the protocol configuration.
@@ -42,7 +42,7 @@ from IPython.display import display, clear_output
 import mechwolf as mw
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
-from .protocol_data_manager import ProtocolDataManager
+from ..experimental_metadata import ExperimentalMetadataManager
 
 
 @dataclass
@@ -63,15 +63,15 @@ class ProtocolGUI:
         self.setup_complete = False
         self.temp_entries: List[Dict[str, Any]] = []
         self.current_mapping_index = 0
-        self.data_manager = ProtocolDataManager(json_file) if json_file else None
+        self.data_manager = ExperimentalMetadataManager(json_file) if json_file else None
 
         # Load full configuration including apparatus config
         self.full_config = (
-            self.data_manager.load_full_config() if self.data_manager else None
+            self.data_manager.get_all_data() if self.data_manager else None
         )
         # Load protocol config separately
         self.existing_config = (
-            self.data_manager.load_protocol_config() if self.data_manager else None
+            self.data_manager.get_section_data("protocol_config") if self.data_manager else None
         )
 
         self.create_widgets()
@@ -439,7 +439,8 @@ class ProtocolGUI:
                 }
                 protocol_config["pump_entries"].append(serialized_entry)
 
-            self.data_manager.save_protocol_config(protocol_config)
+            self.data_manager.update_section_data("protocol_config", protocol_config)
+            self.data_manager.save()
 
         self.configs = []
         for entry in self.temp_entries:

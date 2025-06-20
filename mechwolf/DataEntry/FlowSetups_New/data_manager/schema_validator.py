@@ -17,21 +17,20 @@ class SchemaValidator:
         self.current_version = "2.0.0"
         self.supported_versions = ["1.0.0", "2.0.0"]
         
-        # Define schemas for different versions
-        self.schemas = {
-            "2.0.0": self._get_v2_schema(),
-            "1.0.0": self._get_v1_schema()
-        }
-        
-        # Common validation patterns
+        # Common validation patterns (must be defined before schemas)
         self.patterns = {
             'python_identifier': r'^[a-zA-Z_][a-zA-Z0-9_]*$',
             'serial_port': r'^(/dev/|COM)',
             'unit_volume': r'^\d+(\.\d+)?\s*(mL|ml|ML|Ml|L|l)$',
-            'unit_length': r'^\d+(\.\d+)?\s*(ft|in|cm|mm|m)$',
-            'unit_flow_rate': r'^\d+(\.\d+)?\s*(mL/min|ml/min|ML/min|L/min|l/min)$',
-            'unit_diameter': r'^\d+(\.\d+)?\s*(mm|cm|in|")$|^\d+/\d+\s*(in|")$',
-            'iso_datetime': r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}',
+            'unit_length': r'^\d+(\.\d+)?\s*(mm|cm|m|in|ft)$',
+            'unit_flow_rate': r'^\d+(\.\d+)?\s*(mL/min|ml/min|L/min|l/min)$',
+            'iso_datetime': r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)?$'
+        }
+        
+        # Define schemas for different versions
+        self.schemas = {
+            "2.0.0": self._get_v2_schema(),
+            "1.0.0": self._get_v1_schema()
         }
     
     def validate_apparatus_config(self, config: Dict[str, Any]) -> List[str]:

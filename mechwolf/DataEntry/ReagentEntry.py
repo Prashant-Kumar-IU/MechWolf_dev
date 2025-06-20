@@ -2,7 +2,7 @@ import ipywidgets as widgets
 from IPython.display import display, clear_output
 
 # Import helper modules
-from mechwolf.DataEntry.ReagentUI.DataManager import ReagentDataManager
+from mechwolf.DataEntry.experimental_metadata import ExperimentalMetadataManager
 from mechwolf.DataEntry.ReagentUI.PubChemService import PubChemService
 from mechwolf.DataEntry.ReagentUI.UIComponents import UIComponents
 from mechwolf.DataEntry.ReagentUI.FormHandlers import ReagentFormHandler, FinalDetailsFormHandler
@@ -11,7 +11,7 @@ class ReagentInputForm:
     def __init__(self, data_file: str) -> None:
         """Initialize the form with a data file path."""
         # Initialize data manager
-        self.data_manager = ReagentDataManager(data_file)
+        self.data_manager = ExperimentalMetadataManager(data_file)
         self.data_file = data_file
         
         # Initialize PubChem service
