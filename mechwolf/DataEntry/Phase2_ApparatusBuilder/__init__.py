@@ -20,7 +20,25 @@ Main Components:
     apparatus_visualizer: Network diagram visualization
 """
 
-from .apparatus_gui import ApparatusBuilderGUI
+try:
+    from .apparatus_gui import ApparatusBuilderGUI
+except ImportError as e:
+    # Handle missing dependencies gracefully
+    class ApparatusBuilderGUI:
+        def __init__(self, experiment_manager):
+            self.experiment = experiment_manager
+            print(f"Warning: ApparatusBuilderGUI dependencies not available: {e}")
+        
+        def display(self):
+            print("ApparatusBuilderGUI not available - install required dependencies (ipywidgets, etc.)")
+            
+        def get_configured_pumps(self):
+            return {}
+            
+        def get_apparatus(self):
+            return None
+            
+    print(f"Warning: ApparatusBuilderGUI not fully available: {e}")
 
 # Convenience function for launching GUI
 def launch_gui(experiment_manager):

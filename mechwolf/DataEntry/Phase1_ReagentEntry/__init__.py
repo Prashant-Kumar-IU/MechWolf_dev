@@ -11,7 +11,19 @@ Main Components:
     structure_visualization: Molecular structure visualization
 """
 
-from .reagent_gui import ReagentEntryGUI
+try:
+    from .reagent_gui import ReagentEntryGUI
+except ImportError as e:
+    # Handle missing dependencies gracefully
+    class ReagentEntryGUI:
+        def __init__(self, experiment_manager):
+            self.experiment = experiment_manager
+            print(f"Warning: ReagentEntryGUI dependencies not available: {e}")
+        
+        def display(self):
+            print("ReagentEntryGUI not available - install required dependencies (ipywidgets, etc.)")
+            
+    print(f"Warning: ReagentEntryGUI not fully available: {e}")
 
 # Convenience function for launching GUI
 def launch_gui(experiment_manager):

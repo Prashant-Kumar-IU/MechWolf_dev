@@ -14,7 +14,7 @@ Main Components:
     AnalysisDataManager: TLC, NMR, yields, and other analytical data
 
 Usage:
-    from mechwolf.DataEntry.experimental_metadata import ExperimentalMetadataManager
+    from experimental_metadata import ExperimentalMetadataManager
     
     # Create or load experiment metadata
     experiment = ExperimentalMetadataManager("birch_reduction_experiment.json")
@@ -23,7 +23,7 @@ Usage:
     experiment.chemistry.update_reagents(reagent_data)
     experiment.apparatus.configure_components(components)
     experiment.protocol.add_procedures(procedures)
-    experiment.analysis.add_tlc_data(tlc_results)  # Future
+    experiment.analysis.add_tlc_data(tlc_results)
 """
 
 from .experimental_metadata_manager import ExperimentalMetadataManager

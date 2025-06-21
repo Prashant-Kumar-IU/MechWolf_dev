@@ -24,9 +24,9 @@ Usage:
 # =============================================================================
 
 # Import the unified experimental metadata system
-from mechwolf.DataEntry.experimental_metadata import ExperimentalMetadataManager
-from mechwolf.DataEntry.utilities import get_notebook_json_name
-from mechwolf.DataEntry.shared_components import NotebookIntegration
+from experimental_metadata import ExperimentalMetadataManager
+from utilities import get_notebook_json_name
+from shared_components import NotebookIntegration
 
 # Create enhanced header
 header = NotebookIntegration.create_section_header(
@@ -67,7 +67,7 @@ info_box = NotebookIntegration.create_info_box(
 )
 display(info_box)
 
-from mechwolf.DataEntry.utilities import SerialPortViewer
+from utilities import SerialPortViewer
 
 # Launch serial port viewer
 port_viewer = SerialPortViewer()
@@ -77,7 +77,7 @@ port_viewer.run()
 # CELL 3: Phase 1 - Reagent Entry
 # =============================================================================
 
-from mechwolf.DataEntry import Phase1_ReagentEntry
+import Phase1_ReagentEntry
 
 # Create phase header
 phase1_header = NotebookIntegration.create_section_header(
@@ -104,7 +104,7 @@ print("💡 Pro tip: Use the PubChem lookup for automatic molecular data")
 # CELL 4: Phase 2 - Integrated Apparatus & Pump Builder
 # =============================================================================
 
-from mechwolf.DataEntry import Phase2_ApparatusBuilder
+import Phase2_ApparatusBuilder
 
 # Create phase header
 phase2_header = NotebookIntegration.create_section_header(
@@ -170,7 +170,7 @@ else:
 # CELL 6: Phase 3 - Protocol Development
 # =============================================================================
 
-from mechwolf.DataEntry import Phase3_ProtocolDev
+import Phase3_ProtocolDev
 import mechwolf as mw
 
 # Create phase header
@@ -282,7 +282,7 @@ analysis_header = NotebookIntegration.create_section_header(
 display(analysis_header)
 
 # Add TLC analysis
-from mechwolf.DataEntry.utilities import TLCInputForm
+from utilities import TLCInputForm
 
 tlc_form = TLCInputForm(experiment)
 tlc_form.run()

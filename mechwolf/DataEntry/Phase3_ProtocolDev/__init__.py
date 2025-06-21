@@ -19,7 +19,21 @@ Main Components:
     simulation_engine: Protocol simulation capabilities
 """
 
-from .protocol_gui import ProtocolDevGUI
+try:
+    from .protocol_gui import ProtocolDevGUI
+except ImportError as e:
+    # Handle missing dependencies gracefully
+    class ProtocolDevGUI:
+        def __init__(self, experiment_manager, protocol=None, pumps=None):
+            self.experiment = experiment_manager
+            self.protocol = protocol
+            self.pumps = pumps
+            print(f"Warning: ProtocolDevGUI dependencies not available: {e}")
+        
+        def display(self):
+            print("ProtocolDevGUI not available - install required dependencies (ipywidgets, etc.)")
+            
+    print(f"Warning: ProtocolDevGUI not fully available: {e}")
 
 # Convenience function for launching GUI
 def launch_gui(experiment_manager, protocol=None, pumps=None):
