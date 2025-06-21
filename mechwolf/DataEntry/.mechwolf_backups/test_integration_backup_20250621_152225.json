@@ -1,0 +1,52 @@
+{
+    "analysis": {
+        "chromatography": {},
+        "custom_analysis": {},
+        "schema_version": "1.0.0",
+        "spectroscopy": {},
+        "tlc_data": {},
+        "yield_data": {}
+    },
+    "apparatus_config": {
+        "calibration_data": {},
+        "components": {
+            "active": [],
+            "passive": []
+        },
+        "connections": [],
+        "description": "Flow chemistry apparatus configuration",
+        "name": "New Apparatus",
+        "schema_version": "2.0.0"
+    },
+    "chemistry": {
+        "liquid_reagents": [],
+        "schema_version": "1.0.0",
+        "solid_reagents": [],
+        "solvent_volume": []
+    },
+    "experiment_execution": {
+        "errors": [],
+        "executed_procedures": [],
+        "logs": [],
+        "schema_version": "1.0.0",
+        "sensor_data": {},
+        "status": "not_started"
+    },
+    "mechwolf_experiment": {
+        "created": "2025-06-21T15:22:25.229022",
+        "description": "MechWolf flow chemistry experiment",
+        "experiment_id": "2025_06_21_15_22_25_d3ef2648",
+        "experiment_name": "Integration Test",
+        "last_updated": "2025-06-21T15:22:25.250670",
+        "notebook_file": "test_integration.json",
+        "version": "3.0.0"
+    },
+    "protocol_config": {
+        "description": "Flow chemistry protocol",
+        "name": "New Protocol",
+        "parameters": {},
+        "procedures": [],
+        "schema_version": "1.0.0",
+        "timing": {}
+    }
+}
