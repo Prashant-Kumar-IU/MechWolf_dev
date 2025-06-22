@@ -303,6 +303,10 @@ class ReagentUI:
         self.current_editing_reagent = None
         self.search_results = []
         
+        # Store form widget references for import functionality
+        self.solid_form_widgets = {}
+        self.liquid_form_widgets = {}
+        
         # Create the tabbed interface
         self._create_interface()
     
@@ -351,10 +355,13 @@ class ReagentUI:
     
     def _create_solid_reagent_tab(self):
         """Create the solid reagent entry tab"""
-        form = ReagentFormHandler.create_reagent_form(
+        form, form_widgets = self._create_enhanced_reagent_form(
             "solid",
             on_save=self._save_solid_reagent
         )
+        
+        # Store widget references for import functionality
+        self.solid_form_widgets = form_widgets
         
         return widgets.VBox([
             widgets.HTML("<p>Add solid reagents (powders, crystals, etc.)</p>"),
@@ -363,15 +370,247 @@ class ReagentUI:
     
     def _create_liquid_reagent_tab(self):
         """Create the liquid reagent entry tab"""
-        form = ReagentFormHandler.create_reagent_form(
+        form, form_widgets = self._create_enhanced_reagent_form(
             "liquid",
             on_save=self._save_liquid_reagent
         )
+        
+        # Store widget references for import functionality
+        self.liquid_form_widgets = form_widgets
         
         return widgets.VBox([
             widgets.HTML("<p>Add liquid reagents (solutions, solvents, etc.)</p>"),
             form
         ])
+    
+    def _create_enhanced_reagent_form(self, reagent_type: str, on_save):
+        """Create an enhanced reagent form that returns both form and widget references"""
+        
+        # Create form widgets with references
+        name_input = widgets.Text(
+            description="Name:",
+            layout=widgets.Layout(width="80%")
+        )
+        
+        inchi_input = widgets.Text(
+            description="InChi:",
+            layout=widgets.Layout(width="80%")
+        )
+        
+        smiles_input = widgets.Text(
+            description="SMILES:",
+            layout=widgets.Layout(width="80%")
+        )
+        
+        inchikey_input = widgets.Text(
+            description="InChi Key:",
+            layout=widgets.Layout(width="80%")
+        )
+        
+        mw_input = widgets.FloatText(
+            description="MW (g/mol):",
+            layout=widgets.Layout(width="80%")
+        )
+        
+        eq_input = widgets.FloatText(
+            description="Equivalents:",
+            value=1.0,
+            layout=widgets.Layout(width="80%")
+        )
+        
+        syringe_input = widgets.IntText(
+            description="Syringe:",
+            value=1,
+            layout=widgets.Layout(width="80%")
+        )
+        
+        # Store widget references
+        form_widgets = {
+            'name': name_input,
+            'inchi': inchi_input,
+            'smiles': smiles_input,
+            'inchikey': inchikey_input,
+            'mw': mw_input,
+            'eq': eq_input,
+            'syringe': syringe_input
+        }
+        
+        # Add density for liquid reagents
+        density_input = None
+        if reagent_type == "liquid":
+            density_input = widgets.FloatText(
+                description="Density (g/mL):",
+                value=1.0,
+                layout=widgets.Layout(width="80%")
+            )
+            form_widgets['density'] = density_input
+        
+        # Create structure visualization area
+        structure_area = widgets.Output(
+            layout=widgets.Layout(width="200px", height="200px")
+        )
+        
+        # Function to update structure visualization
+        def update_structure(change=None):
+            structure_area.clear_output()
+            with structure_area:
+                if smiles_input.value:
+                    vis = StructureVisualization.get_structure_image(smiles_input.value, size=(200, 200))
+                    if vis:
+                        display(vis)
+                    else:
+                        print("Could not render structure.\\nCheck SMILES format.")
+        
+        # Connect update to SMILES field
+        smiles_input.observe(update_structure, names='value')
+        
+        # Create save button
+        save_button = widgets.Button(
+            description="Save Reagent",
+            button_style="success",
+            layout=widgets.Layout(width="auto")
+        )
+        
+        # Error/status area
+        status_area = widgets.HTML("")
+        form_widgets['status'] = status_area
+        
+        # Create form layout
+        form_fields = [
+            widgets.HTML(f"<h4>Add {reagent_type.capitalize()} Reagent</h4>"),
+            status_area,
+            ReagentFormHandler.create_form_field(name_input, "Required: Chemical name"),
+            ReagentFormHandler.create_form_field(inchi_input, "Example: InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3"),
+            ReagentFormHandler.create_form_field(smiles_input, "Example: CCO (ethanol)"),
+            ReagentFormHandler.create_form_field(inchikey_input, "Example: LFQSCWFLJHTTHZ-UHFFFAOYSA-N"),
+            ReagentFormHandler.create_form_field(mw_input, "Required: Must be > 0"),
+            ReagentFormHandler.create_form_field(eq_input, "Required: Must be > 0. Set to 1.0 for limiting reagent."),
+            ReagentFormHandler.create_form_field(syringe_input, "Required: Must be > 0")
+        ]
+        
+        if density_input:
+            form_fields.append(
+                ReagentFormHandler.create_form_field(density_input, "Required for liquids: Must be > 0")
+            )
+        
+        # Add structure visualization
+        form_fields.append(widgets.VBox([
+            widgets.HTML("<h4>Structure Preview</h4>"),
+            structure_area
+        ], layout=widgets.Layout(
+            align_items="center",
+            border="1px solid #ddd",
+            margin="10px 0",
+            padding="10px"
+        )))
+        
+        form_fields.append(save_button)
+        
+        # Set up save callback
+        def save_reagent(b):
+            try:
+                # Collect form data
+                inchi_value = inchi_input.value
+                if inchi_value and inchi_value.startswith("InChI="):
+                    inchi_value = inchi_value[6:]  # Remove 'InChI=' prefix
+                
+                reagent_data = {
+                    "name": name_input.value,
+                    "inChi": inchi_value,
+                    "SMILES": smiles_input.value,
+                    "inChi Key": inchikey_input.value,
+                    "molecular weight (in g/mol)": mw_input.value,
+                    "eq": eq_input.value,
+                    "syringe": syringe_input.value
+                }
+                
+                if density_input:
+                    reagent_data["density (in g/mL)"] = density_input.value
+                
+                # Validate
+                validation_errors = validate_reagent_data(reagent_data, reagent_type)
+                if validation_errors:
+                    status_area.value = "<div style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'>"
+                    status_area.value += "<b>Please correct the following errors:</b><ul>"
+                    for error in validation_errors:
+                        status_area.value += f"<li>{error}</li>"
+                    status_area.value += "</ul></div>"
+                    return
+                
+                # Save
+                success = on_save(reagent_data, None)
+                if success:
+                    status_area.value = "<div style='color: green; padding: 10px; background-color: #EEFFEE; border-radius: 5px;'><b>Reagent saved successfully!</b></div>"
+                    # Clear form
+                    self._clear_form(form_widgets)
+                else:
+                    status_area.value = "<div style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'><b>Failed to save reagent.</b></div>"
+                    
+            except Exception as e:
+                status_area.value = f"<div style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'><b>Error: {str(e)}</b></div>"
+        
+        save_button.on_click(save_reagent)
+        
+        # Create form container
+        bg_color = "#F0F7F4" if reagent_type == "solid" else "#EFF7FF"
+        form = widgets.VBox(
+            form_fields,
+            layout=widgets.Layout(
+                border=f"1px solid {'#90BE6D' if reagent_type == 'solid' else '#577590'}",
+                padding="15px",
+                margin="10px 0",
+                background_color=bg_color
+            )
+        )
+        
+        return form, form_widgets
+    
+    def _clear_form(self, form_widgets):
+        """Clear all form inputs"""
+        form_widgets['name'].value = ""
+        form_widgets['inchi'].value = ""
+        form_widgets['smiles'].value = ""
+        form_widgets['inchikey'].value = ""
+        form_widgets['mw'].value = 0.0
+        form_widgets['eq'].value = 1.0
+        form_widgets['syringe'].value = 1
+        if 'density' in form_widgets:
+            form_widgets['density'].value = 1.0
+        if 'status' in form_widgets:
+            form_widgets['status'].value = ""
+    
+    def _populate_form(self, form_widgets, compound_data):
+        """Populate form with compound data"""
+        try:
+            # Debug: Print available data
+            print(f"🔍 Debug: Populating form with compound data: {list(compound_data.keys())}")
+            
+            form_widgets['name'].value = compound_data.get('name', '')
+            form_widgets['inchi'].value = compound_data.get('inchi', '')
+            form_widgets['smiles'].value = compound_data.get('smiles', '')
+            form_widgets['inchikey'].value = compound_data.get('inchikey', '')
+            form_widgets['mw'].value = compound_data.get('molecular_weight', 0.0)
+            form_widgets['eq'].value = 1.0  # Default
+            form_widgets['syringe'].value = 1  # Default
+            if 'density' in form_widgets and 'density' in compound_data:
+                form_widgets['density'].value = compound_data.get('density', 1.0)
+            
+            # Show success message
+            if 'status' in form_widgets:
+                form_widgets['status'].value = f"""
+                <div style='color: green; padding: 10px; background-color: #EEFFEE; border-radius: 5px; border: 1px solid #90BE6D;'>
+                    <b>✅ Imported from PubChem!</b><br>
+                    Compound: {compound_data.get('name', 'Unknown')}<br>
+                    Review the data and click "Save Reagent" to add to your experiment.
+                </div>
+                """
+            
+            print(f"✅ Successfully populated form fields")
+            
+        except Exception as e:
+            print(f"❌ Error populating form: {str(e)}")
+            import traceback
+            traceback.print_exc()
     
     def _create_pubchem_search_tab(self):
         """Create the PubChem search tab"""
@@ -387,7 +626,7 @@ class ReagentUI:
             options=['name', 'smiles', 'inchi', 'inchi key', 'cas'],
             value='name',
             description='Type:',
-            layout=widgets.Layout(width="120px")
+            layout=widgets.Layout(width="180px")
         )
         
         search_button = widgets.Button(
@@ -446,10 +685,19 @@ class ReagentUI:
         
         search_button.on_click(perform_search)
         
-        search_controls = widgets.HBox([search_input, search_type, search_button])
+        # Improved search controls layout with better spacing
+        search_controls = widgets.HBox([
+            search_input, 
+            search_type, 
+            search_button
+        ], layout=widgets.Layout(
+            align_items='flex-end',
+            margin='0 0 10px 0'
+        ))
         
         return widgets.VBox([
             widgets.HTML("<h4>Search PubChem Database</h4>"),
+            widgets.HTML("<p style='color: #666; margin: 5px 0;'>Search for compounds and import them directly into your reagent forms</p>"),
             search_controls,
             status_output,
             widgets.HTML("<h5>Search Results:</h5>"),
@@ -521,38 +769,26 @@ class ReagentUI:
         display(container)
     
     def _import_compound(self, compound: Dict[str, Any], reagent_type: str):
-        """Import a compound from search results"""
+        """Import a compound from search results and populate the form"""
         
-        # Convert compound data to reagent format
-        reagent_data = {
-            "name": compound.get('name', ''),
-            "molecular weight (in g/mol)": compound.get('molecular_weight', 0),
-            "inChi": compound.get('inchi', ''),
-            "inChi Key": compound.get('inchikey', ''),
-            "SMILES": compound.get('smiles', ''),
-            "eq": 1.0,  # Default
-            "syringe": 1  # Default
-        }
-        
-        # Add density for liquids
-        if reagent_type == "liquid":
-            reagent_data["density (in g/mL)"] = compound.get('density', 1.0)
-        
-        # Switch to appropriate tab and populate form
+        # Switch to appropriate tab
         if reagent_type == "solid":
             self.tab_widget.selected_index = 0  # Solid tab
+            form_widgets = self.solid_form_widgets
         else:
             self.tab_widget.selected_index = 1  # Liquid tab
+            form_widgets = self.liquid_form_widgets
         
-        # Note: In a full implementation, we would populate the form fields
-        # For now, we'll add directly
-        success = self.data_manager.add_reagent(reagent_data, reagent_type)
+        # Ensure form widgets are available
+        if not form_widgets:
+            print(f"❌ Error: Form widgets not available for {reagent_type} tab")
+            return
         
-        if success:
-            print(f"✅ Imported {compound.get('name', 'compound')} as {reagent_type}")
-            self._refresh_display_tab()
-        else:
-            print(f"❌ Failed to import {compound.get('name', 'compound')}")
+        # Populate the form with compound data
+        self._populate_form(form_widgets, compound)
+        
+        print(f"✅ Imported {compound.get('name', 'compound')} data into {reagent_type} reagent form")
+        print("📝 Review the imported data and click 'Save Reagent' to add to your experiment")
     
     def _create_reagents_display_tab(self):
         """Create the current reagents display tab"""
