@@ -1,8 +1,9 @@
 """
-Modern Reagent Entry GUI
+Modern Reagent Entry GUI with Enhanced UI
 
 Integrated reagent entry interface that works with the unified experimental 
-metadata system. Provides modern UI with validation and PubChem integration.
+metadata system. Provides a polished UI with validation, PubChem integration,
+and structure visualization.
 """
 
 import ipywidgets as widgets
@@ -10,19 +11,51 @@ from IPython.display import display, clear_output
 from typing import Dict, Any, Optional, List
 import traceback
 
-# Import from ReagentUI components that we'll reuse
+# Import our enhanced components
 try:
-    from ..ReagentUI.PubChemService import PubChemService
-    from ..ReagentUI.StructureVisualization import StructureVisualization
-    from ..ReagentUI.UIComponents import UIComponents
+    from .pubchem_service import PubChemService
+    from .structure_visualization import StructureVisualization
+    from .ui_components import UIComponents
+    from .reagent_utils import validate_reagent_data
+    from .reagent_validator import ReagentValidator
 except ImportError:
-    # Fallback if ReagentUI components are not available
-    PubChemService = None
-    StructureVisualization = None
-    UIComponents = None
-
-from .reagent_validator import ReagentValidator
-
+    try:
+        from mechwolf.DataEntry.Phase1_ReagentEntry.pubchem_service import PubChemService
+        from mechwolf.DataEntry.Phase1_ReagentEntry.structure_visualization import StructureVisualization
+        from mechwolf.DataEntry.Phase1_ReagentEntry.ui_components import UIComponents
+        from mechwolf.DataEntry.Phase1_ReagentEntry.reagent_utils import validate_reagent_data
+        from mechwolf.DataEntry.Phase1_ReagentEntry.reagent_validator import ReagentValidator
+    except ImportError:
+        # Create fallback classes
+        class PubChemService:
+            def search(self, query, search_type):
+                return []
+        
+        class StructureVisualization:
+            pass
+        
+        class UIComponents:
+            @staticmethod
+            def create_section_header(title, icon=""):
+                import ipywidgets as widgets
+                return widgets.HTML(f"<h3>{icon} {title}</h3>")
+            
+            @staticmethod
+            def create_reagent_item(reagent, is_solid, on_edit, on_delete, index):
+                import ipywidgets as widgets
+                return widgets.HTML(f"<div>{reagent.get('name', 'Unknown')}</div>")
+            
+            @staticmethod
+            def create_search_result_widget(compound, on_import_solid, on_import_liquid):
+                import ipywidgets as widgets
+                return widgets.HTML(f"<div>{compound.get('name', 'Unknown')}</div>")
+        
+        def validate_reagent_data(data, reagent_type):
+            return []
+        
+        class ReagentValidator:
+            def validate_reagent(self, data, reagent_type):
+                return []
 
 class ReagentEntryGUI:
     """Modern reagent entry interface using experimental metadata"""
@@ -37,15 +70,16 @@ class ReagentEntryGUI:
         self.experiment = experiment_manager
         self.validator = ReagentValidator()
         
-        # Initialize services if available
-        self.pubchem_service = PubChemService() if PubChemService else None
-        self.structure_viz = StructureVisualization() if StructureVisualization else None
-        self.ui_components = UIComponents() if UIComponents else None
+        # Initialize services
+        self.pubchem_service = PubChemService()
+        self.structure_viz = StructureVisualization()
+        self.ui_components = UIComponents()
         
         # GUI state
         self.current_reagent = {}
         self.editing_index = None
         self.reagent_type = "solid"  # 'solid' or 'liquid'
+        self.search_results = []
         
         # Create widgets
         self._create_widgets()
@@ -53,18 +87,11 @@ class ReagentEntryGUI:
     def _create_widgets(self):
         """Create the main UI widgets"""
         
-        # Header
-        self.header = widgets.HTML("""
-        <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                    padding: 20px; border-radius: 10px; margin-bottom: 20px;'>
-            <h2 style='color: white; margin: 0; text-align: center;'>
-                🧪 Phase 1: Reagent Entry
-            </h2>
-            <p style='color: #f0f0f0; margin: 5px 0 0 0; text-align: center;'>
-                Add and manage reagents for your experiment
-            </p>
-        </div>
-        """)
+        # Main header
+        self.header = self.ui_components.create_section_header(
+            "🧪 Phase 1: Reagent Entry", 
+            ""
+        )
         
         # Reagent type selector
         self.reagent_type_selector = widgets.ToggleButtons(
@@ -72,44 +99,85 @@ class ReagentEntryGUI:
             value='solid',
             description='Type:',
             button_style='info',
-            tooltips=['Solid reagents (powders, crystals)', 'Liquid reagents (solutions, solvents)']
+            tooltips=['Solid reagents (powders, crystals)', 'Liquid reagents (solutions, solvents)'],
+            layout=widgets.Layout(width='400px')
         )
         self.reagent_type_selector.observe(self._on_reagent_type_change, names='value')
         
-        # Reagent name input with PubChem lookup
+        # Search section
+        self._create_search_widgets()
+        
+        # Entry form section
+        self._create_form_widgets()
+        
+        # Reaction scale section
+        self._create_scale_widgets()
+        
+        # Display and status areas
+        self.reagents_display = widgets.Output(
+            layout=widgets.Layout(
+                height='400px',
+                border='1px solid #ccc',
+                padding='10px',
+                overflow_y='auto'
+            )
+        )
+        
+        self.status_output = widgets.Output()
+        
+        # Initialize display
+        self._refresh_reagents_display()
+        self._update_limiting_reagent_options()
+        
+    def _create_search_widgets(self):
+        """Create PubChem search widgets"""
+        
+        # Search input and button
+        self.search_input = widgets.Text(
+            placeholder="Search PubChem (name, SMILES, InChI, CAS)",
+            description="Search:",
+            layout=widgets.Layout(width='300px')
+        )
+        
+        self.search_type_dropdown = widgets.Dropdown(
+            options=['name', 'smiles', 'inchi', 'inchi key', 'cas'],
+            value='name',
+            description='Type:',
+            layout=widgets.Layout(width='120px')
+        )
+        
+        self.search_button = widgets.Button(
+            description="🔍 Search",
+            button_style='primary',
+            layout=widgets.Layout(width='100px')
+        )
+        self.search_button.on_click(self._search_pubchem)
+        
+        # Search results area
+        self.search_results_output = widgets.Output(
+            layout=widgets.Layout(
+                height='300px',
+                border='1px solid #ddd',
+                overflow_y='auto',
+                padding='10px'
+            )
+        )
+        
+    def _create_form_widgets(self):
+        """Create reagent entry form widgets"""
+        
+        # Basic reagent information
         self.name_input = widgets.Text(
             placeholder="Enter reagent name",
             description="Name:",
             layout=widgets.Layout(width='300px')
         )
         
-        self.pubchem_button = widgets.Button(
-            description="🔍 PubChem",
-            button_style='info',
-            layout=widgets.Layout(width='100px'),
-            disabled=self.pubchem_service is None
-        )
-        self.pubchem_button.on_click(self._lookup_pubchem)
-        
-        # Molecular data inputs
         self.mw_input = widgets.FloatText(
             description="MW (g/mol):",
             layout=widgets.Layout(width='150px')
         )
         
-        self.inchi_input = widgets.Text(
-            placeholder="InChI string (optional)",
-            description="InChI:",
-            layout=widgets.Layout(width='400px')
-        )
-        
-        self.inchi_key_input = widgets.Text(
-            placeholder="InChI Key (optional)",
-            description="InChI Key:",
-            layout=widgets.Layout(width='300px')
-        )
-        
-        # Stoichiometry inputs
         self.eq_input = widgets.FloatText(
             description="Equivalents:",
             value=1.0,
@@ -120,6 +188,25 @@ class ReagentEntryGUI:
             description="Position:",
             value=1,
             layout=widgets.Layout(width='120px')
+        )
+        
+        # Chemical identifiers
+        self.inchi_input = widgets.Text(
+            placeholder="InChI string (optional)",
+            description="InChI:",
+            layout=widgets.Layout(width='500px')
+        )
+        
+        self.inchi_key_input = widgets.Text(
+            placeholder="InChI Key (optional)",
+            description="InChI Key:",
+            layout=widgets.Layout(width='350px')
+        )
+        
+        self.smiles_input = widgets.Text(
+            placeholder="SMILES string (optional)",
+            description="SMILES:",
+            layout=widgets.Layout(width='350px')
         )
         
         # Amount inputs (different for solid vs liquid)
@@ -170,8 +257,8 @@ class ReagentEntryGUI:
         )
         self.clear_button.on_click(self._clear_form)
         
-        # Reaction scale inputs
-        self.scale_header = widgets.HTML("<h4>Reaction Scale</h4>")
+    def _create_scale_widgets(self):
+        """Create reaction scale widgets"""
         
         self.mass_scale_input = widgets.FloatText(
             description="Mass Scale (mg):",
@@ -201,37 +288,35 @@ class ReagentEntryGUI:
         )
         self.save_scale_button.on_click(self._save_reaction_scale)
         
-        # Display area for current reagents
-        self.reagents_display = widgets.Output(
-            layout=widgets.Layout(
-                height='400px',
-                border='1px solid #ccc',
-                padding='10px',
-                overflow_y='auto'
-            )
-        )
-        
-        # Status/feedback area
-        self.status_output = widgets.Output()
-        
-        # Update initial display
-        self._update_form_layout()
-        self._refresh_reagents_display()
-        self._update_limiting_reagent_options()
-        
     def _create_main_layout(self):
         """Create the main layout structure"""
         
-        # Input form layout
-        name_row = widgets.HBox([
-            self.name_input,
-            self.pubchem_button
+        # Search section layout
+        search_row = widgets.HBox([
+            self.search_input,
+            self.search_type_dropdown,
+            self.search_button
         ])
+        
+        search_section = widgets.VBox([
+            self.ui_components.create_section_header("🔍 PubChem Search"),
+            search_row,
+            widgets.HTML("<h5>Search Results:</h5>"),
+            self.search_results_output
+        ])
+        
+        # Form section layout
+        name_row = widgets.HBox([self.name_input])
         
         molecular_row = widgets.HBox([
             self.mw_input,
             self.eq_input,
             self.position_input
+        ])
+        
+        identifiers_section = widgets.VBox([
+            self.inchi_input,
+            widgets.HBox([self.inchi_key_input, self.smiles_input])
         ])
         
         # Amount inputs depend on reagent type
@@ -251,10 +336,10 @@ class ReagentEntryGUI:
         ])
         
         form_section = widgets.VBox([
+            self.ui_components.create_section_header(f"📝 {self.reagent_type.title()} Reagent Entry"),
             name_row,
-            self.inchi_input,
-            self.inchi_key_input,
             molecular_row,
+            identifiers_section,
             amount_row,
             button_row
         ])
@@ -271,24 +356,23 @@ class ReagentEntryGUI:
         ])
         
         scale_section = widgets.VBox([
-            self.scale_header,
+            self.ui_components.create_section_header("⚗️ Reaction Scale"),
             scale_row1,
             scale_row2,
             self.save_scale_button
         ])
         
-        # Left panel: Input forms
+        # Left panel: Search and forms
         left_panel = widgets.VBox([
             self.reagent_type_selector,
-            widgets.HTML("<h4>Reagent Details</h4>"),
+            search_section,
             form_section,
-            widgets.HTML("<br>"),
             scale_section
-        ], layout=widgets.Layout(width='500px', padding='10px'))
+        ], layout=widgets.Layout(width='600px', padding='10px'))
         
         # Right panel: Current reagents display
         right_panel = widgets.VBox([
-            widgets.HTML("<h4>Current Reagents</h4>"),
+            self.ui_components.create_section_header("📋 Current Reagents"),
             self.reagents_display
         ], layout=widgets.Layout(width='600px', padding='10px'))
         
@@ -301,49 +385,90 @@ class ReagentEntryGUI:
             self.status_output
         ])
         
-    def _update_form_layout(self):
-        """Update form layout based on reagent type"""
-        self._create_main_layout()
-        
     def _on_reagent_type_change(self, change):
         """Handle reagent type change"""
         self.reagent_type = change['new']
         self._update_form_layout()
         self._refresh_reagents_display()
         
-    def _lookup_pubchem(self, button):
-        """Lookup reagent in PubChem"""
-        if not self.pubchem_service or not self.name_input.value:
+    def _update_form_layout(self):
+        """Update form layout based on reagent type"""
+        self._create_main_layout()
+        
+    def _search_pubchem(self, button):
+        """Search PubChem and display results"""
+        query = self.search_input.value.strip()
+        search_type = self.search_type_dropdown.value
+        
+        if not query:
+            with self.status_output:
+                clear_output(wait=True)
+                print("❌ Please enter a search term")
             return
             
         with self.status_output:
             clear_output(wait=True)
-            print("🔍 Looking up in PubChem...")
+            print(f"🔍 Searching PubChem for '{query}' ({search_type})...")
             
         try:
-            compound_data = self.pubchem_service.get_compound_by_name(self.name_input.value)
+            results = self.pubchem_service.search(query, search_type)
+            self.search_results = results
             
-            if compound_data:
-                # Fill in the form with PubChem data
-                if 'molecular_weight' in compound_data:
-                    self.mw_input.value = compound_data['molecular_weight']
-                if 'inchi' in compound_data:
-                    self.inchi_input.value = compound_data['inchi']
-                if 'inchi_key' in compound_data:
-                    self.inchi_key_input.value = compound_data['inchi_key']
+            with self.search_results_output:
+                clear_output(wait=True)
+                
+                if not results:
+                    print("No compounds found")
+                else:
+                    print(f"Found {len(results)} compound(s):")
+                    print("=" * 50)
                     
-                with self.status_output:
-                    clear_output(wait=True)
-                    print("✅ PubChem data loaded successfully")
-            else:
-                with self.status_output:
-                    clear_output(wait=True)
-                    print("❌ Compound not found in PubChem")
-                    
+                    for i, compound in enumerate(results):
+                        # Create search result widget
+                        result_widget = self.ui_components.create_search_result_widget(
+                            compound,
+                            self._import_as_solid,
+                            self._import_as_liquid
+                        )
+                        display(result_widget)
+                        
+            with self.status_output:
+                clear_output(wait=True)
+                print(f"✅ Found {len(results)} results")
+                
         except Exception as e:
             with self.status_output:
                 clear_output(wait=True)
-                print(f"❌ Error looking up compound: {e}")
+                print(f"❌ Search error: {e}")
+    
+    def _import_as_solid(self, compound: Dict[str, Any]):
+        """Import compound as solid reagent"""
+        self.reagent_type = 'solid'
+        self.reagent_type_selector.value = 'solid'
+        self._fill_form_from_compound(compound)
+        
+    def _import_as_liquid(self, compound: Dict[str, Any]):
+        """Import compound as liquid reagent"""
+        self.reagent_type = 'liquid'
+        self.reagent_type_selector.value = 'liquid'
+        self._fill_form_from_compound(compound)
+        
+    def _fill_form_from_compound(self, compound: Dict[str, Any]):
+        """Fill form with compound data"""
+        self.name_input.value = compound.get('name', '')
+        self.mw_input.value = compound.get('molecular_weight', 0.0)
+        self.inchi_input.value = compound.get('inchi', '')
+        self.inchi_key_input.value = compound.get('inchikey', '')
+        self.smiles_input.value = compound.get('smiles', '')
+        
+        if self.reagent_type == 'liquid' and compound.get('density'):
+            self.density_input.value = compound['density']
+        
+        self._update_form_layout()
+        
+        with self.status_output:
+            clear_output(wait=True)
+            print(f"✅ Imported {compound.get('name', 'compound')} as {self.reagent_type}")
     
     def _add_reagent(self, button):
         """Add new reagent"""
@@ -351,7 +476,7 @@ class ReagentEntryGUI:
             reagent_data = self._collect_form_data()
             
             # Validate reagent data
-            validation_errors = self.validator.validate_reagent(reagent_data, self.reagent_type)
+            validation_errors = validate_reagent_data(reagent_data, self.reagent_type)
             if validation_errors:
                 with self.status_output:
                     clear_output(wait=True)
@@ -395,7 +520,7 @@ class ReagentEntryGUI:
             reagent_data = self._collect_form_data()
             
             # Validate reagent data
-            validation_errors = self.validator.validate_reagent(reagent_data, self.reagent_type)
+            validation_errors = validate_reagent_data(reagent_data, self.reagent_type)
             if validation_errors:
                 with self.status_output:
                     clear_output(wait=True)
@@ -405,10 +530,20 @@ class ReagentEntryGUI:
                 return
             
             # Update in experiment
+            chemistry_data = self.experiment.chemistry.get_data()
+            # Use reagent type from current GUI state (which was set during _edit_reagent)
             if self.reagent_type == 'solid':
-                success = self.experiment.chemistry.update_solid_reagent(self.editing_index, reagent_data)
+                if 'solid_reagents' in chemistry_data and self.editing_index < len(chemistry_data['solid_reagents']):
+                    chemistry_data['solid_reagents'][self.editing_index] = reagent_data
+                    success = self.experiment.chemistry.save_data(chemistry_data)
+                else:
+                    success = False
             else:
-                success = self.experiment.chemistry.update_liquid_reagent(self.editing_index, reagent_data)
+                if 'liquid_reagents' in chemistry_data and self.editing_index < len(chemistry_data['liquid_reagents']):
+                    chemistry_data['liquid_reagents'][self.editing_index] = reagent_data
+                    success = self.experiment.chemistry.save_data(chemistry_data)
+                else:
+                    success = False
             
             if success:
                 self.experiment.save()
@@ -429,6 +564,82 @@ class ReagentEntryGUI:
                 clear_output(wait=True)
                 print(f"❌ Error updating reagent: {e}")
     
+    def _edit_reagent(self, index: int, reagent: Dict[str, Any]):
+        """Enter edit mode for a reagent"""
+        self.editing_index = index
+        
+        # Determine reagent type based on data structure and set GUI state
+        is_solid = 'mass' in reagent
+        self.reagent_type = 'solid' if is_solid else 'liquid'
+        self.reagent_type_selector.value = self.reagent_type
+        
+        # Fill form with reagent data
+        self.name_input.value = reagent.get("name", "")
+        self.mw_input.value = reagent.get("molecular_weight", 0.0)
+        self.eq_input.value = reagent.get("eq", 1.0)
+        self.position_input.value = reagent.get("position", 1)
+        self.inchi_input.value = reagent.get("inChi", "")
+        self.inchi_key_input.value = reagent.get("inChi_Key", "")
+        self.smiles_input.value = reagent.get("SMILES", "")
+        
+        if is_solid:
+            self.mass_input.value = reagent.get("mass", 0.0)
+        else:
+            self.volume_input.value = reagent.get("volume", 0.0)
+            self.density_input.value = reagent.get("density", 1.0)
+        
+        # Update button states
+        self.add_button.disabled = True
+        self.update_button.disabled = False
+        self.cancel_button.disabled = False
+        
+        # Update layout to match reagent type
+        self._update_form_layout()
+        
+        with self.status_output:
+            clear_output(wait=True)
+            print(f"📝 Editing {reagent.get('name', 'reagent')}")
+    
+    def _delete_reagent(self, index: int, reagent: Dict[str, Any]):
+        """Delete a reagent"""
+        try:
+            chemistry_data = self.experiment.chemistry.get_data()
+            
+            # Determine reagent type based on data structure (solid reagents have 'mass', liquid have 'volume')
+            is_solid = 'mass' in reagent
+            
+            if is_solid:
+                if 'solid_reagents' in chemistry_data and index < len(chemistry_data['solid_reagents']):
+                    del chemistry_data['solid_reagents'][index]
+                    success = True
+                else:
+                    success = False
+            else:
+                if 'liquid_reagents' in chemistry_data and index < len(chemistry_data['liquid_reagents']):
+                    del chemistry_data['liquid_reagents'][index]
+                    success = True
+                else:
+                    success = False
+            
+            if success:
+                self.experiment.chemistry.save_data(chemistry_data)
+                self.experiment.save()
+                self._refresh_reagents_display()
+                self._update_limiting_reagent_options()
+                
+                with self.status_output:
+                    clear_output(wait=True)
+                    print(f"🗑️ Deleted {reagent.get('name', 'reagent')}")
+            else:
+                with self.status_output:
+                    clear_output(wait=True)
+                    print("❌ Failed to delete reagent")
+                    
+        except Exception as e:
+            with self.status_output:
+                clear_output(wait=True)
+                print(f"❌ Error deleting reagent: {e}")
+    
     def _cancel_edit(self, button=None):
         """Cancel editing mode"""
         self.editing_index = None
@@ -443,6 +654,7 @@ class ReagentEntryGUI:
         self.mw_input.value = 0.0
         self.inchi_input.value = ""
         self.inchi_key_input.value = ""
+        self.smiles_input.value = ""
         self.eq_input.value = 1.0
         self.position_input.value = 1
         self.mass_input.value = 0.0
@@ -455,23 +667,25 @@ class ReagentEntryGUI:
     def _collect_form_data(self) -> Dict[str, Any]:
         """Collect data from form inputs"""
         data = {
-            "name": self.name_input.value,
+            "name": self.name_input.value.strip(),
             "molecular_weight": self.mw_input.value,
-            "eq": self.eq_input.value or None,
-            "position": self.position_input.value or None
+            "eq": self.eq_input.value,
+            "position": self.position_input.value
         }
         
         # Add optional fields if provided
-        if self.inchi_input.value:
-            data["inChi"] = self.inchi_input.value
-        if self.inchi_key_input.value:
-            data["inChi_Key"] = self.inchi_key_input.value
+        if self.inchi_input.value.strip():
+            data["inChi"] = self.inchi_input.value.strip()
+        if self.inchi_key_input.value.strip():
+            data["inChi_Key"] = self.inchi_key_input.value.strip()
+        if self.smiles_input.value.strip():
+            data["SMILES"] = self.smiles_input.value.strip()
             
         # Add type-specific fields
         if self.reagent_type == 'solid':
             data["mass"] = self.mass_input.value
         else:
-            data["volume"] = self.volume_input.value or None
+            data["volume"] = self.volume_input.value
             data["density"] = self.density_input.value
             
         return data
@@ -479,15 +693,18 @@ class ReagentEntryGUI:
     def _save_reaction_scale(self, button):
         """Save reaction scale information"""
         try:
-            self.experiment.chemistry.set_reaction_scale(
-                mass_scale=self.mass_scale_input.value,
-                concentration=self.concentration_input.value,
-                solvent=self.solvent_input.value
-            )
+            chemistry_data = self.experiment.chemistry.get_data()
             
+            if self.mass_scale_input.value:
+                chemistry_data["mass_scale"] = self.mass_scale_input.value
+            if self.concentration_input.value:
+                chemistry_data["concentration"] = self.concentration_input.value
+            if self.solvent_input.value.strip():
+                chemistry_data["solvent"] = self.solvent_input.value.strip()
             if self.limiting_reagent_dropdown.value:
-                self.experiment.chemistry.set_limiting_reagent(self.limiting_reagent_dropdown.value)
+                chemistry_data["limiting_reagent"] = self.limiting_reagent_dropdown.value
             
+            self.experiment.chemistry.save_data(chemistry_data)
             self.experiment.save()
             
             with self.status_output:
@@ -500,7 +717,7 @@ class ReagentEntryGUI:
                 print(f"❌ Error saving reaction scale: {e}")
     
     def _refresh_reagents_display(self):
-        """Refresh the reagents display"""
+        """Refresh the reagents display using enhanced widgets"""
         with self.reagents_display:
             clear_output(wait=True)
             
@@ -509,57 +726,45 @@ class ReagentEntryGUI:
             # Display solid reagents
             solid_reagents = chemistry_data.get("solid_reagents", [])
             if solid_reagents:
-                print("🧱 SOLID REAGENTS")
-                print("=" * 50)
+                display(self.ui_components.create_section_header("🧱 Solid Reagents"))
                 for i, reagent in enumerate(solid_reagents):
-                    self._display_reagent(reagent, i, 'solid')
-                print()
+                    reagent_widget = self.ui_components.create_reagent_item(
+                        reagent, True, self._edit_reagent, self._delete_reagent, i
+                    )
+                    display(reagent_widget)
             
             # Display liquid reagents
             liquid_reagents = chemistry_data.get("liquid_reagents", [])
             if liquid_reagents:
-                print("💧 LIQUID REAGENTS")
-                print("=" * 50)
+                display(self.ui_components.create_section_header("💧 Liquid Reagents"))
                 for i, reagent in enumerate(liquid_reagents):
-                    self._display_reagent(reagent, i, 'liquid')
-                print()
+                    reagent_widget = self.ui_components.create_reagent_item(
+                        reagent, False, self._edit_reagent, self._delete_reagent, i
+                    )
+                    display(reagent_widget)
             
-            # Display reaction scale
-            mass_scale = chemistry_data.get("mass_scale")
-            concentration = chemistry_data.get("concentration")
-            solvent = chemistry_data.get("solvent")
-            limiting_reagent = chemistry_data.get("limiting_reagent")
+            # Display reaction scale info
+            scale_info = []
+            if chemistry_data.get("mass_scale"):
+                scale_info.append(f"Mass Scale: {chemistry_data['mass_scale']} mg")
+            if chemistry_data.get("concentration"):
+                scale_info.append(f"Concentration: {chemistry_data['concentration']} M")
+            if chemistry_data.get("solvent"):
+                scale_info.append(f"Solvent: {chemistry_data['solvent']}")
+            if chemistry_data.get("limiting_reagent"):
+                scale_info.append(f"Limiting Reagent: {chemistry_data['limiting_reagent']}")
             
-            if any([mass_scale, concentration, solvent, limiting_reagent]):
-                print("⚗️ REACTION SCALE")
-                print("=" * 50)
-                if mass_scale:
-                    print(f"Mass Scale: {mass_scale} mg")
-                if concentration:
-                    print(f"Concentration: {concentration} M")
-                if solvent:
-                    print(f"Solvent: {solvent}")
-                if limiting_reagent:
-                    print(f"Limiting Reagent: {limiting_reagent}")
-    
-    def _display_reagent(self, reagent: Dict[str, Any], index: int, reagent_type: str):
-        """Display a single reagent with edit/delete buttons"""
-        name = reagent.get("name", "Unknown")
-        mw = reagent.get("molecular_weight", 0)
-        eq = reagent.get("eq", "N/A")
-        
-        print(f"{index + 1}. {name}")
-        print(f"   MW: {mw} g/mol | Eq: {eq}")
-        
-        if reagent_type == 'solid':
-            mass = reagent.get("mass", 0)
-            print(f"   Mass: {mass} mg")
-        else:
-            volume = reagent.get("volume", "N/A")
-            density = reagent.get("density", 1.0)
-            print(f"   Volume: {volume} mL | Density: {density} g/mL")
-        
-        print()
+            if scale_info:
+                display(self.ui_components.create_section_header("⚗️ Reaction Scale"))
+                scale_html = "<br>".join(scale_info)
+                display(widgets.HTML(f"<div style='padding: 10px;'>{scale_html}</div>"))
+            
+            if not solid_reagents and not liquid_reagents:
+                display(widgets.HTML(
+                    "<div style='text-align: center; color: #666; padding: 40px;'>"
+                    "No reagents added yet. Use the form to add reagents."
+                    "</div>"
+                ))
     
     def _update_limiting_reagent_options(self):
         """Update limiting reagent dropdown options"""

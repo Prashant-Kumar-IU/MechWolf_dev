@@ -13,6 +13,10 @@ Main Components:
 
 try:
     from .reagent_gui import ReagentEntryGUI
+    from .pubchem_service import PubChemService
+    from .structure_visualization import StructureVisualization
+    from .ui_components import UIComponents
+    from .reagent_utils import validate_reagent_data, validate_smiles, is_rdkit_available
 except ImportError as e:
     # Handle missing dependencies gracefully
     class ReagentEntryGUI:
@@ -24,6 +28,11 @@ except ImportError as e:
             print("ReagentEntryGUI not available - install required dependencies (ipywidgets, etc.)")
             
     print(f"Warning: ReagentEntryGUI not fully available: {e}")
+    
+    # Create dummy classes for missing imports
+    PubChemService = None
+    StructureVisualization = None 
+    UIComponents = None
 
 # Convenience function for launching GUI
 def launch_gui(experiment_manager):
@@ -40,4 +49,4 @@ def launch_gui(experiment_manager):
     gui.display()
     return gui
 
-__all__ = ['ReagentEntryGUI', 'launch_gui']
+__all__ = ['ReagentEntryGUI', 'launch_gui', 'PubChemService', 'StructureVisualization', 'UIComponents']
