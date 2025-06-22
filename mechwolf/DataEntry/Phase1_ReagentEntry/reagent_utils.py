@@ -166,7 +166,7 @@ def validate_reagent_data(data, reagent_type):
     Parameters:
     -----------
     data : dict
-        Dictionary containing reagent data
+        Dictionary containing reagent data (in old ReagentUI format)
     reagent_type : str
         Type of reagent ('solid' or 'liquid')
         
@@ -185,22 +185,19 @@ def validate_reagent_data(data, reagent_type):
     if not data.get("eq") or data["eq"] <= 0:
         errors.append("Equivalents must be greater than 0")
         
-    # Molecular weight validation
-    if not data.get("molecular_weight") or data["molecular_weight"] <= 0:
+    # Molecular weight validation (old format field name)
+    mw_field = "molecular weight (in g/mol)"
+    if not data.get(mw_field) or data[mw_field] <= 0:
         errors.append("Molecular weight must be greater than 0")
     
-    # Type-specific validation
-    if reagent_type == "solid":
-        if not data.get("mass") or data["mass"] <= 0:
-            errors.append("Mass must be greater than 0")
-    else:  # liquid
-        if data.get("volume") and data["volume"] <= 0:
-            errors.append("Volume must be greater than 0")
-        if not data.get("density") or data["density"] <= 0:
-            errors.append("Density must be greater than 0")
+    # Syringe validation (old format uses 'syringe' instead of 'position')
+    if not data.get("syringe") or data["syringe"] <= 0:
+        errors.append("Syringe number must be greater than 0")
     
-    # Position validation
-    if not data.get("position") or data["position"] <= 0:
-        errors.append("Position must be greater than 0")
+    # Type-specific validation
+    if reagent_type == "liquid":
+        density_field = "density (in g/mL)"
+        if not data.get(density_field) or data[density_field] <= 0:
+            errors.append("Density must be greater than 0 for liquid reagents")
     
     return errors

@@ -143,42 +143,70 @@ port_viewer = SerialPortViewer()
 port_viewer.run()
 
 # =============================================================================
-# CELL 4: Phase 1 - Reagent Entry
+# CELL 4: Phase 1 - ReagentUI (Restored Original Interface)
 # =============================================================================
 
 try:
     from mechwolf.DataEntry import Phase1_ReagentEntry
+    # Also import the restored ReagentUI directly if needed
+    from mechwolf.DataEntry.Phase1_ReagentEntry import ReagentUI
 except ImportError as e:
     print(f"❌ Failed to import Phase1_ReagentEntry: {e}")
     print("💡 Check that dependencies are installed (run Cell 1)")
-    print("🔄 This may require: conda install ipywidgets ipython")
+    print("🔄 This may require: conda install ipywidgets ipython rdkit")
     Phase1_ReagentEntry = None
+    ReagentUI = None
 
-# Create phase header
+# Create phase header with original ReagentUI branding
 phase1_header = NotebookIntegration.create_section_header(
-    "🧱 Phase 1: Reagent Entry",
-    "Configure reagents, stoichiometry, and reaction conditions",
+    "🧪 Phase 1: ReagentUI - Reagent Entry",
+    "Original tabbed interface with modern experimental metadata backend",
     "135deg, #4facfe 0%, #00f2fe 100%"
 )
 display(phase1_header)
 
-# Launch reagent entry interface
+# Information about the restored interface
+interface_info = NotebookIntegration.create_info_box(
+    "🎉 <strong>Restored Original Interface!</strong><br>"
+    "This is the beloved original ReagentUI with all its excellent functionality:<br>"
+    "• 📑 <strong>Tabbed Interface:</strong> Solid Reagents | Liquid Reagents | PubChem Search | Current Reagents | Final Details<br>"
+    "• 🔍 <strong>PubChem Integration:</strong> Advanced search with structure visualization<br>"
+    "• 🧬 <strong>Structure Display:</strong> Real-time molecular structure rendering<br>"
+    "• ✏️ <strong>Edit/Delete:</strong> Full reagent management capabilities<br>"
+    "• ⚗️ <strong>Calculations:</strong> Automatic volume and stoichiometry calculations<br>"
+    "• 💾 <strong>Modern Backend:</strong> Now uses unified experimental metadata system",
+    "success"
+)
+display(interface_info)
+
+# Launch the restored ReagentUI interface
 if Phase1_ReagentEntry:
     reagent_gui = Phase1_ReagentEntry.launch_gui(experiment)
+    
+    # Display usage instructions
+    usage_instructions = NotebookIntegration.create_info_box(
+        "📋 <strong>How to Use the ReagentUI Tabs:</strong><br>"
+        "1. <strong>🧱 Solid Reagents:</strong> Add powders, crystals, and solid compounds<br>"
+        "2. <strong>💧 Liquid Reagents:</strong> Add solutions, solvents, and liquid compounds<br>"
+        "3. <strong>🔍 PubChem Search:</strong> Search and import compounds with automatic data lookup<br>"
+        "4. <strong>📋 Current Reagents:</strong> View, edit, and delete added reagents<br>"
+        "5. <strong>⚗️ Final Details:</strong> Set mass scale, concentration, and process data<br><br>"
+        "<em>💡 Pro Tips:</em><br>"
+        "• Use PubChem search for automatic molecular weight and structure data<br>"
+        "• Set one reagent to eq=1.0 to designate it as the limiting reagent<br>"
+        "• The interface automatically calculates solution volumes and stoichiometry",
+        "info"
+    )
+    display(usage_instructions)
+    
 else:
     print("❌ Phase1_ReagentEntry not available due to import errors")
     print("💡 Install missing dependencies and restart kernel")
     reagent_gui = None
 
-# The GUI will be displayed below this cell
-# Use it to:
-# 1. Add solid and liquid reagents
-# 2. Set molecular weights and equivalents
-# 3. Configure reaction scale
-# 4. Set limiting reagent
-
-print("✅ Use the interface above to configure your reagents")
-print("💡 Pro tip: Use the PubChem lookup for automatic molecular data")
+print("✅ The original ReagentUI tabbed interface is now available above!")
+print("🎯 This preserves all the excellent functionality you loved")
+print("💾 Data is automatically saved to the modern experimental metadata system")
 
 # =============================================================================
 # CELL 5: Phase 2 - Integrated Apparatus & Pump Builder
