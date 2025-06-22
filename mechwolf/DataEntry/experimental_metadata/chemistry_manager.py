@@ -29,11 +29,46 @@ class ChemistryDataManager:
         """Get the chemistry section data"""
         return self.metadata_manager.get_section_data(self.section_name)
     
+    def _order_chemistry_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Ensure chemistry data fields are in desired order"""
+        ordered = {}
+        # Add fields in desired order
+        desired_order = ['schema_version', 'mass_scale', 'concentration', 'solid_reagents', 'liquid_reagents', 'solvent', 'solvent_volume']
+        
+        for key in desired_order:
+            if key in data:
+                ordered[key] = data[key]
+        
+        # Add any remaining fields that weren't in the desired order
+        for key, value in data.items():
+            if key not in ordered:
+                ordered[key] = value
+                
+        return ordered
+    
     def save_data(self, data: Dict[str, Any]) -> bool:
-        """Save chemistry section data"""
-        return self.metadata_manager.update_section_data(self.section_name, data)
+        """Save chemistry section data with proper field ordering"""
+        ordered_data = self._order_chemistry_data(data)
+        return self.metadata_manager.update_section_data(self.section_name, ordered_data)
     
     # Reagent Management
+    def _order_reagent_fields(self, reagent: Dict[str, Any]) -> Dict[str, Any]:
+        """Order reagent fields according to desired sequence"""
+        ordered = {}
+        desired_order = ['name', 'molecular_weight', 'eq', 'density', 'position', 'inChi', 'inChi_Key', 'SMILES']
+        
+        # Add fields in desired order if they exist
+        for field in desired_order:
+            if field in reagent:
+                ordered[field] = reagent[field]
+        
+        # Add any remaining fields that weren't in the desired order
+        for field, value in reagent.items():
+            if field not in ordered:
+                ordered[field] = value
+                
+        return ordered
+
     def add_solid_reagent(self, reagent: Dict[str, Any]) -> bool:
         """
         Add a solid reagent to the experiment
@@ -61,7 +96,9 @@ class ChemistryDataManager:
             print(f"⚠️  Solid reagent '{reagent['name']}' already exists. Use update_solid_reagent() to modify.")
             return False
         
-        data["solid_reagents"].append(reagent)
+        # Order the reagent fields before adding
+        ordered_reagent = self._order_reagent_fields(reagent)
+        data["solid_reagents"].append(ordered_reagent)
         return self.save_data(data)
     
     def add_liquid_reagent(self, reagent: Dict[str, Any]) -> bool:
@@ -91,7 +128,9 @@ class ChemistryDataManager:
             print(f"⚠️  Liquid reagent '{reagent['name']}' already exists. Use update_liquid_reagent() to modify.")
             return False
         
-        data["liquid_reagents"].append(reagent)
+        # Order the reagent fields before adding
+        ordered_reagent = self._order_reagent_fields(reagent)
+        data["liquid_reagents"].append(ordered_reagent)
         return self.save_data(data)
     
     def update_solid_reagent(self, reagent_name: str, updates: Dict[str, Any]) -> bool:
@@ -101,6 +140,8 @@ class ChemistryDataManager:
         for i, reagent in enumerate(data.get("solid_reagents", [])):
             if reagent.get("name") == reagent_name:
                 data["solid_reagents"][i].update(updates)
+                # Reorder fields after update
+                data["solid_reagents"][i] = self._order_reagent_fields(data["solid_reagents"][i])
                 return self.save_data(data)
         
         print(f"❌ Solid reagent '{reagent_name}' not found")
@@ -113,6 +154,8 @@ class ChemistryDataManager:
         for i, reagent in enumerate(data.get("liquid_reagents", [])):
             if reagent.get("name") == reagent_name:
                 data["liquid_reagents"][i].update(updates)
+                # Reorder fields after update
+                data["liquid_reagents"][i] = self._order_reagent_fields(data["liquid_reagents"][i])
                 return self.save_data(data)
         
         print(f"❌ Liquid reagent '{reagent_name}' not found")

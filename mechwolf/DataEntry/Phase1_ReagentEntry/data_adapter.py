@@ -47,9 +47,7 @@ class ReagentDataAdapter:
         return old_reagent
     
     def _convert_to_new_format(self, reagent: Dict[str, Any]) -> Dict[str, Any]:
-        """Convert old format reagent to new format"""
-        new_reagent = copy.deepcopy(reagent)
-        
+        """Convert old format reagent to new format with proper field ordering"""
         # Convert field names from old format to new format
         field_mapping = {
             "molecular weight (in g/mol)": "molecular_weight",
@@ -58,9 +56,25 @@ class ReagentDataAdapter:
             "syringe": "position"  # Syringe maps to position in new format
         }
         
+        # Create a working copy for field conversion
+        temp_reagent = copy.deepcopy(reagent)
         for old_field, new_field in field_mapping.items():
-            if old_field in new_reagent:
-                new_reagent[new_field] = new_reagent.pop(old_field)
+            if old_field in temp_reagent:
+                temp_reagent[new_field] = temp_reagent.pop(old_field)
+        
+        # Build new reagent with desired field order
+        new_reagent = {}
+        desired_order = ['name', 'molecular_weight', 'eq', 'density', 'position', 'inChi', 'inChi_Key', 'SMILES']
+        
+        # Add fields in desired order if they exist
+        for field in desired_order:
+            if field in temp_reagent:
+                new_reagent[field] = temp_reagent[field]
+        
+        # Add any remaining fields that weren't in the desired order
+        for field, value in temp_reagent.items():
+            if field not in new_reagent:
+                new_reagent[field] = value
         
         return new_reagent
     

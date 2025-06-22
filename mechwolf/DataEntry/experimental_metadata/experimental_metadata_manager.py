@@ -144,7 +144,7 @@ class ExperimentalMetadataManager:
             # Write to temporary file first, then move (atomic operation)
             temp_file = self.json_file.with_suffix('.tmp')
             with open(temp_file, 'w', encoding='utf-8') as f:
-                json.dump(self._data, f, indent=4, ensure_ascii=False, sort_keys=True)
+                json.dump(self._data, f, indent=4, ensure_ascii=False)
             
             # Move temp file to actual file
             temp_file.replace(self.json_file)
