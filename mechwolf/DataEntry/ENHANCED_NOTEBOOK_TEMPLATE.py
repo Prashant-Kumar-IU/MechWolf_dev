@@ -24,9 +24,9 @@ Usage:
 # =============================================================================
 
 # Import the unified experimental metadata system
-from experimental_metadata import ExperimentalMetadataManager
-from utilities import get_notebook_json_name
-from shared_components import NotebookIntegration
+from mechwolf.DataEntry.experimental_metadata import ExperimentalMetadataManager
+from mechwolf.DataEntry.utilities import get_notebook_json_name
+from mechwolf.DataEntry.shared_components import NotebookIntegration
 
 # Create enhanced header
 header = NotebookIntegration.create_section_header(
@@ -67,7 +67,7 @@ info_box = NotebookIntegration.create_info_box(
 )
 display(info_box)
 
-from utilities import SerialPortViewer
+from mechwolf.DataEntry.utilities import SerialPortViewer
 
 # Launch serial port viewer
 port_viewer = SerialPortViewer()
@@ -282,7 +282,7 @@ analysis_header = NotebookIntegration.create_section_header(
 display(analysis_header)
 
 # Add TLC analysis
-from utilities import TLCInputForm
+from mechwolf.DataEntry.utilities import TLCInputForm
 
 tlc_form = TLCInputForm(experiment)
 tlc_form.run()

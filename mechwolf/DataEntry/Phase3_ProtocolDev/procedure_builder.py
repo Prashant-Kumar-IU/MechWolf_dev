@@ -7,7 +7,7 @@ component selection and parameter configuration.
 
 import ipywidgets as widgets
 from IPython.display import clear_output
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 
 
 class ProcedureBuilder:
