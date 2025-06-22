@@ -20,13 +20,82 @@ Usage:
 """
 
 # =============================================================================
-# CELL 1: Experiment Setup and Initialization
+# CELL 1: Dependency Check
+# =============================================================================
+
+print("🔍 Checking dependencies...")
+
+# Check for required dependencies
+missing_deps = []
+dependency_status = {}
+
+# Core dependencies
+dependencies = {
+    'pint': 'Physical units library (required by MechWolf core)',
+    'ipywidgets': 'Interactive widgets for Jupyter notebooks',
+    'IPython': 'Enhanced interactive Python shell for notebooks'
+}
+
+for dep_name, description in dependencies.items():
+    try:
+        __import__(dep_name)
+        dependency_status[dep_name] = True
+        print(f"✅ {dep_name}: Available")
+    except ImportError:
+        dependency_status[dep_name] = False
+        missing_deps.append(dep_name)
+        print(f"❌ {dep_name}: Missing - {description}")
+
+# MechWolf components check
+mechwolf_components = {
+    'mechwolf.DataEntry.experimental_metadata': 'Experimental metadata system',
+    'mechwolf.DataEntry.shared_components': 'Shared components and utilities',
+    'mechwolf.DataEntry.utilities': 'Notebook utilities'
+}
+
+print("\n🧪 Checking MechWolf components...")
+for component, description in mechwolf_components.items():
+    try:
+        __import__(component)
+        print(f"✅ {component}: Available")
+    except ImportError as e:
+        print(f"❌ {component}: Error - {str(e)}")
+
+if missing_deps:
+    print(f"\\n⚠️ Missing dependencies: {', '.join(missing_deps)}")
+    print("\\n💡 To install missing dependencies:")
+    print("   conda install ipywidgets ipython pint")
+    print("   # OR")  
+    print("   pip install ipywidgets ipython pint")
+    print("\\n🔄 After installation, restart your kernel and re-run this cell")
+else:
+    print("\\n🎉 All dependencies available! Ready to proceed.")
+
+# =============================================================================
+# CELL 2: Experiment Setup and Initialization  
 # =============================================================================
 
 # Import the unified experimental metadata system
-from mechwolf.DataEntry.experimental_metadata import ExperimentalMetadataManager
-from mechwolf.DataEntry.utilities import get_notebook_json_name
-from mechwolf.DataEntry.shared_components import NotebookIntegration
+try:
+    from mechwolf.DataEntry.experimental_metadata import ExperimentalMetadataManager
+    from mechwolf.DataEntry.utilities import get_notebook_json_name
+    from mechwolf.DataEntry.shared_components import NotebookIntegration
+    
+    # Check if we're in a Jupyter environment
+    try:
+        from IPython.display import display
+    except ImportError:
+        # Fallback for non-Jupyter environments
+        def display(obj):
+            print("📋 [Display widget would appear here in Jupyter]")
+            if hasattr(obj, 'value'):
+                print(f"Content: {obj.value}")
+                
+except ImportError as e:
+    print(f"❌ Import Error: {e}")
+    print("💡 This usually means missing dependencies. Run Cell 1 to check dependencies.")
+    print("🔄 Install missing packages and restart kernel before proceeding.")
+    raise
 
 # Create enhanced header
 header = NotebookIntegration.create_section_header(
@@ -56,7 +125,7 @@ navigator = NotebookIntegration.create_workflow_navigator(workflow_phases, curre
 display(navigator)
 
 # =============================================================================
-# CELL 2: Hardware Discovery (Optional)
+# CELL 3: Hardware Discovery (Optional)
 # =============================================================================
 
 # Optional: Discover available hardware
@@ -74,10 +143,16 @@ port_viewer = SerialPortViewer()
 port_viewer.run()
 
 # =============================================================================
-# CELL 3: Phase 1 - Reagent Entry
+# CELL 4: Phase 1 - Reagent Entry
 # =============================================================================
 
-import Phase1_ReagentEntry
+try:
+    from mechwolf.DataEntry import Phase1_ReagentEntry
+except ImportError as e:
+    print(f"❌ Failed to import Phase1_ReagentEntry: {e}")
+    print("💡 Check that dependencies are installed (run Cell 1)")
+    print("🔄 This may require: conda install ipywidgets ipython")
+    Phase1_ReagentEntry = None
 
 # Create phase header
 phase1_header = NotebookIntegration.create_section_header(
@@ -88,7 +163,12 @@ phase1_header = NotebookIntegration.create_section_header(
 display(phase1_header)
 
 # Launch reagent entry interface
-reagent_gui = Phase1_ReagentEntry.launch_gui(experiment)
+if Phase1_ReagentEntry:
+    reagent_gui = Phase1_ReagentEntry.launch_gui(experiment)
+else:
+    print("❌ Phase1_ReagentEntry not available due to import errors")
+    print("💡 Install missing dependencies and restart kernel")
+    reagent_gui = None
 
 # The GUI will be displayed below this cell
 # Use it to:
@@ -101,10 +181,15 @@ print("✅ Use the interface above to configure your reagents")
 print("💡 Pro tip: Use the PubChem lookup for automatic molecular data")
 
 # =============================================================================
-# CELL 4: Phase 2 - Integrated Apparatus & Pump Builder
+# CELL 5: Phase 2 - Integrated Apparatus & Pump Builder
 # =============================================================================
 
-import Phase2_ApparatusBuilder
+try:
+    from mechwolf.DataEntry import Phase2_ApparatusBuilder
+except ImportError as e:
+    print(f"❌ Failed to import Phase2_ApparatusBuilder: {e}")
+    print("💡 Check that dependencies are installed (run Cell 1)")
+    Phase2_ApparatusBuilder = None
 
 # Create phase header
 phase2_header = NotebookIntegration.create_section_header(
@@ -124,7 +209,12 @@ innovation_box = NotebookIntegration.create_info_box(
 display(innovation_box)
 
 # Launch integrated apparatus builder
-apparatus_gui = Phase2_ApparatusBuilder.launch_gui(experiment)
+if Phase2_ApparatusBuilder:
+    apparatus_gui = Phase2_ApparatusBuilder.launch_gui(experiment)
+else:
+    print("❌ Phase2_ApparatusBuilder not available due to import errors")
+    print("💡 Install missing dependencies and restart kernel")
+    apparatus_gui = None
 
 # The GUI provides:
 # 1. Visual pump configuration with serial port selection
@@ -141,14 +231,20 @@ print("   ✅ Validate configuration")
 print("   💾 Export code")
 
 # =============================================================================
-# CELL 5: Get Configured Objects
+# CELL 6: Get Configured Objects
 # =============================================================================
 
 # After using the apparatus builder GUI above, run this cell to get the objects
 
 # Get configured pumps and apparatus
-pumps = apparatus_gui.get_configured_pumps()
-A = apparatus_gui.get_apparatus()
+if apparatus_gui:
+    pumps = apparatus_gui.get_configured_pumps()
+    A = apparatus_gui.get_apparatus()
+else:
+    print("❌ No apparatus GUI available - Phase 2 may have failed")
+    print("💡 Check Phase 2 configuration and dependencies")
+    pumps = None
+    A = None
 
 if A:
     print("✅ Apparatus created successfully!")
@@ -167,11 +263,17 @@ else:
     print("❌ No apparatus created - please complete Phase 2 configuration")
 
 # =============================================================================
-# CELL 6: Phase 3 - Protocol Development
+# CELL 7: Phase 3 - Protocol Development
 # =============================================================================
 
-import Phase3_ProtocolDev
-import mechwolf as mw
+try:
+    from mechwolf.DataEntry import Phase3_ProtocolDev
+    import mechwolf as mw
+except ImportError as e:
+    print(f"❌ Failed to import Phase3_ProtocolDev or mechwolf: {e}")
+    print("💡 Check that dependencies are installed (run Cell 1)")
+    Phase3_ProtocolDev = None
+    mw = None
 
 # Create phase header
 phase3_header = NotebookIntegration.create_section_header(
@@ -182,16 +284,25 @@ phase3_header = NotebookIntegration.create_section_header(
 display(phase3_header)
 
 # Create protocol from apparatus
-if A:
+if A and mw:
     P = mw.Protocol(A)
     print("✅ Protocol initialized with apparatus")
+elif not mw:
+    print("❌ Cannot create protocol - MechWolf core not available")
+    print("💡 Check dependencies (run Cell 1)")
+    P = None
 else:
     print("❌ Cannot create protocol - apparatus not available")
     print("💡 Complete Phase 2 first")
+    P = None
 
 # Launch protocol development interface
-if A:
+if A and Phase3_ProtocolDev:
     protocol_gui = Phase3_ProtocolDev.launch_gui(experiment, protocol=P, pumps=pumps)
+elif not Phase3_ProtocolDev:
+    print("❌ Phase3_ProtocolDev not available due to import errors")
+    print("💡 Install missing dependencies and restart kernel")
+    protocol_gui = None
     
     print("✅ Use the interface above to:")
     print("   🔧 Build procedures with drag-and-drop interface")
@@ -200,7 +311,7 @@ if A:
     print("   🧪 Run simulations and dry runs")
 
 # =============================================================================
-# CELL 7: Protocol Validation & Code Generation
+# CELL 8: Protocol Validation & Code Generation
 # =============================================================================
 
 # After building protocol in Phase 3, get the validated protocol
@@ -229,7 +340,7 @@ except Exception as e:
     print(f"Note: Protocol validation requires completing Phase 3: {e}")
 
 # =============================================================================
-# CELL 8: Protocol Execution
+# CELL 9: Protocol Execution
 # =============================================================================
 
 execution_header = NotebookIntegration.create_section_header(
@@ -271,7 +382,7 @@ else:
     print("💡 Complete all previous phases first")
 
 # =============================================================================
-# CELL 9: Analysis & Results
+# CELL 10: Analysis & Results
 # =============================================================================
 
 analysis_header = NotebookIntegration.create_section_header(
@@ -306,7 +417,7 @@ print("    'purity': 92.3               # %")
 print("})")
 
 # =============================================================================
-# CELL 10: Experiment Summary & Export
+# CELL 11: Experiment Summary & Export
 # =============================================================================
 
 summary_header = NotebookIntegration.create_section_header(

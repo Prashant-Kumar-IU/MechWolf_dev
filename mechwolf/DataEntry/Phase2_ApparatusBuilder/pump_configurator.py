@@ -41,7 +41,7 @@ class PumpConfigurator:
             'FreeStepPump': {
                 'name': 'FreeStep Syringe Pump',
                 'parameters': ['MCU_ID', 'motor_ID', 'syringe_volume', 'syringe_diameter'],
-                'defaults': {'MCU_ID': 'A', 'motor_ID': 1, 'syringe_volume': '10 mL', 'syringe_diameter': '10 mm'}
+                'defaults': {'MCU_ID': 'A', 'motor_ID': 1, 'syringe_volume': '10 mL', 'syringe_diameter': '11.99 mm'}
             }
         }
         
@@ -55,6 +55,18 @@ class PumpConfigurator:
         ]
         
         self._create_widgets()
+    
+    def _validate_default_in_options(self, options, default_value, fallback_index=0):
+        """
+        Validate that default value exists in options list.
+        Returns the default if valid, otherwise returns fallback option.
+        """
+        if default_value in options:
+            return default_value
+        else:
+            print(f"⚠️ Warning: Default value '{default_value}' not in options {options}")
+            print(f"💡 Using fallback: '{options[fallback_index]}'")
+            return options[fallback_index]
     
     def _create_widgets(self):
         """Create pump configuration widgets"""
@@ -137,23 +149,30 @@ class PumpConfigurator:
                 continue  # Handled separately
                 
             if param == 'syringe_volume':
+                default_val = pump_info['defaults'].get(param, self.syringe_volumes[3])
+                validated_val = self._validate_default_in_options(self.syringe_volumes, default_val, 3)
                 widget = widgets.Dropdown(
                     options=self.syringe_volumes,
-                    value=pump_info['defaults'].get(param, self.syringe_volumes[3]),
+                    value=validated_val,
                     description=f'{param.replace("_", " ").title()}:',
                     layout=widgets.Layout(width='200px')
                 )
             elif param == 'syringe_diameter':
+                default_val = pump_info['defaults'].get(param, self.syringe_diameters[3])
+                validated_val = self._validate_default_in_options(self.syringe_diameters, default_val, 3)
                 widget = widgets.Dropdown(
                     options=self.syringe_diameters,
-                    value=pump_info['defaults'].get(param, self.syringe_diameters[3]),
+                    value=validated_val,
                     description=f'{param.replace("_", " ").title()}:',
                     layout=widgets.Layout(width='200px')
                 )
             elif param in ['MCU_ID']:
+                mcu_options = ['A', 'B', 'C', 'D']
+                default_val = pump_info['defaults'].get(param, 'A')
+                validated_val = self._validate_default_in_options(mcu_options, default_val, 0)
                 widget = widgets.Dropdown(
-                    options=['A', 'B', 'C', 'D'],
-                    value=pump_info['defaults'].get(param, 'A'),
+                    options=mcu_options,
+                    value=validated_val,
                     description=f'{param}:',
                     layout=widgets.Layout(width='150px')
                 )
