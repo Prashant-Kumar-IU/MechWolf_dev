@@ -14,8 +14,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Union
 import mechwolf as mw
 
-from .data_manager.json_handler import JSONHandler
-from .data_manager.schema_validator import SchemaValidator
+# Import JSON handling directly since data_manager module doesn't exist
 from ..experimental_metadata import ExperimentalMetadataManager
 
 
@@ -55,11 +54,11 @@ class ApparatusFactory:
         
         # Fall back to legacy format
         print("🔄 Attempting legacy format...")
-        data_manager = JSONHandler(config_file)
-        config = data_manager.load_config()
-        
-        if not config:
-            raise ValueError(f"Failed to load configuration from {config_file}")
+        try:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+        except Exception as e:
+            raise ValueError(f"Failed to load configuration from {config_file}: {e}")
         
         # Extract apparatus configuration
         apparatus_config = config.get("apparatus_config", {})
@@ -351,17 +350,24 @@ class ApparatusFactory:
             True if valid, False otherwise
         """
         try:
-            validator = SchemaValidator()
-            data_manager = JSONHandler(config_file)
-            
             # Try to load configuration
-            config = data_manager.load_config()
+            with open(config_file, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            
             if not config:
                 return False
             
-            # Validate schema
-            errors = validator.validate_config(config)
-            return len(errors) == 0
+            # Basic validation - check for required sections
+            apparatus_config = config.get("apparatus_config", {})
+            if not apparatus_config:
+                return False
+                
+            # Check for basic structure
+            components = apparatus_config.get("components", {})
+            if not isinstance(components, dict):
+                return False
+                
+            return True
         
         except Exception:
             return False
@@ -375,8 +381,8 @@ class ApparatusFactory:
             config_file: Path to configuration file
         """
         try:
-            data_manager = JSONHandler(config_file)
-            config = data_manager.load_config()
+            with open(config_file, 'r', encoding='utf-8') as f:
+                config = json.load(f)
             
             if not config:
                 print(f"❌ Could not load configuration from {config_file}")

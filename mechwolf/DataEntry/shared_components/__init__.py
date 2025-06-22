@@ -12,17 +12,32 @@ Modules:
 """
 
 # Import key components for easy access
+# Import them individually to provide better error messages
+
+ValidationUtils = None
 try:
-    from .apparatus_factory import ApparatusFactory, create_apparatus_from_config
     from .validation_utilities import ValidationUtils
+except ImportError as e:
+    print(f"Warning: ValidationUtils not available: {e}")
+
+NotebookIntegration = None
+try:
     from .notebook_integration import NotebookIntegration
 except ImportError as e:
-    # Allow partial imports if some dependencies are missing
-    print(f"Warning: Some shared components not available: {e}")
+    print(f"Warning: NotebookIntegration not available: {e}")
 
-__all__ = [
-    'ApparatusFactory',
-    'create_apparatus_from_config',
-    'ValidationUtils', 
-    'NotebookIntegration'
-]
+ApparatusFactory = None
+create_apparatus_from_config = None
+try:
+    from .apparatus_factory import ApparatusFactory, create_apparatus_from_config
+except ImportError as e:
+    print(f"Warning: ApparatusFactory not available: {e}")
+
+# Only include successfully imported items in __all__
+__all__ = []
+if ValidationUtils is not None:
+    __all__.append('ValidationUtils')
+if NotebookIntegration is not None:
+    __all__.append('NotebookIntegration')
+if ApparatusFactory is not None:
+    __all__.extend(['ApparatusFactory', 'create_apparatus_from_config'])
