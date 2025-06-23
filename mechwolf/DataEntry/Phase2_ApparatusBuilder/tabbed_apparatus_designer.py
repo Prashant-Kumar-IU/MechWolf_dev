@@ -284,10 +284,9 @@ class TabbedApparatusDesigner:
             header,
             add_section,
             widgets.HTML("<hr>"),
-            widgets.HTML("<b>Active Components List:</b>"),
-            self.active_components_display,
+            self.active_property_editor,
             widgets.HTML("<hr>"),
-            self.active_property_editor
+            self.active_components_display
         ])
     
     def _create_passive_components_tab(self):
@@ -343,10 +342,9 @@ class TabbedApparatusDesigner:
             header,
             add_section,
             widgets.HTML("<hr>"),
-            widgets.HTML("<b>Passive Components List:</b>"),
-            self.passive_components_display,
+            self.passive_property_editor,
             widgets.HTML("<hr>"),
-            self.passive_property_editor
+            self.passive_components_display
         ])
     
     def _create_connections_tab(self):
@@ -528,18 +526,38 @@ class TabbedApparatusDesigner:
             self.active_components_display.value = "<i>No active components added yet</i>"
             return
         
-        html_lines = []
+        # Create compact table-style display
+        html_lines = [f"<div style='font-weight: bold; margin-bottom: 8px;'>Active Components ({len(active_comps)})</div>"]
+        html_lines.append("""
+        <table style='width: 100%; border-collapse: collapse; font-size: 0.9em;'>
+        <thead>
+            <tr style='background: #f0f0f0; border-bottom: 2px solid #ddd;'>
+                <th style='padding: 4px 8px; text-align: left; width: 60px;'>Type</th>
+                <th style='padding: 4px 8px; text-align: left; width: 120px;'>Name</th>
+                <th style='padding: 4px 8px; text-align: left;'>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+        """)
+        
         for comp in active_comps:
             info = ComponentRegistry.ACTIVE_COMPONENTS[comp.component_type]
-            description_text = f"<br>&nbsp;&nbsp;&nbsp;&nbsp;<i>{comp.description}</i>" if comp.description else ""
+            # Truncate description if too long
+            description = comp.description if comp.description else "<i>No description</i>"
+            if len(description) > 40:
+                description = description[:37] + "..."
             
-            # Create simple HTML display
             html_lines.append(f"""
-            <div style="margin: 5px 0; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">
-                {info['icon']} <b>{comp.name}</b> ({info['display_name']}){description_text}
-            </div>
+            <tr style='border-bottom: 1px solid #eee; hover: background: #f9f9f9;' 
+                onmouseover='this.style.backgroundColor="#f9f9f9"' 
+                onmouseout='this.style.backgroundColor=""'>
+                <td style='padding: 4px 8px;'>{info['icon']}</td>
+                <td style='padding: 4px 8px;'><b>{comp.name}</b></td>
+                <td style='padding: 4px 8px; color: #666;' title='{comp.description}'>{description}</td>
+            </tr>
             """)
         
+        html_lines.append("</tbody></table>")
         self.active_components_display.value = "".join(html_lines)
     
     def _update_passive_components_display(self):
@@ -551,18 +569,38 @@ class TabbedApparatusDesigner:
             self.passive_components_display.value = "<i>No passive components added yet</i>"
             return
         
-        html_lines = []
+        # Create compact table-style display
+        html_lines = [f"<div style='font-weight: bold; margin-bottom: 8px;'>Passive Components ({len(passive_comps)})</div>"]
+        html_lines.append("""
+        <table style='width: 100%; border-collapse: collapse; font-size: 0.9em;'>
+        <thead>
+            <tr style='background: #f0f0f0; border-bottom: 2px solid #ddd;'>
+                <th style='padding: 4px 8px; text-align: left; width: 60px;'>Type</th>
+                <th style='padding: 4px 8px; text-align: left; width: 120px;'>Name</th>
+                <th style='padding: 4px 8px; text-align: left;'>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+        """)
+        
         for comp in passive_comps:
             info = ComponentRegistry.PASSIVE_COMPONENTS[comp.component_type]
-            description_text = f"<br>&nbsp;&nbsp;&nbsp;&nbsp;<i>{comp.description}</i>" if comp.description else ""
+            # Truncate description if too long
+            description = comp.description if comp.description else "<i>No description</i>"
+            if len(description) > 40:
+                description = description[:37] + "..."
             
-            # Create simple HTML display
             html_lines.append(f"""
-            <div style="margin: 5px 0; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">
-                {info['icon']} <b>{comp.name}</b> ({info['display_name']}){description_text}
-            </div>
+            <tr style='border-bottom: 1px solid #eee;' 
+                onmouseover='this.style.backgroundColor="#f9f9f9"' 
+                onmouseout='this.style.backgroundColor=""'>
+                <td style='padding: 4px 8px;'>{info['icon']}</td>
+                <td style='padding: 4px 8px;'><b>{comp.name}</b></td>
+                <td style='padding: 4px 8px; color: #666;' title='{comp.description}'>{description}</td>
+            </tr>
             """)
         
+        html_lines.append("</tbody></table>")
         self.passive_components_display.value = "".join(html_lines)
     
     def _update_connections_display(self):
@@ -571,26 +609,41 @@ class TabbedApparatusDesigner:
             self.connections_display.value = "<i>No connections created yet</i>"
             return
         
-        html_lines = []
+        # Create compact table-style display
+        html_lines = [f"<div style='font-weight: bold; margin-bottom: 8px;'>Connections ({len(self.connections)})</div>"]
+        html_lines.append("""
+        <table style='width: 100%; border-collapse: collapse; font-size: 0.9em;'>
+        <thead>
+            <tr style='background: #f0f0f0; border-bottom: 2px solid #ddd;'>
+                <th style='padding: 4px 8px; text-align: left; width: 30px;'>#</th>
+                <th style='padding: 4px 8px; text-align: left; width: 120px;'>From</th>
+                <th style='padding: 4px 8px; text-align: left; width: 120px;'>To</th>
+                <th style='padding: 4px 8px; text-align: left;'>Tube</th>
+            </tr>
+        </thead>
+        <tbody>
+        """)
+        
         for i, conn in enumerate(self.connections):
             # Get tube component info if it exists
             tube_info_text = conn.tube_type
             if conn.tube_type in self.components:
                 tube_comp = self.components[conn.tube_type]
                 tube_props = tube_comp.properties
-                tube_info_text = f"{conn.tube_type} (ID: {tube_props.get('ID', 'N/A')}, {tube_props.get('length', 'N/A')})"
+                tube_info_text = f"{conn.tube_type} (ID:{tube_props.get('ID', '?')}, L:{tube_props.get('length', '?')})"
             
-            # Create simple HTML display 
             html_lines.append(f"""
-            <div style="margin: 5px 0; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">
-                🔗 <b>{conn.from_component}</b> → <b>{conn.to_component}</b><br>
-                &nbsp;&nbsp;&nbsp;&nbsp;via {tube_info_text}
-                <div style="font-size: 0.9em; color: #666; margin-top: 4px;">
-                    Connection #{i+1}
-                </div>
-            </div>
+            <tr style='border-bottom: 1px solid #eee;' 
+                onmouseover='this.style.backgroundColor="#f9f9f9"' 
+                onmouseout='this.style.backgroundColor=""'>
+                <td style='padding: 4px 8px; color: #999;'>{i+1}</td>
+                <td style='padding: 4px 8px;'><b>{conn.from_component}</b></td>
+                <td style='padding: 4px 8px;'><b>{conn.to_component}</b></td>
+                <td style='padding: 4px 8px; color: #666;'>{tube_info_text}</td>
+            </tr>
             """)
         
+        html_lines.append("</tbody></table>")
         self.connections_display.value = "".join(html_lines)
     
     def _update_connection_dropdowns(self):
