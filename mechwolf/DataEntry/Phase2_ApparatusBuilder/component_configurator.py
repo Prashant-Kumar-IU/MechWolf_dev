@@ -7,7 +7,7 @@ that integrates with the experimental metadata system.
 
 import ipywidgets as widgets
 from IPython.display import clear_output
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 import traceback
 
 # Import enhanced input components
