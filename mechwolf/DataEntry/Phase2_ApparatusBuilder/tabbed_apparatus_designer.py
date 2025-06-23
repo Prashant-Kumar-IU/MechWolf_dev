@@ -869,12 +869,11 @@ class TabbedApparatusDesigner:
             class_name = info['class_name']
             
             if comp.component_type == 'HarvardSyringePump':
-                # Build parameters for Harvard pump (includes name)
-                params = []
+                # Build parameters for Harvard pump (name first, then properties)
+                params = [f'name="{name}"']
                 for prop_name, prop_value in comp.properties.items():
                     if prop_value:  # Only include non-empty properties
                         params.append(f'{prop_name}="{prop_value}"')
-                params.append(f'name="{name}"')
                 code_lines.append(f'{name} = HarvardSyringePump({", ".join(params)})')
             elif comp.component_type == 'Tube':
                 # Tubes don't take a 'name' parameter, only properties
@@ -884,12 +883,11 @@ class TabbedApparatusDesigner:
                         tube_params.append(f'{prop_name}="{prop_value}"')
                 code_lines.append(f'{name} = mw.{class_name}({", ".join(tube_params)})')
             else:
-                # Other components (Vessel, TMixer) include name parameter
-                params = []
+                # Other components (Vessel, TMixer) include name parameter first
+                params = [f'name="{name}"']
                 for prop_name, prop_value in comp.properties.items():
                     if prop_value:  # Only include non-empty properties
                         params.append(f'{prop_name}="{prop_value}"')
-                params.append(f'name="{name}"')
                 code_lines.append(f'{name} = mw.{class_name}({", ".join(params)})')
         
         code_lines.append("")
