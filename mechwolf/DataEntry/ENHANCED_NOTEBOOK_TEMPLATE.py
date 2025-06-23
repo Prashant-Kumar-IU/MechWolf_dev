@@ -143,12 +143,11 @@ port_viewer = SerialPortViewer()
 port_viewer.run()
 
 # =============================================================================
-# CELL 4: Phase 1 - ReagentUI (Restored Original Interface)
+# CELL 4: Phase 1 - Reagent Entry
 # =============================================================================
 
 try:
     from mechwolf.DataEntry import Phase1_ReagentEntry
-    # Also import the restored ReagentUI directly if needed
     from mechwolf.DataEntry.Phase1_ReagentEntry import ReagentUI
 except ImportError as e:
     print(f"❌ Failed to import Phase1_ReagentEntry: {e}")
@@ -157,16 +156,15 @@ except ImportError as e:
     Phase1_ReagentEntry = None
     ReagentUI = None
 
-# Create phase header with original ReagentUI branding
+# Create phase header
 phase1_header = NotebookIntegration.create_section_header(
-    "🧪 Phase 1: ReagentUI - Reagent Entry",
-    "Original tabbed interface with modern experimental metadata backend",
+    "🧪 Phase 1: Reagent Entry",
+    "Configure reagents for your experiment",
     "135deg, #4facfe 0%, #00f2fe 100%"
 )
 display(phase1_header)
 
 # Launch the ReagentUI interface
-
 if Phase1_ReagentEntry:
     reagent_gui = Phase1_ReagentEntry.launch_gui(experiment)
 else:
@@ -208,20 +206,6 @@ else:
     print("❌ Phase2_ApparatusBuilder not available due to import errors")
     print("💡 Install missing dependencies and restart kernel")
     apparatus_gui = None
-
-# The GUI provides:
-# 1. Visual pump configuration with serial port selection
-# 2. Component configuration (vessels, tubes, mixers)
-# 3. Connection building with validation
-# 4. Real-time apparatus visualization
-# 5. Automatic code generation
-
-print("✅ Use the tabbed interface above to:")
-print("   🔧 Configure pumps (replaces separate pump notebook)")
-print("   📦 Add apparatus components") 
-print("   🔗 Build connections")
-print("   ✅ Validate configuration")
-print("   💾 Export code")
 
 # =============================================================================
 # CELL 6: Get Configured Objects
@@ -296,12 +280,6 @@ elif not Phase3_ProtocolDev:
     print("❌ Phase3_ProtocolDev not available due to import errors")
     print("💡 Install missing dependencies and restart kernel")
     protocol_gui = None
-    
-    print("✅ Use the interface above to:")
-    print("   🔧 Build procedures with drag-and-drop interface")
-    print("   📅 View timeline and concurrent operations")
-    print("   ✅ Validate using MechWolf core")
-    print("   🧪 Run simulations and dry runs")
 
 # =============================================================================
 # CELL 8: Protocol Validation & Code Generation
@@ -435,14 +413,6 @@ print(experiment.get_summary())
 
 print("\n💾 All data has been automatically saved to:")
 print(f"   📁 {experiment.json_file}")
-
-print("\n✨ Benefits of the new system:")
-print("   ✅ Unified data management - no more scattered JSON files")
-print("   ✅ Integrated pump configuration - no separate notebooks")  
-print("   ✅ Real-time validation and error checking")
-print("   ✅ Modern, interactive interfaces")
-print("   ✅ Complete experiment tracking and reproducibility")
-print("   ✅ Seamless MechWolf core integration")
 
 # =============================================================================
 # END OF ENHANCED NOTEBOOK TEMPLATE

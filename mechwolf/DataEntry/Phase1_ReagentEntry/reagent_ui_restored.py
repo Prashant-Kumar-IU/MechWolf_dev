@@ -1398,7 +1398,7 @@ class ReagentUI:
                 
                 <!-- Position Summary -->
                 <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin-top: 30px;">
-                    <h3 style="color: #15803d; margin-top: 0;">📍 Syringe Position Summary</h3>
+                    <h3 style="color: #15803d; margin-top: 0;">Syringe Positions</h3>
                     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
             """
             
@@ -1425,12 +1425,11 @@ class ReagentUI:
                 
                 <!-- Notes -->
                 <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 20px; margin-top: 20px;">
-                    <h4 style="color: #1e40af; margin-top: 0;">📝 Notes</h4>
+                    <h4 style="color: #1e40af; margin-top: 0;">Notes</h4>
                     <ul style="margin: 0; padding-left: 20px; color: #374151;">
-                        <li>All calculations based on the limiting reagent and specified mass scale</li>
-                        <li>Volume calculations shown for liquid reagents only</li>
-                        <li>Densities used as specified in reagent properties</li>
-                        <li>Syringe positions as assigned during reagent entry</li>
+                        <li>Calculations based on limiting reagent and mass scale</li>
+                        <li>Volume calculations for liquid reagents only</li>
+                        <li>Uses densities from reagent properties</li>
                     </ul>
                 </div>
             </div>
