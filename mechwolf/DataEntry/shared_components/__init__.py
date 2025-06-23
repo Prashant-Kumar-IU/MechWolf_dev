@@ -33,6 +33,23 @@ try:
 except ImportError as e:
     print(f"Warning: ApparatusFactory not available: {e}")
 
+# Import modern UI components
+ModernUIComponents = None
+TailwindColors = None
+TailwindSpacing = None
+try:
+    from .modern_ui_components import (
+        ModernUIComponents, 
+        TailwindColors, 
+        TailwindSpacing,
+        create_header,
+        create_info,
+        create_card,
+        create_button
+    )
+except ImportError as e:
+    print(f"Warning: ModernUIComponents not available: {e}")
+
 # Only include successfully imported items in __all__
 __all__ = []
 if ValidationUtils is not None:
@@ -41,3 +58,13 @@ if NotebookIntegration is not None:
     __all__.append('NotebookIntegration')
 if ApparatusFactory is not None:
     __all__.extend(['ApparatusFactory', 'create_apparatus_from_config'])
+if ModernUIComponents is not None:
+    __all__.extend([
+        'ModernUIComponents', 
+        'TailwindColors', 
+        'TailwindSpacing',
+        'create_header',
+        'create_info', 
+        'create_card',
+        'create_button'
+    ])
