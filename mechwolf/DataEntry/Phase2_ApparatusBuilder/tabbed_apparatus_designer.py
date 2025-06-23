@@ -529,13 +529,10 @@ class TabbedApparatusDesigner:
             info = ComponentRegistry.ACTIVE_COMPONENTS[comp.component_type]
             description_text = f"<br>&nbsp;&nbsp;&nbsp;&nbsp;<i>{comp.description}</i>" if comp.description else ""
             
-            # Create simple HTML display (buttons handled via property editor)
+            # Create simple HTML display
             html_lines.append(f"""
             <div style="margin: 5px 0; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">
                 {info['icon']} <b>{comp.name}</b> ({info['display_name']}){description_text}
-                <div style="font-size: 0.9em; color: #666; margin-top: 4px;">
-                    Click component in dropdown to edit properties
-                </div>
             </div>
             """)
         
@@ -555,13 +552,10 @@ class TabbedApparatusDesigner:
             info = ComponentRegistry.PASSIVE_COMPONENTS[comp.component_type]
             description_text = f"<br>&nbsp;&nbsp;&nbsp;&nbsp;<i>{comp.description}</i>" if comp.description else ""
             
-            # Create simple HTML display (buttons handled via property editor)
+            # Create simple HTML display
             html_lines.append(f"""
             <div style="margin: 5px 0; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">
                 {info['icon']} <b>{comp.name}</b> ({info['display_name']}){description_text}
-                <div style="font-size: 0.9em; color: #666; margin-top: 4px;">
-                    Click component in dropdown to edit properties
-                </div>
             </div>
             """)
         
@@ -691,8 +685,10 @@ class TabbedApparatusDesigner:
             input_widgets[prop_name] = widget
             prop_widgets.append(widget)
         
-        # Apply button
+        # Action buttons
         apply_btn = widgets.Button(description="Apply Changes", button_style='success')
+        delete_btn = widgets.Button(description="Delete Component", button_style='danger')
+        cancel_btn = widgets.Button(description="Cancel", button_style='warning')
         
         def apply_changes(_):
             # Update name and description
@@ -723,15 +719,52 @@ class TabbedApparatusDesigner:
             self._update_passive_components_display()
             self._save_to_metadata()
             print(f"✅ Updated properties for {component.name}")
+            
+            # Reset property editor
+            self._reset_property_editor(component.component_type)
+        
+        def delete_component(_):
+            self._delete_component(component)
+            print(f"🗑️ Deleted component: {component.name}")
+            # Reset property editor
+            self._reset_property_editor(component.component_type)
+        
+        def cancel_edit(_):
+            # Reset property editor without saving
+            self._reset_property_editor(component.component_type)
         
         apply_btn.on_click(apply_changes)
-        prop_widgets.append(apply_btn)
+        delete_btn.on_click(delete_component)
+        cancel_btn.on_click(cancel_edit)
+        
+        # Button row
+        button_row = widgets.HBox([apply_btn, delete_btn, cancel_btn])
+        prop_widgets.append(button_row)
         
         # Update appropriate property editor
         if component.component_type in ComponentRegistry.ACTIVE_COMPONENTS:
             self.active_property_editor.children = prop_widgets
         else:
             self.passive_property_editor.children = prop_widgets
+    
+    def _reset_property_editor(self, component_type: str):
+        """Reset property editor to default state"""
+        if component_type in ComponentRegistry.ACTIVE_COMPONENTS:
+            # Reset active component editor
+            self.active_component_selector.value = None
+            self.active_property_editor.children = [
+                widgets.HTML("<b>Component Properties:</b>"),
+                self.active_component_selector,
+                widgets.HTML("<i>Select a component above to edit properties</i>")
+            ]
+        else:
+            # Reset passive component editor
+            self.passive_component_selector.value = None
+            self.passive_property_editor.children = [
+                widgets.HTML("<b>Component Properties:</b>"),
+                self.passive_component_selector,
+                widgets.HTML("<i>Select a component above to edit properties</i>")
+            ]
     
     def _delete_component(self, component: ApparatusComponent):
         """Delete a component from the apparatus."""
