@@ -260,10 +260,14 @@ class TabbedApparatusDesigner:
             )
         ])
         
-        # Component list (scrollable)
+        # Component list container (scrollable)
         self.active_components_list = widgets.VBox([
             widgets.HTML("<i>No active components added yet</i>")
-        ], layout=widgets.Layout(height='300px', overflow='auto', border='1px solid #eee'))
+        ])
+        
+        self.active_components_container = widgets.Box([self.active_components_list], 
+                                                      layout=widgets.Layout(height='300px', overflow='auto', 
+                                                                           border='1px solid #eee', padding='5px'))
         
         # Property editor
         self.active_property_editor = widgets.VBox([
@@ -276,7 +280,7 @@ class TabbedApparatusDesigner:
             add_section,
             widgets.HTML("<hr>"),
             widgets.HTML("<b>Active Components List:</b>"),
-            self.active_components_list,
+            self.active_components_container,
             widgets.HTML("<hr>"),
             self.active_property_editor
         ])
@@ -310,10 +314,14 @@ class TabbedApparatusDesigner:
             widgets.HBox([add_vessel_btn, add_tmixer_btn, add_tube_btn])
         ])
         
-        # Component list (scrollable)
+        # Component list container (scrollable)
         self.passive_components_list = widgets.VBox([
             widgets.HTML("<i>No passive components added yet</i>")
-        ], layout=widgets.Layout(height='300px', overflow='auto', border='1px solid #eee'))
+        ])
+        
+        self.passive_components_container = widgets.Box([self.passive_components_list],
+                                                       layout=widgets.Layout(height='300px', overflow='auto',
+                                                                            border='1px solid #eee', padding='5px'))
         
         # Property editor
         self.passive_property_editor = widgets.VBox([
@@ -326,7 +334,7 @@ class TabbedApparatusDesigner:
             add_section,
             widgets.HTML("<hr>"),
             widgets.HTML("<b>Passive Components List:</b>"),
-            self.passive_components_list,
+            self.passive_components_container,
             widgets.HTML("<hr>"),
             self.passive_property_editor
         ])
@@ -374,14 +382,18 @@ class TabbedApparatusDesigner:
             ])
         ])
         
-        # Connections list (scrollable)
+        # Connections list container (scrollable)
         self.connections_list = widgets.VBox([
             widgets.HTML("<i>No connections created yet</i>")
-        ], layout=widgets.Layout(height='200px', overflow='auto', border='1px solid #eee'))
+        ])
         
-        # Network visualization
+        self.connections_container = widgets.Box([self.connections_list],
+                                                layout=widgets.Layout(height='200px', overflow='auto',
+                                                                     border='1px solid #eee', padding='5px'))
+        
+        # Network visualization (scrollable)
         self.network_display = widgets.Output(
-            layout=widgets.Layout(height='200px', border='1px solid #ccc')
+            layout=widgets.Layout(height='200px', border='1px solid #ccc', overflow='auto')
         )
         
         return widgets.VBox([
@@ -389,7 +401,7 @@ class TabbedApparatusDesigner:
             connection_builder,
             widgets.HTML("<hr>"),
             widgets.HTML("<b>Connections List:</b>"),
-            self.connections_list,
+            self.connections_container,
             widgets.HTML("<hr>"),
             widgets.HTML("<b>Network Overview:</b>"),
             self.network_display
@@ -679,7 +691,7 @@ class TabbedApparatusDesigner:
         # Apply button
         apply_btn = widgets.Button(description="Apply Changes", button_style='success')
         
-        def apply_changes(b):
+        def apply_changes(_):
             # Update name and description
             old_name = component.name
             component.name = name_widget.value
@@ -744,7 +756,7 @@ class TabbedApparatusDesigner:
             self._update_network_visualization()
             self._save_to_metadata()
     
-    def _generate_code(self, button=None):
+    def _generate_code(self, _=None):
         """Generate MechWolf apparatus code."""
         if not self.components:
             self.code_output.value = "# No components added yet"
