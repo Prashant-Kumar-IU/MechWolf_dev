@@ -260,19 +260,24 @@ class TabbedApparatusDesigner:
             )
         ])
         
-        # Component list container (scrollable)
-        self.active_components_list = widgets.VBox([
-            widgets.HTML("<i>No active components added yet</i>")
-        ])
+        # Component list container (scrollable HTML)
+        self.active_components_display = widgets.HTML(
+            value="<i>No active components added yet</i>",
+            layout=widgets.Layout(height='300px', overflow='auto', 
+                                border='1px solid #eee', padding='5px')
+        )
         
-        self.active_components_container = widgets.Box([self.active_components_list], 
-                                                      layout=widgets.Layout(height='300px', overflow='auto', 
-                                                                           border='1px solid #eee', padding='5px'))
+        # Property editor with component selector
+        self.active_component_selector = widgets.Dropdown(
+            options=[],
+            description="Select:",
+            layout=widgets.Layout(width='200px')
+        )
         
-        # Property editor
         self.active_property_editor = widgets.VBox([
             widgets.HTML("<b>Component Properties:</b>"),
-            widgets.HTML("<i>Select a component to edit properties</i>")
+            self.active_component_selector,
+            widgets.HTML("<i>Select a component above to edit properties</i>")
         ])
         
         return widgets.VBox([
@@ -280,7 +285,7 @@ class TabbedApparatusDesigner:
             add_section,
             widgets.HTML("<hr>"),
             widgets.HTML("<b>Active Components List:</b>"),
-            self.active_components_container,
+            self.active_components_display,
             widgets.HTML("<hr>"),
             self.active_property_editor
         ])
@@ -314,19 +319,24 @@ class TabbedApparatusDesigner:
             widgets.HBox([add_vessel_btn, add_tmixer_btn, add_tube_btn])
         ])
         
-        # Component list container (scrollable)
-        self.passive_components_list = widgets.VBox([
-            widgets.HTML("<i>No passive components added yet</i>")
-        ])
+        # Component list container (scrollable HTML)
+        self.passive_components_display = widgets.HTML(
+            value="<i>No passive components added yet</i>",
+            layout=widgets.Layout(height='300px', overflow='auto',
+                                border='1px solid #eee', padding='5px')
+        )
         
-        self.passive_components_container = widgets.Box([self.passive_components_list],
-                                                       layout=widgets.Layout(height='300px', overflow='auto',
-                                                                            border='1px solid #eee', padding='5px'))
+        # Property editor with component selector
+        self.passive_component_selector = widgets.Dropdown(
+            options=[],
+            description="Select:",
+            layout=widgets.Layout(width='200px')
+        )
         
-        # Property editor
         self.passive_property_editor = widgets.VBox([
             widgets.HTML("<b>Component Properties:</b>"),
-            widgets.HTML("<i>Select a component to edit properties</i>")
+            self.passive_component_selector,
+            widgets.HTML("<i>Select a component above to edit properties</i>")
         ])
         
         return widgets.VBox([
@@ -334,7 +344,7 @@ class TabbedApparatusDesigner:
             add_section,
             widgets.HTML("<hr>"),
             widgets.HTML("<b>Passive Components List:</b>"),
-            self.passive_components_container,
+            self.passive_components_display,
             widgets.HTML("<hr>"),
             self.passive_property_editor
         ])
@@ -382,14 +392,12 @@ class TabbedApparatusDesigner:
             ])
         ])
         
-        # Connections list container (scrollable)
-        self.connections_list = widgets.VBox([
-            widgets.HTML("<i>No connections created yet</i>")
-        ])
-        
-        self.connections_container = widgets.Box([self.connections_list],
-                                                layout=widgets.Layout(height='200px', overflow='auto',
-                                                                     border='1px solid #eee', padding='5px'))
+        # Connections list container (scrollable HTML)
+        self.connections_display = widgets.HTML(
+            value="<i>No connections created yet</i>",
+            layout=widgets.Layout(height='200px', overflow='auto',
+                                border='1px solid #eee', padding='5px')
+        )
         
         # Network visualization (scrollable)
         self.network_display = widgets.Output(
@@ -401,7 +409,7 @@ class TabbedApparatusDesigner:
             connection_builder,
             widgets.HTML("<hr>"),
             widgets.HTML("<b>Connections List:</b>"),
-            self.connections_container,
+            self.connections_display,
             widgets.HTML("<hr>"),
             widgets.HTML("<b>Network Overview:</b>"),
             self.network_display
@@ -456,6 +464,10 @@ class TabbedApparatusDesigner:
         
         # Tab change events
         self.tab_widget.observe(self._on_tab_change, names='selected_index')
+        
+        # Component selector events
+        self.active_component_selector.observe(self._on_active_component_selected, names='value')
+        self.passive_component_selector.observe(self._on_passive_component_selected, names='value')
     
     def _add_harvard_pump(self, button):
         """Add a Harvard pump to the apparatus."""
@@ -509,32 +521,25 @@ class TabbedApparatusDesigner:
                        if comp.component_type in ComponentRegistry.ACTIVE_COMPONENTS]
         
         if not active_comps:
-            self.active_components_list.children = [
-                widgets.HTML("<i>No active components added yet</i>")
-            ]
+            self.active_components_display.value = "<i>No active components added yet</i>"
             return
         
-        comp_widgets = []
+        html_lines = []
         for comp in active_comps:
             info = ComponentRegistry.ACTIVE_COMPONENTS[comp.component_type]
             description_text = f"<br>&nbsp;&nbsp;&nbsp;&nbsp;<i>{comp.description}</i>" if comp.description else ""
-            comp_widget = widgets.HBox([
-                widgets.HTML(f"{info['icon']} <b>{comp.name}</b> ({info['display_name']}){description_text}"),
-                widgets.Button(description="Edit", button_style='info', 
-                             layout=widgets.Layout(width='60px')),
-                widgets.Button(description="Delete", button_style='danger',
-                             layout=widgets.Layout(width='60px'))
-            ])
             
-            # Bind edit/delete events
-            edit_btn = comp_widget.children[1]
-            delete_btn = comp_widget.children[2]
-            edit_btn.on_click(lambda b, c=comp: self._edit_component(c))
-            delete_btn.on_click(lambda b, c=comp: self._delete_component(c))
-            
-            comp_widgets.append(comp_widget)
+            # Create simple HTML display (buttons handled via property editor)
+            html_lines.append(f"""
+            <div style="margin: 5px 0; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">
+                {info['icon']} <b>{comp.name}</b> ({info['display_name']}){description_text}
+                <div style="font-size: 0.9em; color: #666; margin-top: 4px;">
+                    Click component in dropdown to edit properties
+                </div>
+            </div>
+            """)
         
-        self.active_components_list.children = comp_widgets
+        self.active_components_display.value = "".join(html_lines)
     
     def _update_passive_components_display(self):
         """Update the passive components list display."""
@@ -542,42 +547,33 @@ class TabbedApparatusDesigner:
                         if comp.component_type in ComponentRegistry.PASSIVE_COMPONENTS]
         
         if not passive_comps:
-            self.passive_components_list.children = [
-                widgets.HTML("<i>No passive components added yet</i>")
-            ]
+            self.passive_components_display.value = "<i>No passive components added yet</i>"
             return
         
-        comp_widgets = []
+        html_lines = []
         for comp in passive_comps:
             info = ComponentRegistry.PASSIVE_COMPONENTS[comp.component_type]
             description_text = f"<br>&nbsp;&nbsp;&nbsp;&nbsp;<i>{comp.description}</i>" if comp.description else ""
-            comp_widget = widgets.HBox([
-                widgets.HTML(f"{info['icon']} <b>{comp.name}</b> ({info['display_name']}){description_text}"),
-                widgets.Button(description="Edit", button_style='info',
-                             layout=widgets.Layout(width='60px')),
-                widgets.Button(description="Delete", button_style='danger',
-                             layout=widgets.Layout(width='60px'))
-            ])
             
-            # Bind edit/delete events
-            edit_btn = comp_widget.children[1]
-            delete_btn = comp_widget.children[2]
-            edit_btn.on_click(lambda b, c=comp: self._edit_component(c))
-            delete_btn.on_click(lambda b, c=comp: self._delete_component(c))
-            
-            comp_widgets.append(comp_widget)
+            # Create simple HTML display (buttons handled via property editor)
+            html_lines.append(f"""
+            <div style="margin: 5px 0; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">
+                {info['icon']} <b>{comp.name}</b> ({info['display_name']}){description_text}
+                <div style="font-size: 0.9em; color: #666; margin-top: 4px;">
+                    Click component in dropdown to edit properties
+                </div>
+            </div>
+            """)
         
-        self.passive_components_list.children = comp_widgets
+        self.passive_components_display.value = "".join(html_lines)
     
     def _update_connections_display(self):
         """Update the connections list display."""
         if not self.connections:
-            self.connections_list.children = [
-                widgets.HTML("<i>No connections created yet</i>")
-            ]
+            self.connections_display.value = "<i>No connections created yet</i>"
             return
         
-        conn_widgets = []
+        html_lines = []
         for i, conn in enumerate(self.connections):
             # Get tube component info if it exists
             tube_info_text = conn.tube_type
@@ -586,20 +582,18 @@ class TabbedApparatusDesigner:
                 tube_props = tube_comp.properties
                 tube_info_text = f"{conn.tube_type} (ID: {tube_props.get('ID', 'N/A')}, {tube_props.get('length', 'N/A')})"
             
-            conn_widget = widgets.HBox([
-                widgets.HTML(f"🔗 <b>{conn.from_component}</b> → <b>{conn.to_component}</b><br>"
-                           f"&nbsp;&nbsp;&nbsp;&nbsp;via {tube_info_text}"),
-                widgets.Button(description="Delete", button_style='danger',
-                             layout=widgets.Layout(width='60px'))
-            ])
-            
-            # Bind delete event
-            delete_btn = conn_widget.children[1]
-            delete_btn.on_click(lambda b, idx=i: self._delete_connection(idx))
-            
-            conn_widgets.append(conn_widget)
+            # Create simple HTML display 
+            html_lines.append(f"""
+            <div style="margin: 5px 0; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">
+                🔗 <b>{conn.from_component}</b> → <b>{conn.to_component}</b><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;via {tube_info_text}
+                <div style="font-size: 0.9em; color: #666; margin-top: 4px;">
+                    Connection #{i+1}
+                </div>
+            </div>
+            """)
         
-        self.connections_list.children = conn_widgets
+        self.connections_display.value = "".join(html_lines)
     
     def _update_connection_dropdowns(self):
         """Update the connection dropdown options."""
@@ -613,6 +607,15 @@ class TabbedApparatusDesigner:
         tube_components = [name for name, comp in self.components.items() 
                           if comp.component_type == 'Tube']
         self.tube_selection_dropdown.options = tube_components
+        
+        # Update property editor dropdowns
+        active_components = [name for name, comp in self.components.items() 
+                           if comp.component_type in ComponentRegistry.ACTIVE_COMPONENTS]
+        self.active_component_selector.options = active_components
+        
+        passive_components = [name for name, comp in self.components.items() 
+                            if comp.component_type in ComponentRegistry.PASSIVE_COMPONENTS]
+        self.passive_component_selector.options = passive_components
     
     def _update_network_visualization(self):
         """Update the network visualization display."""
@@ -804,6 +807,20 @@ class TabbedApparatusDesigner:
         """Handle tab change events."""
         if change['new'] == 2:  # Connections tab
             self._update_network_visualization()
+    
+    def _on_active_component_selected(self, change):
+        """Handle active component selection for editing."""
+        component_name = change['new']
+        if component_name and component_name in self.components:
+            component = self.components[component_name]
+            self._edit_component(component)
+    
+    def _on_passive_component_selected(self, change):
+        """Handle passive component selection for editing."""
+        component_name = change['new']
+        if component_name and component_name in self.components:
+            component = self.components[component_name]
+            self._edit_component(component)
     
     def _save_to_metadata(self):
         """Save current apparatus to experimental metadata."""
