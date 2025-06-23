@@ -901,36 +901,25 @@ class ReagentUI:
         if success:
             print(f"✅ Deleted {reagent.get('name', 'reagent')}")
             self._refresh_display_tab()
+            # Also refresh the final details display to update limiting reagent
+            self._refresh_final_details_display()
         else:
             print(f"❌ Failed to delete {reagent.get('name', 'reagent')}")
     
     def _create_final_details_tab(self):
         """Create the final details tab with original functionality"""
         
-        # Load existing data
-        data = self.data_manager.load_data()
-        
         # Status/message area
-        message_area = widgets.HTML("")
+        self.final_message_area = widgets.HTML("")
         
-        # Find the limiting reagent (eq = 1.0)
-        limiting_reagent = None
-        limiting_reagent_mw = None
+        # Limiting reagent display (will be updated dynamically)
+        self.limiting_reagent_display = widgets.HTML(value="")
         
-        all_reagents = data.get("solid reagents", []) + data.get("liquid reagents", [])
-        for reagent in all_reagents:
-            if abs(reagent.get("eq", 0) - 1.0) < 1e-6:
-                limiting_reagent = reagent["name"]
-                limiting_reagent_mw = reagent["molecular weight (in g/mol)"]
-                break
+        # Initialize the limiting reagent display
+        self._refresh_final_details_display()
         
-        # Display the limiting reagent
-        if limiting_reagent:
-            reagent_html = f"<p><b>Limiting Reagent:</b> {limiting_reagent}</p>"
-        else:
-            reagent_html = "<p><b>Limiting Reagent:</b> <span style='color:red'>None selected (set eq=1.0 for limiting reagent)</span></p>"
-        
-        limiting_reagent_display = widgets.HTML(value=reagent_html)
+        # Load current data for form initialization
+        data = self.data_manager.load_data()
         
         # Form fields
         mass_scale_input = widgets.FloatText(
@@ -955,6 +944,9 @@ class ReagentUI:
             try:
                 mass_scale = mass_scale_input.value
                 concentration = concentration_input.value
+                
+                # Get current limiting reagent info
+                _, limiting_reagent_mw = self._get_limiting_reagent_info()
                 
                 if not limiting_reagent_mw or mass_scale <= 0 or concentration <= 0:
                     volume_display.value = "<p><b>Volume needed:</b> Please enter valid mass scale and concentration values</p>"
@@ -994,17 +986,20 @@ class ReagentUI:
                 concentration = concentration_input.value
                 solvent = solvent_input.value
                 
+                # Get current limiting reagent info
+                limiting_reagent, _ = self._get_limiting_reagent_info()
+                
                 # Validate
                 if not limiting_reagent:
-                    message_area.value = "<p style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'>Please set one reagent to eq=1.0 as the limiting reagent first.</p>"
+                    self.final_message_area.value = "<p style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'>Please set one reagent to eq=1.0 as the limiting reagent first.</p>"
                     return
                 
                 if mass_scale <= 0:
-                    message_area.value = "<p style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'>Mass scale must be greater than 0.</p>"
+                    self.final_message_area.value = "<p style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'>Mass scale must be greater than 0.</p>"
                     return
                 
                 if concentration <= 0:
-                    message_area.value = "<p style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'>Concentration must be greater than 0.</p>"
+                    self.final_message_area.value = "<p style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'>Concentration must be greater than 0.</p>"
                     return
                 
                 # Save the final details
@@ -1015,7 +1010,7 @@ class ReagentUI:
                 )
                 
                 if success:
-                    message_area.value = """
+                    self.final_message_area.value = """
                     <div style='color: green; padding: 15px; background-color: #EEFFEE; border-radius: 5px; border: 1px solid #90BE6D;'>
                         <h4 style='margin-top: 0;'>✅ Final Details Saved Successfully!</h4>
                         <p>Your experiment data has been saved with the unified experimental metadata system.</p>
@@ -1027,18 +1022,18 @@ class ReagentUI:
                     </div>
                     """
                 else:
-                    message_area.value = "<p style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'>❌ Failed to save final details. Please try again.</p>"
+                    self.final_message_area.value = "<p style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'>❌ Failed to save final details. Please try again.</p>"
                     
             except Exception as e:
-                message_area.value = f"<p style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'>❌ Error: {str(e)}</p>"
+                self.final_message_area.value = f"<p style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'>❌ Error: {str(e)}</p>"
         
         submit_button.on_click(save_final_details)
         
         # Create form with original styling
         form_container = widgets.VBox([
             widgets.HTML("<h4>Final Experiment Details</h4>"),
-            message_area,
-            limiting_reagent_display,
+            self.final_message_area,
+            self.limiting_reagent_display,
             mass_scale_input,
             concentration_input,
             volume_display,
@@ -1053,10 +1048,42 @@ class ReagentUI:
         # Initial volume calculation if all values are available
         current_mass = data.get("mass scale (in mg)")
         current_concentration = data.get("concentration (in mM)")
-        if current_mass and current_concentration and limiting_reagent_mw:
+        if current_mass and current_concentration:
             update_volume()
         
         return form_container
+    
+    def _get_limiting_reagent_info(self):
+        """Get current limiting reagent name and molecular weight"""
+        data = self.data_manager.load_data()
+        
+        # Find the limiting reagent (eq = 1.0)
+        limiting_reagent = None
+        limiting_reagent_mw = None
+        
+        all_reagents = data.get("solid reagents", []) + data.get("liquid reagents", [])
+        for reagent in all_reagents:
+            if abs(reagent.get("eq", 0) - 1.0) < 1e-6:
+                limiting_reagent = reagent["name"]
+                limiting_reagent_mw = reagent["molecular weight (in g/mol)"]
+                break
+        
+        return limiting_reagent, limiting_reagent_mw
+    
+    def _refresh_final_details_display(self):
+        """Refresh the limiting reagent display in final details tab"""
+        # Only refresh if the final details tab has been created
+        if not hasattr(self, 'limiting_reagent_display'):
+            return
+            
+        limiting_reagent, _ = self._get_limiting_reagent_info()
+        
+        if limiting_reagent:
+            reagent_html = f"<p><b>Limiting Reagent:</b> {limiting_reagent}</p>"
+        else:
+            reagent_html = "<p><b>Limiting Reagent:</b> <span style='color:red'>None selected (set eq=1.0 for limiting reagent)</span></p>"
+        
+        self.limiting_reagent_display.value = reagent_html
     
     def _save_solid_reagent(self, new_reagent: Dict[str, Any], old_reagent: Optional[Dict[str, Any]] = None) -> bool:
         """Save a solid reagent"""
@@ -1070,6 +1097,8 @@ class ReagentUI:
             
             if success:
                 self._refresh_display_tab()
+                # Also refresh the final details display to update limiting reagent
+                self._refresh_final_details_display()
             
             return success
         except Exception as e:
@@ -1088,6 +1117,8 @@ class ReagentUI:
             
             if success:
                 self._refresh_display_tab()
+                # Also refresh the final details display to update limiting reagent
+                self._refresh_final_details_display()
             
             return success
         except Exception as e:
