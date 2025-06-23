@@ -39,6 +39,7 @@ class TailwindColors:
     RED_50 = "#fef2f2"
     RED_500 = "#ef4444"
     RED_600 = "#dc2626"
+    RED_700 = "#b91c1c"
     
     # Neutral colors
     GRAY_50 = "#f9fafb"
