@@ -31,8 +31,8 @@ class ComponentRegistry:
     
     # Active Components (Tab 1)
     ACTIVE_COMPONENTS = {
-        'HarvardPump': {
-            'class_name': 'HarvardPump',
+        'HarvardSyringePump': {
+            'class_name': 'HarvardSyringePump',
             'import_path': 'mechwolf.components.contrib.harvardpump',
             'display_name': 'Harvard Syringe Pump',
             'icon': '💉',
@@ -876,10 +876,19 @@ class TabbedApparatusDesigner:
                         params.append(f'{prop_name}="{prop_value}"')
                 code_lines.append(f'{name} = HarvardSyringePump({", ".join(params)})')
             elif comp.component_type == 'Tube':
-                # Tubes don't take a 'name' parameter, only properties
+                # Tubes don't take a 'name' parameter, only properties with proper units
                 tube_params = []
                 for prop_name, prop_value in comp.properties.items():
                     if prop_value:  # Only include non-empty properties
+                        # Ensure proper units for tube parameters
+                        if prop_name in ['ID', 'OD']:
+                            # For tube dimensions, ensure they have 'in' units
+                            if 'in' not in prop_value:
+                                prop_value = f"{prop_value} in"
+                        elif prop_name == 'length':
+                            # For length, ensure proper units (ft/foot)
+                            if 'ft' not in prop_value and 'foot' not in prop_value and 'in' not in prop_value:
+                                prop_value = f"{prop_value} ft"
                         tube_params.append(f'{prop_name}="{prop_value}"')
                 code_lines.append(f'{name} = mw.{class_name}({", ".join(tube_params)})')
             else:
