@@ -1075,16 +1075,30 @@ class TabbedApparatusDesigner:
                         tube_params.append(f'{prop_name}="{prop_value}"')
                 code_lines.append(f'{name} = mw.{class_name}({", ".join(tube_params)})')
             else:
-                # Other components (Vessel, TMixer) include name parameter first, then description
-                params = [f'name="{name}"']
-                # Always include description parameter for Vessel and TMixer
-                if comp.component_type in ['Vessel', 'TMixer']:
+                # Handle different component types with their specific parameter patterns
+                if comp.component_type == 'Vessel':
+                    # Vessel takes description first, then name
                     description = comp.description if comp.description else ""
-                    params.append(f'description="{description}"')
-                # Add other properties
-                for prop_name, prop_value in comp.properties.items():
-                    if prop_value:  # Only include non-empty properties
-                        params.append(f'{prop_name}="{prop_value}"')
+                    params = [f'description="{description}"', f'name="{name}"']
+                    # Add other properties
+                    for prop_name, prop_value in comp.properties.items():
+                        if prop_value:  # Only include non-empty properties
+                            params.append(f'{prop_name}="{prop_value}"')
+                elif comp.component_type == 'TMixer':
+                    # TMixer only takes name parameter (no description)
+                    params = [f'name="{name}"']
+                    # Add other properties
+                    for prop_name, prop_value in comp.properties.items():
+                        if prop_value:  # Only include non-empty properties
+                            params.append(f'{prop_name}="{prop_value}"')
+                else:
+                    # Other components - default pattern with name first
+                    params = [f'name="{name}"']
+                    # Add other properties
+                    for prop_name, prop_value in comp.properties.items():
+                        if prop_value:  # Only include non-empty properties
+                            params.append(f'{prop_name}="{prop_value}"')
+                
                 code_lines.append(f'{name} = mw.{class_name}({", ".join(params)})')
         
         code_lines.append("")
