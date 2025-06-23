@@ -821,18 +821,24 @@ class TabbedApparatusDesigner:
         self.passive_component_selector.options = passive_components
         
         # Update connection selector with readable connection descriptions
-        connection_options = []
-        for i, conn in enumerate(self.connections):
-            tube_info = conn.tube_type
-            if conn.tube_type in self.components:
-                tube_comp = self.components[conn.tube_type]
-                tube_props = tube_comp.properties
-                tube_info = f"{conn.tube_type} (ID:{tube_props.get('ID', '?')}, L:{tube_props.get('length', '?')})"
-            
-            connection_desc = f"#{i+1}: {conn.from_component} → {conn.to_component} via {tube_info}"
-            connection_options.append((connection_desc, i))
+        # Force clear the dropdown first
+        self.connection_selector.options = []
+        self.connection_selector.value = None
         
-        self.connection_selector.options = connection_options
+        if self.connections:
+            connection_options = []
+            for i, conn in enumerate(self.connections):
+                tube_info = conn.tube_type
+                if conn.tube_type in self.components:
+                    tube_comp = self.components[conn.tube_type]
+                    tube_props = tube_comp.properties
+                    tube_info = f"{conn.tube_type} (ID:{tube_props.get('ID', '?')}, L:{tube_props.get('length', '?')})"
+                
+                connection_desc = f"#{i+1}: {conn.from_component} → {conn.to_component} via {tube_info}"
+                connection_options.append((connection_desc, i))
+            
+            # Set new options
+            self.connection_selector.options = connection_options
     
     def _update_network_visualization(self):
         """Update the network visualization display."""
