@@ -17,6 +17,9 @@ from IPython.display import display, clear_output
 from typing import Dict, List, Any, Optional
 from collections import defaultdict
 import json
+import os
+import importlib
+import inspect
 
 # Import experimental metadata system
 try:
@@ -27,31 +30,110 @@ except ImportError:
     print("Warning: Experimental metadata system not available")
 
 class ComponentRegistry:
-    """Registry for available components - designed for easy extension."""
+    """Registry for available components with dynamic discovery from contrib files."""
     
-    # Active Components (Tab 1)
-    ACTIVE_COMPONENTS = {
-        'HarvardSyringePump': {
-            'class_name': 'HarvardSyringePump',
-            'import_path': 'mechwolf.components.contrib.harvardpump',
-            'display_name': 'Harvard Syringe Pump',
-            'icon': '💉',
-            'default_properties': {
-                'syringe_volume': '3 mL',
-                'syringe_diameter': '10 mm',
-                'serial_port': 'COM1'
-            },
-            'required_properties': ['syringe_volume', 'syringe_diameter', 'serial_port'],
-            'property_types': {
-                'syringe_volume': 'text',
-                'syringe_diameter': 'text', 
-                'serial_port': 'text'
-            }
+    @staticmethod
+    def _discover_components():
+        """Dynamically discover components from contrib directory."""
+        components = {
+            'active': {},
+            'passive': {}
         }
-    }
+        
+        try:
+            # Try to discover components dynamically
+            contrib_path = '/home/kumar/MechWolf/mechwolf/components/contrib'
+            
+            # Known component mappings from our analysis
+            known_components = {
+                'HarvardSyringePump': {
+                    'module': 'harvardpump',
+                    'category': 'active',
+                    'display_name': 'Harvard Syringe Pump',
+                    'icon': '💉',
+                    'default_properties': {
+                        'syringe_volume': '3 mL',
+                        'syringe_diameter': '10 mm',
+                        'serial_port': 'COM1'
+                    },
+                    'required_properties': ['syringe_volume', 'syringe_diameter', 'serial_port']
+                },
+                'VarianPump': {
+                    'module': 'varian',
+                    'category': 'active',
+                    'display_name': 'Varian HPLC Pump',
+                    'icon': '⚙️',
+                    'default_properties': {
+                        'serial_port': '/dev/ttyUSB0',
+                        'max_rate': '5 ml/min'
+                    },
+                    'required_properties': ['serial_port', 'max_rate']
+                },
+                'ViciPump': {
+                    'module': 'vicipump',
+                    'category': 'active',
+                    'display_name': 'Vici M50 Pump',
+                    'icon': '🔧',
+                    'default_properties': {
+                        'serial_port': '/dev/ttyUSB0',
+                        'volume_per_rev': '1 mL'
+                    },
+                    'required_properties': ['serial_port', 'volume_per_rev']
+                },
+                'ViciValve': {
+                    'module': 'vici',
+                    'category': 'active',
+                    'display_name': 'VICI Valve',
+                    'icon': '🔀',
+                    'default_properties': {
+                        'serial_port': '/dev/ttyUSB0'
+                    },
+                    'required_properties': ['serial_port', 'mapping']
+                }
+            }
+            
+            # Add known components to registry
+            for class_name, info in known_components.items():
+                component_info = {
+                    'class_name': class_name,
+                    'import_path': f'mechwolf.components.contrib.{info["module"]}',
+                    'display_name': info['display_name'],
+                    'icon': info['icon'],
+                    'default_properties': info['default_properties'],
+                    'required_properties': info['required_properties'],
+                    'property_types': {prop: 'text' for prop in info['required_properties']}
+                }
+                components[info['category']][class_name] = component_info
+                
+        except Exception as e:
+            print(f"Warning: Could not discover components dynamically: {e}")
+            # Fallback to hardcoded Harvard pump
+            components['active']['HarvardSyringePump'] = {
+                'class_name': 'HarvardSyringePump',
+                'import_path': 'mechwolf.components.contrib.harvardpump',
+                'display_name': 'Harvard Syringe Pump',
+                'icon': '💉',
+                'default_properties': {
+                    'syringe_volume': '3 mL',
+                    'syringe_diameter': '10 mm',
+                    'serial_port': 'COM1'
+                },
+                'required_properties': ['syringe_volume', 'syringe_diameter', 'serial_port'],
+                'property_types': {
+                    'syringe_volume': 'text',
+                    'syringe_diameter': 'text', 
+                    'serial_port': 'text'
+                }
+            }
+        
+        return components
     
-    # Passive Components (Tab 2)
-    PASSIVE_COMPONENTS = {
+    # Dynamically discovered components
+    _discovered = _discover_components()
+    ACTIVE_COMPONENTS = _discovered['active']
+    
+    # Add passive components (stdlib components)
+    _discovered['passive'].update({
         'Vessel': {
             'class_name': 'Vessel',
             'import_path': 'mechwolf',
@@ -89,7 +171,9 @@ class ComponentRegistry:
                 'material': 'text'
             }
         }
-    }
+    })
+    
+    PASSIVE_COMPONENTS = _discovered['passive']
     
     # Tube Specifications (used in connections)
     TUBE_TYPES = {
@@ -134,6 +218,39 @@ class ComponentRegistry:
             cls.ACTIVE_COMPONENTS[comp_type] = config
         elif category == 'passive':
             cls.PASSIVE_COMPONENTS[comp_type] = config
+    
+    @classmethod
+    def get_component_info(cls, component_type: str) -> Dict[str, Any]:
+        """Get component info with backward compatibility."""
+        # Handle backward compatibility for old naming
+        if component_type == 'HarvardPump':
+            component_type = 'HarvardSyringePump'
+        
+        # Check active components first
+        if component_type in cls.ACTIVE_COMPONENTS:
+            return cls.ACTIVE_COMPONENTS[component_type]
+        
+        # Check passive components
+        if component_type in cls.PASSIVE_COMPONENTS:
+            return cls.PASSIVE_COMPONENTS[component_type]
+        
+        # Fallback for unknown components
+        return {
+            'class_name': component_type,
+            'import_path': 'mechwolf',
+            'display_name': component_type,
+            'icon': '🔧',
+            'default_properties': {},
+            'required_properties': [],
+            'property_types': {}
+        }
+    
+    @classmethod
+    def normalize_component_type(cls, component_type: str) -> str:
+        """Normalize component type with backward compatibility."""
+        if component_type == 'HarvardPump':
+            return 'HarvardSyringePump'
+        return component_type
 
 class ApparatusComponent:
     """Represents a single component in the apparatus."""
@@ -519,8 +636,14 @@ class TabbedApparatusDesigner:
     
     def _update_active_components_display(self):
         """Update the active components list display."""
-        active_comps = [comp for comp in self.components.values() 
-                       if comp.component_type in ComponentRegistry.ACTIVE_COMPONENTS]
+        active_comps = []
+        for comp in self.components.values():
+            # Normalize component type
+            normalized_type = ComponentRegistry.normalize_component_type(comp.component_type)
+            if comp.component_type != normalized_type:
+                comp.component_type = normalized_type
+            if comp.component_type in ComponentRegistry.ACTIVE_COMPONENTS:
+                active_comps.append(comp)
         
         if not active_comps:
             self.active_components_display.value = "<i>No active components added yet</i>"
@@ -541,7 +664,7 @@ class TabbedApparatusDesigner:
         """)
         
         for comp in active_comps:
-            info = ComponentRegistry.ACTIVE_COMPONENTS[comp.component_type]
+            info = ComponentRegistry.get_component_info(comp.component_type)
             # Truncate description if too long
             description = comp.description if comp.description else "<i>No description</i>"
             if len(description) > 40:
@@ -660,12 +783,22 @@ class TabbedApparatusDesigner:
         self.tube_selection_dropdown.options = tube_components
         
         # Update property editor dropdowns
-        active_components = [name for name, comp in self.components.items() 
-                           if comp.component_type in ComponentRegistry.ACTIVE_COMPONENTS]
-        self.active_component_selector.options = active_components
+        active_components = []
+        passive_components = []
         
-        passive_components = [name for name, comp in self.components.items() 
-                            if comp.component_type in ComponentRegistry.PASSIVE_COMPONENTS]
+        for name, comp in self.components.items():
+            comp_type = comp.component_type
+            # Handle backward compatibility
+            if comp_type == 'HarvardPump':
+                comp_type = 'HarvardSyringePump'
+                comp.component_type = 'HarvardSyringePump'  # Update for consistency
+            
+            if comp_type in ComponentRegistry.ACTIVE_COMPONENTS:
+                active_components.append(name)
+            elif comp_type in ComponentRegistry.PASSIVE_COMPONENTS:
+                passive_components.append(name)
+        
+        self.active_component_selector.options = active_components
         self.passive_component_selector.options = passive_components
     
     def _update_network_visualization(self):
@@ -683,7 +816,12 @@ class TabbedApparatusDesigner:
             # Show components
             print("\n🔧 Components:")
             for name, comp in self.components.items():
-                info = ComponentRegistry.get_all_components().get(comp.component_type, {})
+                comp_type = comp.component_type
+                # Handle backward compatibility
+                if comp_type == 'HarvardPump':
+                    comp_type = 'HarvardSyringePump'
+                    comp.component_type = 'HarvardSyringePump'
+                info = ComponentRegistry.get_all_components().get(comp_type, {})
                 icon = info.get('icon', '🔧')
                 display_name = info.get('display_name', comp.component_type)
                 description_text = f" - {comp.description}" if comp.description else ""
@@ -865,7 +1003,12 @@ class TabbedApparatusDesigner:
         # Generate component definitions
         code_lines.append("# Component Definitions")
         for name, comp in self.components.items():
-            info = ComponentRegistry.get_all_components()[comp.component_type]
+            # Normalize component type and update if needed
+            normalized_type = ComponentRegistry.normalize_component_type(comp.component_type)
+            if comp.component_type != normalized_type:
+                comp.component_type = normalized_type
+            
+            info = ComponentRegistry.get_component_info(comp.component_type)
             class_name = info['class_name']
             
             if comp.component_type == 'HarvardSyringePump':
