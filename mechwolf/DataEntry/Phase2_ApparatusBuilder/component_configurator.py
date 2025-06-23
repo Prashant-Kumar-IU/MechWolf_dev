@@ -113,6 +113,7 @@ class ComponentConfigurator:
                 return True, ""
             return False, f"Invalid component type. Valid options: {', '.join(valid_names)}"
         
+        # Always use input box for simplicity
         if MODERN_UI_AVAILABLE:
             self.component_type_input_field = EnhancedInputComponents.create_autocomplete_input(
                 description="Component Type:",
@@ -125,14 +126,15 @@ class ComponentConfigurator:
             )
             # Extract the actual input widget for accessing value
             self.component_type_input = self.component_type_input_field.children[1]  # Skip label
+            self.component_type_widget = self.component_type_input_field
         else:
-            # Fallback to dropdown
-            self.component_type_dropdown = widgets.Dropdown(
-                options=[(info['name'], key) for key, info in self.component_types.items()],
+            # Fallback to simple text input instead of dropdown
+            self.component_type_input = widgets.Text(
+                placeholder='e.g., Vessel, Tube, T-Mixer',
                 description='Type:',
                 layout=widgets.Layout(width='250px')
             )
-            self.component_type_input = self.component_type_dropdown
+            self.component_type_widget = self.component_type_input
         
         self.component_type_input.observe(self._on_component_type_change, names='value')
         
@@ -175,11 +177,9 @@ class ComponentConfigurator:
         )
         
         # Initialize
-        if MODERN_UI_AVAILABLE:
-            initial_component_type = component_type_options[0]
-            self._on_component_type_change({'new': initial_component_type})
-        else:
-            self._on_component_type_change({'new': self.component_type_dropdown.value})
+        # Initialize with first component type
+        initial_component_type = component_type_options[0]
+        self._on_component_type_change({'new': initial_component_type})
         self._refresh_components_display()
     
     def _get_component_type_from_input(self, input_value: str) -> Optional[str]:
@@ -271,9 +271,9 @@ class ComponentConfigurator:
                     required=True
                 )
             else:
-                return widgets.Dropdown(
-                    options=options,
+                return widgets.Text(
                     value=defaults.get(param, options[0]),
+                    placeholder='e.g., Glass, PTFE, Steel',
                     description='Material:',
                     layout=widgets.Layout(width='200px')
                 )
@@ -297,9 +297,9 @@ class ComponentConfigurator:
                     required=True
                 )
             else:
-                return widgets.Dropdown(
-                    options=self.volumes,
+                return widgets.Text(
                     value=defaults.get(param, '10 mL'),
+                    placeholder='e.g., 10 mL, 50 μL',
                     description='Volume:',
                     layout=widgets.Layout(width='150px')
                 )
@@ -323,8 +323,12 @@ class ComponentConfigurator:
                     required=True
                 )
             else:
-                return widgets.Dropdown(
-                    options=self.tube_sizes['length'],
+                return widgets.Text(
+                    value=defaults.get(param, '1 ft'),
+                    placeholder='e.g., 1 ft, 30 cm',
+                    description='Length:',
+                    layout=widgets.Layout(width='150px')
+                )
                     value=defaults.get(param, '1 ft'),
                     description='Length:',
                     layout=widgets.Layout(width='150px')
@@ -349,9 +353,9 @@ class ComponentConfigurator:
                     required=True
                 )
             else:
-                return widgets.Dropdown(
-                    options=self.tube_sizes['ID'],
+                return widgets.Text(
                     value=defaults.get(param, '1/16 in'),
+                    placeholder='e.g., 1/16 in, 1.5 mm',
                     description='Inner Diameter:',
                     layout=widgets.Layout(width='180px')
                 )
@@ -375,9 +379,9 @@ class ComponentConfigurator:
                     required=True
                 )
             else:
-                return widgets.Dropdown(
-                    options=self.tube_sizes['OD'],
+                return widgets.Text(
                     value=defaults.get(param, '1/8 in'),
+                    placeholder='e.g., 1/8 in, 3.0 mm',
                     description='Outer Diameter:',
                     layout=widgets.Layout(width='180px')
                 )
@@ -399,9 +403,9 @@ class ComponentConfigurator:
                     required=True
                 )
             else:
-                return widgets.Dropdown(
-                    options=sensor_options,
+                return widgets.Text(
                     value='Temperature',
+                    placeholder='e.g., Temperature, Pressure',
                     description='Sensor Type:',
                     layout=widgets.Layout(width='200px')
                 )
@@ -476,7 +480,11 @@ class ComponentConfigurator:
                     print("❌ Please select a valid component type")
                     return
             else:
-                component_type = self.component_type_dropdown.value
+                component_type_input = self.component_type_input.value
+                component_type = self._get_component_type_from_input(component_type_input)
+                if not component_type:
+                    print("❌ Please enter a valid component type")
+                    return
             
             # Collect parameters
             parameters = {}
@@ -565,19 +573,16 @@ class ComponentConfigurator:
         self.component_name_input.value = ''
         
         # Reset parameter widgets to defaults
-        component_type = self.component_type_dropdown.value
+        component_type_input = self.component_type_input.value
+        component_type = self._get_component_type_from_input(component_type_input)
+        if not component_type:
+            return  # Can't reset without valid component type
         component_info = self.component_types[component_type]
         defaults = component_info.get('defaults', {})
         
         for param, widget in self.parameter_widgets.items():
-            if hasattr(widget, 'options') and isinstance(widget, widgets.Dropdown):
-                # Reset dropdown to default or first option
-                if param in defaults and defaults[param] in widget.options:
-                    widget.value = defaults[param]
-                else:
-                    widget.value = widget.options[0]
-            else:
-                # Reset text input
+            if hasattr(widget, 'value'):
+                # Reset widget to default value or empty
                 widget.value = defaults.get(param, '')
     
     def _refresh_components_display(self):
@@ -651,7 +656,7 @@ class ComponentConfigurator:
         # Configuration section
         config_section = widgets.VBox([
             widgets.HTML("<h4>Component Configuration</h4>"),
-            self.component_type_dropdown,
+            self.component_type_widget,
             self.type_description,
             self.component_name_input,
             widgets.HTML("<h5>Parameters:</h5>"),
