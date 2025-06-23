@@ -127,6 +127,7 @@ class ApparatusComponent:
         self.component_type = component_type
         self.name = name
         self.instance_id = instance_id
+        self.description = ""  # User-defined description
         self.properties = {}
         self.registry_info = ComponentRegistry.get_all_components().get(component_type, {})
         
@@ -137,8 +138,9 @@ class ApparatusComponent:
     def to_dict(self):
         """Convert to dictionary for metadata storage."""
         return {
-            'component_type': self.component_type,
+            'type': self.component_type,  # Match ApparatusDataManager expected format
             'name': self.name,
+            'description': self.description,
             'instance_id': self.instance_id,
             'properties': self.properties,
             'registry_info': self.registry_info
@@ -147,7 +149,9 @@ class ApparatusComponent:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]):
         """Create component from dictionary."""
-        comp = cls(data['component_type'], data['name'], data['instance_id'])
+        comp_type = data.get('type', data.get('component_type', ''))
+        comp = cls(comp_type, data['name'], data.get('instance_id', 0))
+        comp.description = data.get('description', '')
         comp.properties = data.get('properties', {})
         return comp
 
@@ -164,8 +168,8 @@ class ApparatusConnection:
     def to_dict(self):
         """Convert to dictionary for metadata storage."""
         return {
-            'from_component': self.from_component,
-            'to_component': self.to_component,
+            'from': self.from_component,  # Match ApparatusDataManager expected format
+            'to': self.to_component,
             'tube_type': self.tube_type,
             'tube_length': self.tube_length,
             'tube_properties': self.tube_properties
@@ -174,9 +178,11 @@ class ApparatusConnection:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]):
         """Create connection from dictionary."""
+        from_comp = data.get('from', data.get('from_component', ''))
+        to_comp = data.get('to', data.get('to_component', ''))
         conn = cls(
-            data['from_component'],
-            data['to_component'], 
+            from_comp,
+            to_comp, 
             data.get('tube_type', 'fat_tube'),
             data.get('tube_length', '1 ft')
         )
@@ -184,7 +190,12 @@ class ApparatusConnection:
         return conn
 
 class TabbedApparatusDesigner:
-    """Main tabbed interface for apparatus design."""
+    """
+    Main tabbed interface for apparatus design.
+    
+    Uses simple network representation (components + connections lists)
+    for development simplicity - not NetworkX graphs.
+    """
     
     def __init__(self, experiment_manager: Optional[Any] = None):
         self.experiment_manager = experiment_manager
@@ -473,8 +484,9 @@ class TabbedApparatusDesigner:
         comp_widgets = []
         for comp in active_comps:
             info = ComponentRegistry.ACTIVE_COMPONENTS[comp.component_type]
+            description_text = f"<br>&nbsp;&nbsp;&nbsp;&nbsp;<i>{comp.description}</i>" if comp.description else ""
             comp_widget = widgets.HBox([
-                widgets.HTML(f"{info['icon']} <b>{comp.name}</b> ({info['display_name']})"),
+                widgets.HTML(f"{info['icon']} <b>{comp.name}</b> ({info['display_name']}){description_text}"),
                 widgets.Button(description="Edit", button_style='info', 
                              layout=widgets.Layout(width='60px')),
                 widgets.Button(description="Delete", button_style='danger',
@@ -505,8 +517,9 @@ class TabbedApparatusDesigner:
         comp_widgets = []
         for comp in passive_comps:
             info = ComponentRegistry.PASSIVE_COMPONENTS[comp.component_type]
+            description_text = f"<br>&nbsp;&nbsp;&nbsp;&nbsp;<i>{comp.description}</i>" if comp.description else ""
             comp_widget = widgets.HBox([
-                widgets.HTML(f"{info['icon']} <b>{comp.name}</b> ({info['display_name']})"),
+                widgets.HTML(f"{info['icon']} <b>{comp.name}</b> ({info['display_name']}){description_text}"),
                 widgets.Button(description="Edit", button_style='info',
                              layout=widgets.Layout(width='60px')),
                 widgets.Button(description="Delete", button_style='danger',
@@ -574,7 +587,8 @@ class TabbedApparatusDesigner:
                 info = ComponentRegistry.get_all_components().get(comp.component_type, {})
                 icon = info.get('icon', '🔧')
                 display_name = info.get('display_name', comp.component_type)
-                print(f"  {icon} {name} ({display_name})")
+                description_text = f" - {comp.description}" if comp.description else ""
+                print(f"  {icon} {name} ({display_name}){description_text}")
             
             # Show connections
             print(f"\n🔗 Connections ({len(self.connections)}):")
@@ -594,6 +608,24 @@ class TabbedApparatusDesigner:
         
         prop_widgets.append(widgets.HTML(f"<b>Editing: {component.name}</b>"))
         
+        # Component name and description editors
+        name_widget = widgets.Text(
+            value=component.name,
+            description="Name:",
+            layout=widgets.Layout(width='300px')
+        )
+        prop_widgets.append(name_widget)
+        
+        description_widget = widgets.Text(
+            value=component.description,
+            description="Description:",
+            placeholder="Enter component description...",
+            layout=widgets.Layout(width='300px')
+        )
+        prop_widgets.append(description_widget)
+        
+        prop_widgets.append(widgets.HTML("<hr>"))
+        
         # Create input widgets for each property
         input_widgets = {}
         for prop_name in info.get('required_properties', []):
@@ -610,8 +642,32 @@ class TabbedApparatusDesigner:
         apply_btn = widgets.Button(description="Apply Changes", button_style='success')
         
         def apply_changes(b):
+            # Update name and description
+            old_name = component.name
+            component.name = name_widget.value
+            component.description = description_widget.value
+            
+            # Update component properties
             for prop_name, widget in input_widgets.items():
                 component.properties[prop_name] = widget.value
+            
+            # Update components dict if name changed
+            if old_name != component.name:
+                self.components[component.name] = self.components.pop(old_name)
+                # Update connections that reference this component
+                for conn in self.connections:
+                    if conn.from_component == old_name:
+                        conn.from_component = component.name
+                    if conn.to_component == old_name:
+                        conn.to_component = component.name
+                
+                # Update dropdowns
+                self._update_connection_dropdowns()
+                self._update_connections_display()
+            
+            # Update displays
+            self._update_active_components_display()
+            self._update_passive_components_display()
             self._save_to_metadata()
             print(f"✅ Updated properties for {component.name}")
         
@@ -713,15 +769,25 @@ class TabbedApparatusDesigner:
         if not self.experiment_manager or not _metadata_available:
             return
         
-        # Prepare apparatus data
-        apparatus_data = {
-            'components': {name: comp.to_dict() for name, comp in self.components.items()},
-            'connections': [conn.to_dict() for conn in self.connections],
-            'component_counters': dict(self.component_counters)
-        }
-        
         try:
-            self.experiment_manager.apparatus.update_apparatus_configuration(apparatus_data)
+            # Clear existing apparatus data and rebuild
+            self.experiment_manager.apparatus.save_data({
+                'components': {'active': [], 'passive': []},
+                'connections': []
+            })
+            
+            # Save components separately as active/passive
+            for name, comp in self.components.items():
+                comp_dict = comp.to_dict()
+                if comp.component_type in ComponentRegistry.ACTIVE_COMPONENTS:
+                    self.experiment_manager.apparatus.add_active_component(comp_dict)
+                else:
+                    self.experiment_manager.apparatus.add_passive_component(comp_dict)
+            
+            # Save connections
+            for conn in self.connections:
+                self.experiment_manager.apparatus.add_connection(conn.to_dict())
+            
             self.experiment_manager.save()
         except Exception as e:
             print(f"Warning: Could not save to metadata: {e}")
@@ -732,21 +798,33 @@ class TabbedApparatusDesigner:
             return
         
         try:
-            apparatus_data = self.experiment_manager.apparatus.get_apparatus_configuration()
+            apparatus_data = self.experiment_manager.apparatus.get_data()
             
             if apparatus_data:
-                # Load components
-                for name, comp_data in apparatus_data.get('components', {}).items():
+                # Load active components
+                for comp_data in apparatus_data.get('components', {}).get('active', []):
                     comp = ApparatusComponent.from_dict(comp_data)
-                    self.components[name] = comp
+                    self.components[comp.name] = comp
+                    # Update counter
+                    self.component_counters[comp.component_type] = max(
+                        self.component_counters[comp.component_type], 
+                        comp.instance_id
+                    )
+                
+                # Load passive components
+                for comp_data in apparatus_data.get('components', {}).get('passive', []):
+                    comp = ApparatusComponent.from_dict(comp_data)
+                    self.components[comp.name] = comp
+                    # Update counter
+                    self.component_counters[comp.component_type] = max(
+                        self.component_counters[comp.component_type], 
+                        comp.instance_id
+                    )
                 
                 # Load connections
                 for conn_data in apparatus_data.get('connections', []):
                     conn = ApparatusConnection.from_dict(conn_data)
                     self.connections.append(conn)
-                
-                # Load counters
-                self.component_counters.update(apparatus_data.get('component_counters', {}))
                 
                 # Update displays
                 self._update_active_components_display()
