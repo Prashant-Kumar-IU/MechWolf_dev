@@ -329,10 +329,6 @@ class ComponentConfigurator:
                     description='Length:',
                     layout=widgets.Layout(width='150px')
                 )
-                    value=defaults.get(param, '1 ft'),
-                    description='Length:',
-                    layout=widgets.Layout(width='150px')
-                )
         
         elif param == 'ID':
             if MODERN_UI_AVAILABLE:
