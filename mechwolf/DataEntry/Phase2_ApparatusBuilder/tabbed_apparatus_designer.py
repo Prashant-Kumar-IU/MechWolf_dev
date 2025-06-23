@@ -29,88 +29,23 @@ except ImportError:
     _metadata_available = False
     print("Warning: Experimental metadata system not available")
 
-class ComponentRegistry:
-    """Registry for available components with dynamic discovery from contrib files."""
+# Function to discover components (moved outside class to avoid staticmethod issues)
+def _discover_components():
+    """Dynamically discover components from contrib directory."""
+    components = {
+        'active': {},
+        'passive': {}
+    }
     
-    @staticmethod
-    def _discover_components():
-        """Dynamically discover components from contrib directory."""
-        components = {
-            'active': {},
-            'passive': {}
-        }
+    try:
+        # Try to discover components dynamically
+        contrib_path = '/home/kumar/MechWolf/mechwolf/components/contrib'
         
-        try:
-            # Try to discover components dynamically
-            contrib_path = '/home/kumar/MechWolf/mechwolf/components/contrib'
-            
-            # Known component mappings from our analysis
-            known_components = {
-                'HarvardSyringePump': {
-                    'module': 'harvardpump',
-                    'category': 'active',
-                    'display_name': 'Harvard Syringe Pump',
-                    'icon': '💉',
-                    'default_properties': {
-                        'syringe_volume': '3 mL',
-                        'syringe_diameter': '10 mm',
-                        'serial_port': 'COM1'
-                    },
-                    'required_properties': ['syringe_volume', 'syringe_diameter', 'serial_port']
-                },
-                'VarianPump': {
-                    'module': 'varian',
-                    'category': 'active',
-                    'display_name': 'Varian HPLC Pump',
-                    'icon': '⚙️',
-                    'default_properties': {
-                        'serial_port': '/dev/ttyUSB0',
-                        'max_rate': '5 ml/min'
-                    },
-                    'required_properties': ['serial_port', 'max_rate']
-                },
-                'ViciPump': {
-                    'module': 'vicipump',
-                    'category': 'active',
-                    'display_name': 'Vici M50 Pump',
-                    'icon': '🔧',
-                    'default_properties': {
-                        'serial_port': '/dev/ttyUSB0',
-                        'volume_per_rev': '1 mL'
-                    },
-                    'required_properties': ['serial_port', 'volume_per_rev']
-                },
-                'ViciValve': {
-                    'module': 'vici',
-                    'category': 'active',
-                    'display_name': 'VICI Valve',
-                    'icon': '🔀',
-                    'default_properties': {
-                        'serial_port': '/dev/ttyUSB0'
-                    },
-                    'required_properties': ['serial_port', 'mapping']
-                }
-            }
-            
-            # Add known components to registry
-            for class_name, info in known_components.items():
-                component_info = {
-                    'class_name': class_name,
-                    'import_path': f'mechwolf.components.contrib.{info["module"]}',
-                    'display_name': info['display_name'],
-                    'icon': info['icon'],
-                    'default_properties': info['default_properties'],
-                    'required_properties': info['required_properties'],
-                    'property_types': {prop: 'text' for prop in info['required_properties']}
-                }
-                components[info['category']][class_name] = component_info
-                
-        except Exception as e:
-            print(f"Warning: Could not discover components dynamically: {e}")
-            # Fallback to hardcoded Harvard pump
-            components['active']['HarvardSyringePump'] = {
-                'class_name': 'HarvardSyringePump',
-                'import_path': 'mechwolf.components.contrib.harvardpump',
+        # Known component mappings from our analysis
+        known_components = {
+            'HarvardSyringePump': {
+                'module': 'harvardpump',
+                'category': 'active',
                 'display_name': 'Harvard Syringe Pump',
                 'icon': '💉',
                 'default_properties': {
@@ -118,61 +53,127 @@ class ComponentRegistry:
                     'syringe_diameter': '10 mm',
                     'serial_port': 'COM1'
                 },
-                'required_properties': ['syringe_volume', 'syringe_diameter', 'serial_port'],
-                'property_types': {
-                    'syringe_volume': 'text',
-                    'syringe_diameter': 'text', 
-                    'serial_port': 'text'
-                }
-            }
-        
-        return components
-    
-    # Dynamically discovered components
-    _discovered = _discover_components()
-    ACTIVE_COMPONENTS = _discovered['active']
-    
-    # Add passive components (stdlib components)
-    _discovered['passive'].update({
-        'Vessel': {
-            'class_name': 'Vessel',
-            'import_path': 'mechwolf',
-            'display_name': 'Reagent Vessel',
-            'icon': '🧪',
-            'default_properties': {},
-            'required_properties': [],  # Remove description to avoid duplicate with main description field
-            'property_types': {}
-        },
-        'TMixer': {
-            'class_name': 'TMixer',
-            'import_path': 'mechwolf',
-            'display_name': 'T-Mixer',
-            'icon': '🔀',
-            'default_properties': {},
-            'required_properties': [],
-            'property_types': {}
-        },
-        'Tube': {
-            'class_name': 'Tube',
-            'import_path': 'mechwolf',
-            'display_name': 'Tubing',
-            'icon': '🔗',
-            'default_properties': {
-                'length': '1 ft',
-                'ID': '1/16 in',
-                'OD': '1/8 in',
-                'material': 'PFA'
+                'required_properties': ['syringe_volume', 'syringe_diameter', 'serial_port']
             },
-            'required_properties': ['length', 'ID', 'OD', 'material'],
-            'property_types': {
-                'length': 'text',
-                'ID': 'text',
-                'OD': 'text',
-                'material': 'text'
+            'VarianPump': {
+                'module': 'varian',
+                'category': 'active',
+                'display_name': 'Varian HPLC Pump',
+                'icon': '⚙️',
+                'default_properties': {
+                    'serial_port': '/dev/ttyUSB0',
+                    'max_rate': '5 ml/min'
+                },
+                'required_properties': ['serial_port', 'max_rate']
+            },
+            'ViciPump': {
+                'module': 'vicipump',
+                'category': 'active',
+                'display_name': 'Vici M50 Pump',
+                'icon': '🔧',
+                'default_properties': {
+                    'serial_port': '/dev/ttyUSB0',
+                    'volume_per_rev': '1 mL'
+                },
+                'required_properties': ['serial_port', 'volume_per_rev']
+            },
+            'ViciValve': {
+                'module': 'vici',
+                'category': 'active',
+                'display_name': 'VICI Valve',
+                'icon': '🔀',
+                'default_properties': {
+                    'serial_port': '/dev/ttyUSB0'
+                },
+                'required_properties': ['serial_port', 'mapping']
             }
         }
-    })
+        
+        # Add known components to registry
+        for class_name, info in known_components.items():
+            component_info = {
+                'class_name': class_name,
+                'import_path': f'mechwolf.components.contrib.{info["module"]}',
+                'display_name': info['display_name'],
+                'icon': info['icon'],
+                'default_properties': info['default_properties'],
+                'required_properties': info['required_properties'],
+                'property_types': {prop: 'text' for prop in info['required_properties']}
+            }
+            components[info['category']][class_name] = component_info
+            
+    except Exception as e:
+        print(f"Warning: Could not discover components dynamically: {e}")
+        # Fallback to hardcoded Harvard pump
+        components['active']['HarvardSyringePump'] = {
+            'class_name': 'HarvardSyringePump',
+            'import_path': 'mechwolf.components.contrib.harvardpump',
+            'display_name': 'Harvard Syringe Pump',
+            'icon': '💉',
+            'default_properties': {
+                'syringe_volume': '3 mL',
+                'syringe_diameter': '10 mm',
+                'serial_port': 'COM1'
+            },
+            'required_properties': ['syringe_volume', 'syringe_diameter', 'serial_port'],
+            'property_types': {
+                'syringe_volume': 'text',
+                'syringe_diameter': 'text', 
+                'serial_port': 'text'
+            }
+        }
     
+    return components
+
+# Discover components at module level
+_discovered = _discover_components()
+
+# Add passive components (stdlib components)
+_discovered['passive'].update({
+    'Vessel': {
+        'class_name': 'Vessel',
+        'import_path': 'mechwolf',
+        'display_name': 'Reagent Vessel',
+        'icon': '🧪',
+        'default_properties': {},
+        'required_properties': [],  # Remove description to avoid duplicate with main description field
+        'property_types': {}
+    },
+    'TMixer': {
+        'class_name': 'TMixer',
+        'import_path': 'mechwolf',
+        'display_name': 'T-Mixer',
+        'icon': '🔀',
+        'default_properties': {},
+        'required_properties': [],
+        'property_types': {}
+    },
+    'Tube': {
+        'class_name': 'Tube',
+        'import_path': 'mechwolf',
+        'display_name': 'Tubing',
+        'icon': '🔗',
+        'default_properties': {
+            'length': '1 ft',
+            'ID': '1/16 in',
+            'OD': '1/8 in',
+            'material': 'PFA'
+        },
+        'required_properties': ['length', 'ID', 'OD', 'material'],
+        'property_types': {
+            'length': 'text',
+            'ID': 'text',
+            'OD': 'text',
+            'material': 'text'
+        }
+    }
+})
+
+class ComponentRegistry:
+    """Registry for available components with dynamic discovery from contrib files."""
+    
+    # Use the discovered components
+    ACTIVE_COMPONENTS = _discovered['active']
     PASSIVE_COMPONENTS = _discovered['passive']
     
     # Tube Specifications (used in connections)
