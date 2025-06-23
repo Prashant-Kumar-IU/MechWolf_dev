@@ -508,6 +508,19 @@ class TabbedApparatusDesigner:
             ])
         ])
         
+        # Connection editor section
+        self.connection_selector = widgets.Dropdown(
+            options=[],
+            description="Select:",
+            layout=widgets.Layout(width='300px')
+        )
+        
+        self.connection_property_editor = widgets.VBox([
+            widgets.HTML("<b>Edit Connection:</b>"),
+            self.connection_selector,
+            widgets.HTML("<i>Select a connection above to edit or delete</i>")
+        ])
+        
         # Connections list container (scrollable HTML)
         self.connections_display = widgets.HTML(
             value="<i>No connections created yet</i>",
@@ -524,7 +537,8 @@ class TabbedApparatusDesigner:
             header,
             connection_builder,
             widgets.HTML("<hr>"),
-            widgets.HTML("<b>Connections List:</b>"),
+            self.connection_property_editor,
+            widgets.HTML("<hr>"),
             self.connections_display,
             widgets.HTML("<hr>"),
             widgets.HTML("<b>Network Overview:</b>"),
@@ -584,6 +598,9 @@ class TabbedApparatusDesigner:
         # Component selector events
         self.active_component_selector.observe(self._on_active_component_selected, names='value')
         self.passive_component_selector.observe(self._on_passive_component_selected, names='value')
+        
+        # Connection selector events
+        self.connection_selector.observe(self._on_connection_selected, names='value')
     
     def _add_harvard_pump(self, button):
         """Add a Harvard pump to the apparatus."""
@@ -801,6 +818,20 @@ class TabbedApparatusDesigner:
         
         self.active_component_selector.options = active_components
         self.passive_component_selector.options = passive_components
+        
+        # Update connection selector with readable connection descriptions
+        connection_options = []
+        for i, conn in enumerate(self.connections):
+            tube_info = conn.tube_type
+            if conn.tube_type in self.components:
+                tube_comp = self.components[conn.tube_type]
+                tube_props = tube_comp.properties
+                tube_info = f"{conn.tube_type} (ID:{tube_props.get('ID', '?')}, L:{tube_props.get('length', '?')})"
+            
+            connection_desc = f"#{i+1}: {conn.from_component} → {conn.to_component} via {tube_info}"
+            connection_options.append((connection_desc, i))
+        
+        self.connection_selector.options = connection_options
     
     def _update_network_visualization(self):
         """Update the network visualization display."""
@@ -1075,6 +1106,115 @@ class TabbedApparatusDesigner:
         if component_name and component_name in self.components:
             component = self.components[component_name]
             self._edit_component(component)
+    
+    def _on_connection_selected(self, change):
+        """Handle connection selection for editing."""
+        connection_index = change['new']
+        if connection_index is not None and 0 <= connection_index < len(self.connections):
+            connection = self.connections[connection_index]
+            self._edit_connection(connection, connection_index)
+    
+    def _edit_connection(self, connection: ApparatusConnection, connection_index: int):
+        """Edit connection properties with edit/delete functionality."""
+        # Create connection editor widgets
+        prop_widgets = []
+        
+        prop_widgets.append(widgets.HTML(f"<b>Editing Connection #{connection_index + 1}</b>"))
+        
+        # From component selector
+        from_dropdown = widgets.Dropdown(
+            options=[name for name, comp in self.components.items() if comp.component_type != 'Tube'],
+            value=connection.from_component,
+            description="From:",
+            layout=widgets.Layout(width='250px')
+        )
+        prop_widgets.append(from_dropdown)
+        
+        # To component selector
+        to_dropdown = widgets.Dropdown(
+            options=[name for name, comp in self.components.items() if comp.component_type != 'Tube'],
+            value=connection.to_component,
+            description="To:",
+            layout=widgets.Layout(width='250px')
+        )
+        prop_widgets.append(to_dropdown)
+        
+        # Tube selector
+        tube_options = [name for name, comp in self.components.items() if comp.component_type == 'Tube']
+        tube_dropdown = widgets.Dropdown(
+            options=tube_options,
+            value=connection.tube_type if connection.tube_type in tube_options else (tube_options[0] if tube_options else None),
+            description="Tube:",
+            layout=widgets.Layout(width='250px')
+        )
+        prop_widgets.append(tube_dropdown)
+        
+        prop_widgets.append(widgets.HTML("<hr>"))
+        
+        # Action buttons
+        apply_btn = widgets.Button(description="Apply Changes", button_style='success')
+        delete_btn = widgets.Button(description="Delete Connection", button_style='danger')
+        cancel_btn = widgets.Button(description="Cancel", button_style='warning')
+        
+        def apply_changes(_):
+            # Update connection properties
+            connection.from_component = from_dropdown.value
+            connection.to_component = to_dropdown.value
+            connection.tube_type = tube_dropdown.value
+            
+            # Update tube properties if tube component exists
+            if connection.tube_type in self.components:
+                tube_comp = self.components[connection.tube_type]
+                connection.tube_properties = tube_comp.properties.copy()
+            
+            # Update displays
+            self._update_connections_display()
+            self._update_connection_dropdowns()
+            self._update_network_visualization()
+            self._save_to_metadata()
+            print(f"✅ Updated connection #{connection_index + 1}")
+            
+            # Reset connection editor
+            self._reset_connection_editor()
+        
+        def delete_connection(_):
+            # Remove the connection
+            if 0 <= connection_index < len(self.connections):
+                del self.connections[connection_index]
+                
+                # Update displays
+                self._update_connections_display()
+                self._update_connection_dropdowns()
+                self._update_network_visualization()
+                self._save_to_metadata()
+                print(f"🗑️ Deleted connection #{connection_index + 1}")
+                
+                # Reset connection editor
+                self._reset_connection_editor()
+        
+        def cancel_edit(_):
+            # Reset connection editor without saving
+            self._reset_connection_editor()
+        
+        apply_btn.on_click(apply_changes)
+        delete_btn.on_click(delete_connection)
+        cancel_btn.on_click(cancel_edit)
+        
+        # Button row
+        button_row = widgets.HBox([apply_btn, delete_btn, cancel_btn])
+        prop_widgets.append(button_row)
+        
+        # Update connection property editor
+        self.connection_property_editor.children = prop_widgets
+    
+    def _reset_connection_editor(self):
+        """Reset connection property editor to default state."""
+        self.connection_selector.value = None
+        self.connection_property_editor.children = [
+            widgets.HTML("<b>Edit Connection:</b>"),
+            self.connection_selector,
+            widgets.HTML("<i>Select a connection above to edit or delete</i>")
+        ]
     
     def _save_to_metadata(self):
         """Save current apparatus to experimental metadata."""
