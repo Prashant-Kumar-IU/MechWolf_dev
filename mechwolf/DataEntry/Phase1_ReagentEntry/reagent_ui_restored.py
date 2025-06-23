@@ -582,9 +582,6 @@ class ReagentUI:
     def _populate_form(self, form_widgets, compound_data):
         """Populate form with compound data"""
         try:
-            # Debug: Print available data
-            print(f"🔍 Debug: Populating form with compound data: {list(compound_data.keys())}")
-            
             form_widgets['name'].value = compound_data.get('name', '')
             form_widgets['inchi'].value = compound_data.get('inchi', '')
             form_widgets['smiles'].value = compound_data.get('smiles', '')
@@ -604,8 +601,6 @@ class ReagentUI:
                     Review the data and click "Save Reagent" to add to your experiment.
                 </div>
                 """
-            
-            print(f"✅ Successfully populated form fields")
             
         except Exception as e:
             print(f"❌ Error populating form: {str(e)}")
@@ -786,9 +781,6 @@ class ReagentUI:
         
         # Populate the form with compound data
         self._populate_form(form_widgets, compound)
-        
-        print(f"✅ Imported {compound.get('name', 'compound')} data into {reagent_type} reagent form")
-        print("📝 Review the imported data and click 'Save Reagent' to add to your experiment")
     
     def _create_reagents_display_tab(self):
         """Create the current reagents display tab"""

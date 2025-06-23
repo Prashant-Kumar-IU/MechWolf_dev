@@ -165,48 +165,13 @@ phase1_header = NotebookIntegration.create_section_header(
 )
 display(phase1_header)
 
-# Information about the restored interface
-interface_info = NotebookIntegration.create_info_box(
-    "🎉 <strong>Restored Original Interface!</strong><br>"
-    "This is the beloved original ReagentUI with all its excellent functionality:<br>"
-    "• 📑 <strong>Tabbed Interface:</strong> Solid Reagents | Liquid Reagents | PubChem Search | Current Reagents | Final Details<br>"
-    "• 🔍 <strong>PubChem Integration:</strong> Advanced search with structure visualization<br>"
-    "• 🧬 <strong>Structure Display:</strong> Real-time molecular structure rendering<br>"
-    "• ✏️ <strong>Edit/Delete:</strong> Full reagent management capabilities<br>"
-    "• ⚗️ <strong>Calculations:</strong> Automatic volume and stoichiometry calculations<br>"
-    "• 💾 <strong>Modern Backend:</strong> Now uses unified experimental metadata system",
-    "success"
-)
-display(interface_info)
+# Launch the ReagentUI interface
 
-# Launch the restored ReagentUI interface
 if Phase1_ReagentEntry:
     reagent_gui = Phase1_ReagentEntry.launch_gui(experiment)
-    
-    # Display usage instructions
-    usage_instructions = NotebookIntegration.create_info_box(
-        "📋 <strong>How to Use the ReagentUI Tabs:</strong><br>"
-        "1. <strong>🧱 Solid Reagents:</strong> Add powders, crystals, and solid compounds<br>"
-        "2. <strong>💧 Liquid Reagents:</strong> Add solutions, solvents, and liquid compounds<br>"
-        "3. <strong>🔍 PubChem Search:</strong> Search and import compounds with automatic data lookup<br>"
-        "4. <strong>📋 Current Reagents:</strong> View, edit, and delete added reagents<br>"
-        "5. <strong>⚗️ Final Details:</strong> Set mass scale, concentration, and process data<br><br>"
-        "<em>💡 Pro Tips:</em><br>"
-        "• Use PubChem search for automatic molecular weight and structure data<br>"
-        "• Set one reagent to eq=1.0 to designate it as the limiting reagent<br>"
-        "• The interface automatically calculates solution volumes and stoichiometry",
-        "info"
-    )
-    display(usage_instructions)
-    
 else:
     print("❌ Phase1_ReagentEntry not available due to import errors")
-    print("💡 Install missing dependencies and restart kernel")
     reagent_gui = None
-
-print("✅ The original ReagentUI tabbed interface is now available above!")
-print("🎯 This preserves all the excellent functionality you loved")
-print("💾 Data is automatically saved to the modern experimental metadata system")
 
 # =============================================================================
 # CELL 5: Phase 2 - Integrated Apparatus & Pump Builder

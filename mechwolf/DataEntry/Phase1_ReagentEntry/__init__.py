@@ -1,18 +1,18 @@
 """
-Phase1_ReagentEntry - Modern reagent entry interface
+Phase1_ReagentEntry - Reagent Entry Interface
 
-This module provides a modern reagent entry interface that integrates with 
-the unified experimental metadata system, replacing the legacy ReagentUI.
+This module provides the original ReagentUI interface restored with 
+modern experimental metadata backend integration.
 
 Main Components:
-    reagent_gui: Main interface for reagent entry and management
-    reagent_validator: Chemistry validation logic
-    pubchem_integration: PubChem API integration for compound lookup
-    structure_visualization: Molecular structure visualization
+    ReagentUI: Main tabbed interface for reagent entry and management
+    PubChemService: PubChem API integration for compound lookup
+    StructureVisualization: Molecular structure visualization
+    ReagentDataAdapter: Data conversion between old/new formats
 """
 
 try:
-    # Import the restored original ReagentUI
+    # Import core components
     from .reagent_ui_restored import ReagentUI
     from .data_adapter import ReagentDataAdapter
     from .pubchem_service import PubChemService
@@ -20,34 +20,28 @@ try:
     from .ui_components import UIComponents
     from .reagent_utils import validate_reagent_data, validate_smiles, is_rdkit_available
     
-    # Create an alias for backward compatibility
+    # Create alias for backward compatibility
     ReagentEntryGUI = ReagentUI
     
 except ImportError as e:
-    # Handle missing dependencies gracefully
+    # Graceful fallback for missing dependencies
     class ReagentUI:
         def __init__(self, experiment_manager):
             self.experiment = experiment_manager
-            print(f"Warning: ReagentUI dependencies not available: {e}")
+            print(f"⚠️ ReagentUI dependencies not available: {e}")
         
         def display(self):
-            print("ReagentUI not available - install required dependencies (ipywidgets, etc.)")
+            print("❌ ReagentUI not available - install required dependencies")
     
-    # Create alias
     ReagentEntryGUI = ReagentUI
-            
-    print(f"Warning: ReagentUI not fully available: {e}")
-    
-    # Create dummy classes for missing imports
     PubChemService = None
     StructureVisualization = None 
     UIComponents = None
     ReagentDataAdapter = None
 
-# Convenience function for launching GUI
 def launch_gui(experiment_manager):
     """
-    Launch the restored original ReagentUI for an experiment
+    Launch the ReagentUI interface for an experiment
     
     Args:
         experiment_manager: ExperimentalMetadataManager instance
@@ -59,4 +53,12 @@ def launch_gui(experiment_manager):
     gui.display()
     return gui
 
-__all__ = ['ReagentUI', 'ReagentEntryGUI', 'launch_gui', 'ReagentDataAdapter', 'PubChemService', 'StructureVisualization', 'UIComponents']
+__all__ = [
+    'ReagentUI', 
+    'ReagentEntryGUI', 
+    'launch_gui', 
+    'ReagentDataAdapter', 
+    'PubChemService', 
+    'StructureVisualization', 
+    'UIComponents'
+]
