@@ -37,11 +37,13 @@ except ImportError as e:
 ModernUIComponents = None
 TailwindColors = None
 TailwindSpacing = None
+EnhancedInputComponents = None
 try:
     from .modern_ui_components import (
         ModernUIComponents, 
         TailwindColors, 
         TailwindSpacing,
+        EnhancedInputComponents,
         create_header,
         create_info,
         create_card,
@@ -63,6 +65,7 @@ if ModernUIComponents is not None:
         'ModernUIComponents', 
         'TailwindColors', 
         'TailwindSpacing',
+        'EnhancedInputComponents',
         'create_header',
         'create_info', 
         'create_card',

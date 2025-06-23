@@ -10,6 +10,17 @@ from IPython.display import display, clear_output, HTML
 from typing import Dict, Any, Optional, List, Tuple
 import traceback
 
+# Import enhanced input components
+try:
+    from ..shared_components import (
+        EnhancedInputComponents,
+        ModernUIComponents
+    )
+    MODERN_UI_AVAILABLE = True
+except ImportError:
+    MODERN_UI_AVAILABLE = False
+    print("Warning: Modern UI components not available, using fallback widgets")
+
 from .pump_configurator import PumpConfigurator
 from .component_configurator import ComponentConfigurator  
 from .connection_builder import ConnectionBuilder
@@ -47,18 +58,26 @@ class ApparatusBuilderGUI:
     def _create_widgets(self):
         """Create the main UI widgets"""
         
-        # Header
-        self.header = widgets.HTML("""
-        <div style='background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
-                    padding: 20px; border-radius: 10px; margin-bottom: 20px;'>
-            <h2 style='color: white; margin: 0; text-align: center;'>
-                ⚙️ Phase 2: Integrated Apparatus & Pump Builder
-            </h2>
-            <p style='color: #f0f0f0; margin: 5px 0 0 0; text-align: center;'>
-                Configure pumps and build apparatus in one integrated workflow
-            </p>
-        </div>
-        """)
+        # Header using modern UI components
+        if MODERN_UI_AVAILABLE:
+            self.header = ModernUIComponents.create_section_header(
+                "⚙️ Phase 2: Integrated Apparatus & Pump Builder",
+                "Configure pumps and build apparatus in one integrated workflow",
+                variant="primary"
+            )
+        else:
+            # Fallback to inline styling
+            self.header = widgets.HTML("""
+            <div style='background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
+                        padding: 20px; border-radius: 10px; margin-bottom: 20px;'>
+                <h2 style='color: white; margin: 0; text-align: center;'>
+                    ⚙️ Phase 2: Integrated Apparatus & Pump Builder
+                </h2>
+                <p style='color: #f0f0f0; margin: 5px 0 0 0; text-align: center;'>
+                    Configure pumps and build apparatus in one integrated workflow
+                </p>
+            </div>
+            """)
         
         # Progress indicator
         self.progress_html = widgets.HTML()
@@ -277,16 +296,45 @@ class ApparatusBuilderGUI:
         """)
         
         # Export options
-        self.export_format = widgets.Dropdown(
-            options=[
-                ('Complete Notebook Code', 'notebook'),
-                ('Pump Objects Only', 'pumps'),
-                ('Apparatus Object Only', 'apparatus'),
-                ('Configuration JSON', 'json')
-            ],
-            value='notebook',
-            description='Export Format:'
-        )
+        export_format_options = [
+            'Complete Notebook Code',
+            'Pump Objects Only', 
+            'Apparatus Object Only',
+            'Configuration JSON'
+        ]
+        
+        if MODERN_UI_AVAILABLE:
+            def validate_export_format(value: str) -> Tuple[bool, str]:
+                """Validate export format selection"""
+                if not value.strip():
+                    return False, "Export format is required"
+                
+                valid_formats = export_format_options + ['notebook', 'pumps', 'apparatus', 'json']
+                if value in valid_formats:
+                    return True, ""
+                return False, f"Export format must be one of: {', '.join(export_format_options)}"
+            
+            self.export_format_input_field = EnhancedInputComponents.create_autocomplete_input(
+                description="Export Format:",
+                suggestions=export_format_options,
+                default_value="Complete Notebook Code",
+                validation_function=validate_export_format,
+                help_text="Select the type of code to generate",
+                required=True
+            )
+            self.export_format_input = self.export_format_input_field.children[1]  # Skip label
+        else:
+            # Fallback to dropdown
+            self.export_format = widgets.Dropdown(
+                options=[
+                    ('Complete Notebook Code', 'notebook'),
+                    ('Pump Objects Only', 'pumps'),
+                    ('Apparatus Object Only', 'apparatus'),
+                    ('Configuration JSON', 'json')
+                ],
+                value='notebook',
+                description='Export Format:'
+            )
         
         export_button = widgets.Button(
             description="📋 Generate Code",
@@ -319,12 +367,20 @@ class ApparatusBuilderGUI:
             )
         )
         
-        control_row = widgets.HBox([
-            self.export_format,
-            export_button,
-            copy_button,
-            save_config_button
-        ])
+        if MODERN_UI_AVAILABLE:
+            control_row = widgets.HBox([
+                self.export_format_input_field,
+                export_button,
+                copy_button,
+                save_config_button
+            ])
+        else:
+            control_row = widgets.HBox([
+                self.export_format,
+                export_button,
+                copy_button,
+                save_config_button
+            ])
         
         return widgets.VBox([
             instructions,
@@ -485,10 +541,28 @@ class ApparatusBuilderGUI:
                 clear_output(wait=True)
                 print(f"❌ Error creating visualization: {e}")
     
+    def _get_export_format_key(self, input_value: str) -> str:
+        """Convert export format input to internal key"""
+        format_mapping = {
+            'Complete Notebook Code': 'notebook',
+            'Pump Objects Only': 'pumps',
+            'Apparatus Object Only': 'apparatus', 
+            'Configuration JSON': 'json',
+            'notebook': 'notebook',
+            'pumps': 'pumps',
+            'apparatus': 'apparatus',
+            'json': 'json'
+        }
+        return format_mapping.get(input_value, 'notebook')
+    
     def _export_code(self, button):
         """Export code based on selected format"""
         try:
-            export_format = self.export_format.value
+            if MODERN_UI_AVAILABLE:
+                export_format_input = self.export_format_input.value.strip()
+                export_format = self._get_export_format_key(export_format_input)
+            else:
+                export_format = self.export_format.value
             
             if export_format == 'notebook':
                 code = self._generate_complete_notebook_code()

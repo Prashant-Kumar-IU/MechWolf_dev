@@ -7,7 +7,7 @@ inspired by Tailwind CSS principles with consistent colors, spacing, and typogra
 
 import ipywidgets as widgets
 from IPython.display import HTML
-from typing import Dict, Any, List, Optional, Union, Callable
+from typing import Dict, Any, List, Optional, Union, Callable, Tuple
 
 
 class TailwindColors:
@@ -556,3 +556,249 @@ def create_card(content, title: str = "") -> widgets.VBox:
 def create_button(text: str, variant: str = "primary", on_click=None) -> widgets.Button:
     """Convenience function for creating buttons"""
     return ModernUIComponents.create_button(text, on_click, variant)
+
+
+class EnhancedInputComponents:
+    """Enhanced input components for replacing dropdowns with intelligent input boxes"""
+    
+    @staticmethod
+    def create_autocomplete_input(
+        description: str,
+        suggestions: List[str],
+        placeholder: str = "",
+        default_value: str = "",
+        validation_function: Optional[Callable[[str], Tuple[bool, str]]] = None,
+        help_text: str = "",
+        required: bool = False
+    ) -> widgets.VBox:
+        """
+        Create an autocomplete text input with suggestions and validation
+        
+        Args:
+            description: Field label
+            suggestions: List of suggested values for autocomplete
+            placeholder: Placeholder text
+            default_value: Default input value
+            validation_function: Function to validate input (returns bool, error_message)
+            help_text: Help text shown below input
+            required: Whether field is required
+        """
+        
+        # Use Combobox for autocomplete functionality
+        input_widget = widgets.Combobox(
+            options=suggestions,
+            value=default_value,
+            placeholder=placeholder,
+            description='',
+            layout=widgets.Layout(width='300px', height='35px'),
+            style={'description_width': '0px'}  # Hide description since we'll use our own
+        )
+        
+        # Create validation output
+        validation_output = widgets.HTML()
+        
+        def validate_input(change=None):
+            """Validate input and show feedback"""
+            value = input_widget.value.strip() if change is None else change['new'].strip()
+            
+            if validation_function:
+                is_valid, error_msg = validation_function(value)
+                if not is_valid:
+                    validation_output.value = f"""
+                    <div style='
+                        margin-top: {TailwindSpacing.XS};
+                        color: {TailwindColors.RED_600};
+                        font-size: 12px;
+                        font-weight: 500;
+                    '>❌ {error_msg}</div>
+                    """
+                    input_widget.layout.border = f"2px solid {TailwindColors.RED_500}"
+                    return False
+                else:
+                    validation_output.value = ""
+                    input_widget.layout.border = f"2px solid {TailwindColors.GREEN_500}"
+                    return True
+            else:
+                # No validation function provided
+                validation_output.value = ""
+                input_widget.layout.border = f"2px solid {TailwindColors.GRAY_300}"
+                return True
+        
+        # Attach validation to value changes
+        input_widget.observe(validate_input, names='value')
+        
+        # Create form field with validation
+        form_field = ModernUIComponents.create_form_field(
+            widget=input_widget,
+            label=description,
+            help_text=help_text,
+            required=required
+        )
+        
+        # Add validation output after the form field
+        form_field.children = list(form_field.children) + [validation_output]
+        
+        # Store validation function for external access
+        input_widget.validate = lambda: validate_input()
+        input_widget.get_value = lambda: input_widget.value.strip()
+        
+        return form_field
+    
+    @staticmethod
+    def create_validated_text_input(
+        description: str,
+        placeholder: str = "",
+        default_value: str = "",
+        validation_function: Optional[Callable[[str], Tuple[bool, str]]] = None,
+        help_text: str = "",
+        required: bool = False,
+        input_type: str = "text"
+    ) -> widgets.VBox:
+        """
+        Create a validated text input with real-time feedback
+        
+        Args:
+            description: Field label
+            placeholder: Placeholder text
+            default_value: Default input value
+            validation_function: Function to validate input (returns bool, error_message)
+            help_text: Help text shown below input
+            required: Whether field is required
+            input_type: Type of input ('text', 'int', 'float')
+        """
+        
+        # Choose appropriate widget based on input type
+        if input_type == "int":
+            input_widget = widgets.IntText(
+                value=int(default_value) if default_value else 0,
+                description='',
+                layout=widgets.Layout(width='200px', height='35px'),
+                style={'description_width': '0px'}
+            )
+        elif input_type == "float":
+            input_widget = widgets.FloatText(
+                value=float(default_value) if default_value else 0.0,
+                description='',
+                layout=widgets.Layout(width='200px', height='35px'),
+                style={'description_width': '0px'}
+            )
+        else:  # text
+            input_widget = widgets.Text(
+                value=default_value,
+                placeholder=placeholder,
+                description='',
+                layout=widgets.Layout(width='300px', height='35px'),
+                style={'description_width': '0px'}
+            )
+        
+        # Create validation output
+        validation_output = widgets.HTML()
+        
+        def validate_input(change=None):
+            """Validate input and show feedback"""
+            if input_type in ["int", "float"]:
+                value = str(input_widget.value) if change is None else str(change['new'])
+            else:
+                value = input_widget.value.strip() if change is None else change['new'].strip()
+            
+            if validation_function:
+                is_valid, error_msg = validation_function(value)
+                if not is_valid:
+                    validation_output.value = f"""
+                    <div style='
+                        margin-top: {TailwindSpacing.XS};
+                        color: {TailwindColors.RED_600};
+                        font-size: 12px;
+                        font-weight: 500;
+                    '>❌ {error_msg}</div>
+                    """
+                    input_widget.layout.border = f"2px solid {TailwindColors.RED_500}"
+                    return False
+                else:
+                    validation_output.value = ""
+                    input_widget.layout.border = f"2px solid {TailwindColors.GREEN_500}"
+                    return True
+            else:
+                # No validation function provided
+                validation_output.value = ""
+                input_widget.layout.border = f"2px solid {TailwindColors.GRAY_300}"
+                return True
+        
+        # Attach validation to value changes
+        input_widget.observe(validate_input, names='value')
+        
+        # Create form field with validation
+        form_field = ModernUIComponents.create_form_field(
+            widget=input_widget,
+            label=description,
+            help_text=help_text,
+            required=required
+        )
+        
+        # Add validation output after the form field
+        form_field.children = list(form_field.children) + [validation_output]
+        
+        # Store validation function for external access
+        input_widget.validate = lambda: validate_input()
+        if input_type in ["int", "float"]:
+            input_widget.get_value = lambda: input_widget.value
+        else:
+            input_widget.get_value = lambda: input_widget.value.strip()
+        
+        return form_field
+    
+    @staticmethod
+    def create_serial_port_input(
+        description: str = "Serial Port:",
+        available_ports: List[str] = None,
+        default_value: str = "",
+        help_text: str = "Enter serial port (e.g., COM1, /dev/ttyUSB0) or select from scanned ports"
+    ) -> Tuple[widgets.VBox, widgets.Button]:
+        """
+        Create a serial port input with scan functionality
+        
+        Args:
+            description: Field label
+            available_ports: List of available serial ports
+            default_value: Default port value
+            help_text: Help text for the field
+            
+        Returns:
+            Tuple of (form_field, scan_button)
+        """
+        
+        if available_ports is None:
+            available_ports = []
+        
+        def validate_serial_port(value: str) -> Tuple[bool, str]:
+            """Validate serial port format"""
+            value = value.strip()
+            if not value:
+                return False, "Serial port is required"
+            
+            # Basic validation for common serial port formats
+            import re
+            if re.match(r'^(COM\d+|/dev/tty\w+)$', value) or value in available_ports:
+                return True, ""
+            else:
+                return True, ""  # Allow any value but don't enforce strict format
+        
+        # Create autocomplete input
+        form_field = EnhancedInputComponents.create_autocomplete_input(
+            description=description,
+            suggestions=available_ports,
+            placeholder="e.g., COM1, /dev/ttyUSB0",
+            default_value=default_value,
+            validation_function=validate_serial_port,
+            help_text=help_text,
+            required=True
+        )
+        
+        # Create scan button
+        scan_button = ModernUIComponents.create_button(
+            description="🔍 Scan",
+            variant="info",
+            size="small"
+        )
+        
+        return form_field, scan_button
