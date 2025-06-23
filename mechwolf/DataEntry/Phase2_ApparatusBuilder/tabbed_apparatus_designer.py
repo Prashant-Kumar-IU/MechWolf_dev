@@ -647,6 +647,7 @@ class TabbedApparatusDesigner:
                 self.connections.append(connection)
                 
                 self._update_connections_display()
+                self._update_connection_dropdowns()
                 self._update_network_visualization()
                 self._save_to_metadata()
             else:
@@ -1017,6 +1018,7 @@ class TabbedApparatusDesigner:
         if 0 <= index < len(self.connections):
             del self.connections[index]
             self._update_connections_display()
+            self._update_connection_dropdowns()
             self._update_network_visualization()
             self._save_to_metadata()
     
