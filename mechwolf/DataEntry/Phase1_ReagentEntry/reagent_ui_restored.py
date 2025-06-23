@@ -1098,21 +1098,52 @@ class ReagentUI:
         
         submit_button.on_click(save_final_details)
         
+        # Create stoichiometry table button
+        stoichiometry_button = widgets.Button(
+            description="📊 Create Stoichiometry Table",
+            button_style="info",
+            layout=widgets.Layout(width="auto")
+        )
+        
+        def show_stoichiometry_table(b):
+            self._show_stoichiometry_table()
+        
+        stoichiometry_button.on_click(show_stoichiometry_table)
+        
+        # Create button row
+        button_row = widgets.HBox([submit_button, stoichiometry_button], 
+                                  layout=widgets.Layout(gap="10px"))
+        
+        # Store original form components for state management
+        self.final_form_components = {
+            'title': widgets.HTML("<h4>Final Experiment Details</h4>"),
+            'message_area': self.final_message_area,
+            'limiting_reagent': self.limiting_reagent_display,
+            'mass_scale': mass_scale_input,
+            'concentration': concentration_input,
+            'volume': volume_display,
+            'solvent': solvent_input,
+            'buttons': button_row
+        }
+        
         # Create form with original styling
         form_container = widgets.VBox([
-            widgets.HTML("<h4>Final Experiment Details</h4>"),
-            self.final_message_area,
-            self.limiting_reagent_display,
-            mass_scale_input,
-            concentration_input,
-            volume_display,
-            solvent_input,
-            submit_button
+            self.final_form_components['title'],
+            self.final_form_components['message_area'],
+            self.final_form_components['limiting_reagent'],
+            self.final_form_components['mass_scale'],
+            self.final_form_components['concentration'],
+            self.final_form_components['volume'],
+            self.final_form_components['solvent'],
+            self.final_form_components['buttons']
         ], layout=widgets.Layout(
             border="1px solid #ddd",
             padding="15px",
             margin="10px 0"
         ))
+        
+        # Store form container for state management
+        self.final_details_container = form_container
         
         # Initial volume calculation if all values are available
         current_mass = data.get("mass scale (in mg)")
@@ -1120,7 +1151,7 @@ class ReagentUI:
         if current_mass and current_concentration:
             update_volume()
         
-        return form_container
+        return self.final_details_container
     
     def _get_limiting_reagent_info(self):
         """Get current limiting reagent name and molecular weight"""
@@ -1200,6 +1231,217 @@ class ReagentUI:
         self._refresh_display_tab()
         display(self.main_widget)
     
+    def _show_stoichiometry_table(self):
+        """Show the stoichiometry table view, replacing the form"""
+        try:
+            # Clear the current final details tab and show table
+            final_tab = self.tab_widget.children[4]  # Final Details is 5th tab (index 4)
+            
+            # Generate stoichiometry table
+            table_html = self._generate_stoichiometry_table()
+            
+            if table_html:
+                # Create back button
+                back_button = widgets.Button(
+                    description="← Back to Form",
+                    button_style="primary",
+                    layout=widgets.Layout(width="auto", margin="0 0 20px 0")
+                )
+                
+                def show_form_view(b):
+                    # Restore the original form view
+                    final_tab.children = [self.final_details_container]
+                
+                back_button.on_click(show_form_view)
+                
+                # Create table display
+                table_display = widgets.HTML(table_html)
+                
+                # Replace tab content with table view
+                final_tab.children = [widgets.VBox([
+                    back_button,
+                    table_display
+                ])]
+                
+            else:
+                # Show error message
+                error_msg = widgets.HTML(
+                    "<p style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'>"
+                    "❌ Cannot create stoichiometry table. Please ensure you have added reagents and set a limiting reagent (eq=1.0)."
+                    "</p>"
+                )
+                final_tab.children = [error_msg]
+                
+        except Exception as e:
+            print(f"Error showing stoichiometry table: {e}")
+    
+    def _generate_stoichiometry_table(self) -> str:
+        """Generate HTML for stoichiometry table based on current reagents"""
+        try:
+            data = self.data_manager.load_data()
+            
+            # Get all reagents
+            solid_reagents = data.get("solid reagents", [])
+            liquid_reagents = data.get("liquid reagents", [])
+            all_reagents = solid_reagents + liquid_reagents
+            
+            if not all_reagents:
+                return None
+            
+            # Find limiting reagent
+            limiting_reagent = None
+            for reagent in all_reagents:
+                if abs(reagent.get("eq", 0) - 1.0) < 1e-6:
+                    limiting_reagent = reagent
+                    break
+            
+            if not limiting_reagent:
+                return None
+            
+            # Get experiment parameters
+            mass_scale = data.get("mass scale (in mg)", 100)  # Default 100mg
+            concentration = data.get("concentration (in mM)", 100)  # Default 100mM
+            solvent = data.get("solvent", "THF")
+            
+            # Calculate stoichiometry
+            limiting_mw = limiting_reagent["molecular weight (in g/mol)"]
+            limiting_moles = (mass_scale / 1000) / limiting_mw  # Convert mg to g, then to moles
+            
+            # Volume calculation
+            volume_ml = (limiting_moles * 1000) / concentration  # moles to mmol, then volume
+            
+            # Generate table HTML
+            html = f"""
+            <div style="max-width: 1200px; margin: 20px auto; font-family: Arial, sans-serif;">
+                <h2 style="color: #2563eb; text-align: center; margin-bottom: 30px;">
+                    📊 Stoichiometry Table
+                </h2>
+                
+                <!-- Experiment Summary -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+                    <h3 style="color: #1e40af; margin-top: 0;">Experiment Parameters</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div><strong>Limiting Reagent:</strong> {limiting_reagent['name']}</div>
+                        <div><strong>Mass Scale:</strong> {mass_scale} mg</div>
+                        <div><strong>Concentration:</strong> {concentration} mM</div>
+                        <div><strong>Solvent:</strong> {solvent}</div>
+                        <div><strong>Total Volume:</strong> {volume_ml:.2f} mL</div>
+                        <div><strong>Limiting Reagent Moles:</strong> {limiting_moles*1000:.3f} mmol</div>
+                    </div>
+                </div>
+                
+                <!-- Reagents Table -->
+                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white;">
+                                <th style="padding: 15px; text-align: left; font-weight: 600;">Reagent</th>
+                                <th style="padding: 15px; text-align: center; font-weight: 600;">MW (g/mol)</th>
+                                <th style="padding: 15px; text-align: center; font-weight: 600;">Equivalents</th>
+                                <th style="padding: 15px; text-align: center; font-weight: 600;">Amount (mmol)</th>
+                                <th style="padding: 15px; text-align: center; font-weight: 600;">Mass (mg)</th>
+                                <th style="padding: 15px; text-align: center; font-weight: 600;">Volume (μL)</th>
+                                <th style="padding: 15px; text-align: center; font-weight: 600;">Density (g/mL)</th>
+                                <th style="padding: 15px; text-align: center; font-weight: 600;">Syringe</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            """
+            
+            # Add reagent rows
+            for i, reagent in enumerate(all_reagents):
+                reagent_name = reagent["name"]
+                reagent_mw = reagent["molecular weight (in g/mol)"]
+                reagent_eq = reagent.get("eq", 1.0)
+                reagent_syringe = reagent.get("syringe", "N/A")
+                
+                # Calculate amounts
+                reagent_moles = limiting_moles * reagent_eq
+                reagent_mass_mg = reagent_moles * reagent_mw * 1000
+                
+                # Volume and density for liquids
+                is_liquid = reagent in liquid_reagents
+                if is_liquid:
+                    density = reagent.get("density (in g/mL)", 1.0)
+                    volume_ul = (reagent_mass_mg / 1000) / density * 1000  # Convert to μL
+                    density_display = f"{density:.3f}"
+                    volume_display = f"{volume_ul:.1f}"
+                else:
+                    density_display = "—"
+                    volume_display = "—"
+                
+                # Row styling
+                row_style = "background: #f8fafc;" if i % 2 == 0 else "background: white;"
+                if reagent == limiting_reagent:
+                    row_style = "background: #fef3c7; border-left: 4px solid #f59e0b;"
+                
+                html += f"""
+                        <tr style="{row_style}">
+                            <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">
+                                <strong>{reagent_name}</strong>
+                                {'<br><span style="color: #f59e0b; font-size: 0.9em;">🎯 Limiting Reagent</span>' if reagent == limiting_reagent else ''}
+                            </td>
+                            <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{reagent_mw:.1f}</td>
+                            <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{reagent_eq:.2f}</td>
+                            <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{reagent_moles*1000:.3f}</td>
+                            <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{reagent_mass_mg:.1f}</td>
+                            <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{volume_display}</td>
+                            <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{density_display}</td>
+                            <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{reagent_syringe}</td>
+                        </tr>
+                """
+            
+            html += """
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Position Summary -->
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin-top: 30px;">
+                    <h3 style="color: #15803d; margin-top: 0;">📍 Syringe Position Summary</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+            """
+            
+            # Group reagents by syringe position
+            syringe_groups = {}
+            for reagent in all_reagents:
+                syringe = reagent.get("syringe", "Unknown")
+                if syringe not in syringe_groups:
+                    syringe_groups[syringe] = []
+                syringe_groups[syringe].append(reagent)
+            
+            for syringe, reagents in sorted(syringe_groups.items(), key=lambda x: str(x[0])):
+                reagent_names = [r["name"] for r in reagents]
+                html += f"""
+                        <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #d1fae5;">
+                            <strong>Syringe {syringe}:</strong><br>
+                            {', '.join(reagent_names)}
+                        </div>
+                """
+            
+            html += """
+                    </div>
+                </div>
+                
+                <!-- Notes -->
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 20px; margin-top: 20px;">
+                    <h4 style="color: #1e40af; margin-top: 0;">📝 Notes</h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #374151;">
+                        <li>All calculations based on the limiting reagent and specified mass scale</li>
+                        <li>Volume calculations shown for liquid reagents only</li>
+                        <li>Densities used as specified in reagent properties</li>
+                        <li>Syringe positions as assigned during reagent entry</li>
+                    </ul>
+                </div>
+            </div>
+            """
+            
+            return html
+            
+        except Exception as e:
+            print(f"Error generating stoichiometry table: {e}")
+            return None
+
     def get_data(self) -> Dict[str, Any]:
         """Get current reagent data"""
         return self.data_manager.load_data()
