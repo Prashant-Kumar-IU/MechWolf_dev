@@ -1075,8 +1075,13 @@ class TabbedApparatusDesigner:
                         tube_params.append(f'{prop_name}="{prop_value}"')
                 code_lines.append(f'{name} = mw.{class_name}({", ".join(tube_params)})')
             else:
-                # Other components (Vessel, TMixer) include name parameter first
+                # Other components (Vessel, TMixer) include name parameter first, then description
                 params = [f'name="{name}"']
+                # Always include description parameter for Vessel and TMixer
+                if comp.component_type in ['Vessel', 'TMixer']:
+                    description = comp.description if comp.description else ""
+                    params.append(f'description="{description}"')
+                # Add other properties
                 for prop_name, prop_value in comp.properties.items():
                     if prop_value:  # Only include non-empty properties
                         params.append(f'{prop_name}="{prop_value}"')
@@ -1084,8 +1089,23 @@ class TabbedApparatusDesigner:
         
         code_lines.append("")
         
-        # No need for tube functions since tubes are components
-        code_lines.append("")
+        # Generate TMixer connections (TMixer to vessel via tube)
+        tmixer_connections = []
+        for conn in self.connections:
+            # Check if connection is from a TMixer to a Vessel via a tube
+            if (conn.from_component in self.components and 
+                conn.to_component in self.components and
+                self.components[conn.from_component].component_type == 'TMixer' and
+                self.components[conn.to_component].component_type == 'Vessel'):
+                
+                tmixer_connections.append(f'{conn.from_component} = mw.TMixer({conn.tube_type})')
+        
+        # Add TMixer connections if any exist
+        if tmixer_connections:
+            code_lines.append("# TMixer Connections")
+            for tmixer_conn in tmixer_connections:
+                code_lines.append(tmixer_conn)
+            code_lines.append("")
         
         # Generate apparatus assembly
         code_lines.append("# Apparatus Assembly")
