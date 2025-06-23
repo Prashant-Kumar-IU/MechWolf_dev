@@ -471,10 +471,12 @@ class TabbedApparatusDesigner:
     
     def _add_harvard_pump(self, button):
         """Add a Harvard pump to the apparatus."""
-        self.component_counters['HarvardPump'] += 1
-        name = f"pump_{self.component_counters['HarvardPump']}"
+        self.component_counters['HarvardSyringePump'] += 1
+        name = f"pump_{self.component_counters['HarvardSyringePump']}"
+        # Replace any spaces with underscores in the generated name
+        name = name.replace(" ", "_")
         
-        component = ApparatusComponent('HarvardPump', name, self.component_counters['HarvardPump'])
+        component = ApparatusComponent('HarvardSyringePump', name, self.component_counters['HarvardSyringePump'])
         self.components[name] = component
         
         self._update_active_components_display()
@@ -485,6 +487,8 @@ class TabbedApparatusDesigner:
         """Add a passive component (Vessel or TMixer)."""
         self.component_counters[component_type] += 1
         name = f"{component_type.lower()}_{self.component_counters[component_type]}"
+        # Replace any spaces with underscores in the generated name
+        name = name.replace(" ", "_")
         
         component = ApparatusComponent(component_type, name, self.component_counters[component_type])
         self.components[name] = component
@@ -693,7 +697,8 @@ class TabbedApparatusDesigner:
         def apply_changes(_):
             # Update name and description
             old_name = component.name
-            component.name = name_widget.value
+            # Replace spaces with underscores in component name
+            component.name = name_widget.value.replace(" ", "_")
             component.description = description_widget.value
             
             # Update component properties
@@ -801,7 +806,7 @@ class TabbedApparatusDesigner:
         code_lines = []
         code_lines.append("# Generated MechWolf Apparatus Code")
         code_lines.append("import mechwolf as mw")
-        code_lines.append("from mechwolf.components.contrib.harvardpump import HarvardPump")
+        code_lines.append("from mechwolf.components.contrib.harvardpump import HarvardSyringePump")
         code_lines.append("")
         
         # Generate component definitions
@@ -810,16 +815,28 @@ class TabbedApparatusDesigner:
             info = ComponentRegistry.get_all_components()[comp.component_type]
             class_name = info['class_name']
             
-            # Build parameters
-            params = []
-            for prop_name, prop_value in comp.properties.items():
-                if prop_value:  # Only include non-empty properties
-                    params.append(f'{prop_name}="{prop_value}"')
-            params.append(f'name="{name}"')
-            
-            if comp.component_type == 'HarvardPump':
-                code_lines.append(f'{name} = HarvardPump({", ".join(params)})')
+            if comp.component_type == 'HarvardSyringePump':
+                # Build parameters for Harvard pump (includes name)
+                params = []
+                for prop_name, prop_value in comp.properties.items():
+                    if prop_value:  # Only include non-empty properties
+                        params.append(f'{prop_name}="{prop_value}"')
+                params.append(f'name="{name}"')
+                code_lines.append(f'{name} = HarvardSyringePump({", ".join(params)})')
+            elif comp.component_type == 'Tube':
+                # Tubes don't take a 'name' parameter, only properties
+                tube_params = []
+                for prop_name, prop_value in comp.properties.items():
+                    if prop_value:  # Only include non-empty properties
+                        tube_params.append(f'{prop_name}="{prop_value}"')
+                code_lines.append(f'{name} = mw.{class_name}({", ".join(tube_params)})')
             else:
+                # Other components (Vessel, TMixer) include name parameter
+                params = []
+                for prop_name, prop_value in comp.properties.items():
+                    if prop_value:  # Only include non-empty properties
+                        params.append(f'{prop_name}="{prop_value}"')
+                params.append(f'name="{name}"')
                 code_lines.append(f'{name} = mw.{class_name}({", ".join(params)})')
         
         code_lines.append("")
