@@ -1241,27 +1241,11 @@ class ReagentUI:
             table_html = self._generate_stoichiometry_table()
             
             if table_html:
-                # Create back button
-                back_button = widgets.Button(
-                    description="← Back to Form",
-                    button_style="primary",
-                    layout=widgets.Layout(width="auto", margin="0 0 20px 0")
-                )
-                
-                def show_form_view(b):
-                    # Restore the original form view
-                    final_tab.children = [self.final_details_container]
-                
-                back_button.on_click(show_form_view)
-                
                 # Create table display
                 table_display = widgets.HTML(table_html)
                 
                 # Replace tab content with table view
-                final_tab.children = [widgets.VBox([
-                    back_button,
-                    table_display
-                ])]
+                final_tab.children = [table_display]
                 
             else:
                 # Show error message
@@ -1372,14 +1356,11 @@ class ReagentUI:
                 
                 # Row styling
                 row_style = "background: #f8fafc;" if i % 2 == 0 else "background: white;"
-                if reagent == limiting_reagent:
-                    row_style = "background: #fef3c7; border-left: 4px solid #f59e0b;"
                 
                 html += f"""
                         <tr style="{row_style}">
                             <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">
                                 <strong>{reagent_name}</strong>
-                                {'<br><span style="color: #f59e0b; font-size: 0.9em;">🎯 Limiting Reagent</span>' if reagent == limiting_reagent else ''}
                             </td>
                             <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{reagent_mw:.1f}</td>
                             <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{reagent_eq:.2f}</td>
