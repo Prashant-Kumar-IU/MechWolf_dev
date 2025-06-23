@@ -55,6 +55,7 @@ class ConnectionBuilder:
                 required=True
             )
             self.from_component_input = self.from_component_input_field.children[1]
+            self.from_component_widget = self.from_component_input_field
             
             self.to_component_input_field = EnhancedInputComponents.create_autocomplete_input(
                 description="To Component:",
@@ -65,6 +66,7 @@ class ConnectionBuilder:
                 required=True
             )
             self.to_component_input = self.to_component_input_field.children[1]
+            self.to_component_widget = self.to_component_input_field
             
             self.tube_input_field = EnhancedInputComponents.create_autocomplete_input(
                 description="Via Tube:",
@@ -73,25 +75,29 @@ class ConnectionBuilder:
                 help_text="Select tube component for connection or leave empty for direct connection"
             )
             self.tube_input = self.tube_input_field.children[1]
+            self.tube_widget = self.tube_input_field
         else:
-            # Fallback to dropdowns
-            self.from_component_dropdown = widgets.Dropdown(
+            # Fallback to text inputs instead of dropdowns
+            self.from_component_input = widgets.Text(
+                placeholder='Enter source component name',
                 description='From:',
                 layout=widgets.Layout(width='250px')
             )
-            self.from_component_input = self.from_component_dropdown
+            self.from_component_widget = self.from_component_input
             
-            self.to_component_dropdown = widgets.Dropdown(
+            self.to_component_input = widgets.Text(
+                placeholder='Enter destination component name',
                 description='To:',
                 layout=widgets.Layout(width='250px')
             )
-            self.to_component_input = self.to_component_dropdown
+            self.to_component_widget = self.to_component_input
             
-            self.tube_dropdown = widgets.Dropdown(
+            self.tube_input = widgets.Text(
+                placeholder='Enter tube component name (optional)',
                 description='Via Tube:',
                 layout=widgets.Layout(width='250px')
             )
-            self.tube_input = self.tube_dropdown
+            self.tube_widget = self.tube_input
         
         # Refresh button to update component lists
         self.refresh_components_button = widgets.Button(
@@ -120,19 +126,16 @@ class ConnectionBuilder:
                 required=True
             )
             self.connection_type_input = self.connection_type_input_field.children[1]
+            self.connection_type_widget = self.connection_type_input_field
         else:
-            # Fallback to dropdown
-            self.connection_type_dropdown = widgets.Dropdown(
-                options=[
-                    ('Direct Connection', 'direct'),
-                    ('Via Tube', 'tube'),
-                    ('Custom', 'custom')
-                ],
-                value='tube',
+            # Fallback to text input
+            self.connection_type_input = widgets.Text(
+                value='Via Tube',
+                placeholder='e.g., Direct Connection, Via Tube',
                 description='Connection Type:',
                 layout=widgets.Layout(width='200px')
             )
-            self.connection_type_input = self.connection_type_dropdown
+            self.connection_type_widget = self.connection_type_input
         
         self.connection_type_input.observe(self._on_connection_type_change, names='value')
         
@@ -144,12 +147,14 @@ class ConnectionBuilder:
                 help_text="Add any additional information about this connection"
             )
             self.connection_notes_input = self.connection_notes_input_field.children[1]
+            self.connection_notes_widget = self.connection_notes_input_field
         else:
             self.connection_notes_input = widgets.Text(
                 placeholder='Optional notes about this connection',
                 description='Notes:',
                 layout=widgets.Layout(width='400px')
             )
+            self.connection_notes_widget = self.connection_notes_input
         
         # Action buttons
         self.add_connection_button = widgets.Button(
@@ -198,7 +203,7 @@ class ConnectionBuilder:
         if MODERN_UI_AVAILABLE:
             self._on_connection_type_change({'new': 'Via Tube'})
         else:
-            self._on_connection_type_change({'new': self.connection_type_dropdown.value})
+            self._on_connection_type_change({'new': self.connection_type_input.value})
         self._refresh_connections_display()
         self._update_connection_diagram()
     
@@ -234,14 +239,10 @@ class ConnectionBuilder:
                 self.to_component_input.options = component_suggestions
                 self.tube_input.options = tube_suggestions
             else:
-                # Update dropdowns
-                component_options = [('Select component...', '')] + [(name, name.split(' (')[0]) for name in component_suggestions]
-                tube_options = [('Select tube...', '')] + [(name, name.split(' (')[0]) for name in tube_suggestions]
-                
-                self.from_component_dropdown.options = component_options
-                self.to_component_dropdown.options = component_options
-                if hasattr(self, 'tube_dropdown'):
-                    self.tube_dropdown.options = tube_options
+                # Fallback: clear current values for text inputs
+                self.from_component_input.value = ''
+                self.to_component_input.value = ''
+                self.tube_input.value = ''
             
         except Exception as e:
             print(f"Error refreshing component lists: {e}")
@@ -270,10 +271,8 @@ class ConnectionBuilder:
             else:
                 self.tube_input_field.layout.display = 'none'
         else:
-            if connection_type == 'tube':
-                self.tube_dropdown.layout.display = 'flex'
-            else:
-                self.tube_dropdown.layout.display = 'none'
+            # For text inputs, we don't need to hide/show widgets
+            pass
     
     def _extract_component_name(self, component_input: str) -> str:
         """Extract component name from display string"""
@@ -293,10 +292,10 @@ class ConnectionBuilder:
                 tube_component_input = self.tube_input.value.strip()
                 notes = self.connection_notes_input.value.strip()
             else:
-                from_component_input = self.from_component_dropdown.value
-                to_component_input = self.to_component_dropdown.value 
-                connection_type_input = self.connection_type_dropdown.value
-                tube_component_input = self.tube_dropdown.value if hasattr(self, 'tube_dropdown') else ''
+                from_component_input = self.from_component_input.value
+                to_component_input = self.to_component_input.value 
+                connection_type_input = self.connection_type_input.value
+                tube_component_input = self.tube_input.value
                 notes = self.connection_notes_input.value.strip()
             
             # Extract component names
@@ -537,9 +536,9 @@ class ConnectionBuilder:
     
     def _clear_form(self):
         """Clear the connection form"""
-        self.from_component_dropdown.value = ''
-        self.to_component_dropdown.value = ''
-        self.tube_dropdown.value = ''
+        self.from_component_input.value = ''
+        self.to_component_input.value = ''
+        self.tube_input.value = ''
         self.connection_notes_input.value = ''
     
     def _refresh_connections_display(self):
@@ -630,21 +629,21 @@ class ConnectionBuilder:
         
         # Connection configuration section
         config_row1 = widgets.HBox([
-            self.from_component_dropdown,
+            self.from_component_widget,
             widgets.HTML("<span style='padding: 20px; font-size: 16px;'>→</span>"),
-            self.to_component_dropdown
+            self.to_component_widget
         ])
         
         config_row2 = widgets.HBox([
-            self.connection_type_dropdown,
-            self.tube_dropdown
+            self.connection_type_widget,
+            self.tube_widget
         ])
         
         config_section = widgets.VBox([
             widgets.HTML("<h4>Connection Configuration</h4>"),
             config_row1,
             config_row2,
-            self.connection_notes_input
+            self.connection_notes_widget
         ])
         
         # Control buttons
