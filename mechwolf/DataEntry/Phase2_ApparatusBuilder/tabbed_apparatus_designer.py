@@ -57,13 +57,9 @@ class ComponentRegistry:
             'import_path': 'mechwolf',
             'display_name': 'Reagent Vessel',
             'icon': '🧪',
-            'default_properties': {
-                'description': 'New vessel'
-            },
-            'required_properties': ['description'],
-            'property_types': {
-                'description': 'text'
-            }
+            'default_properties': {},
+            'required_properties': [],  # Remove description to avoid duplicate with main description field
+            'property_types': {}
         },
         'TMixer': {
             'class_name': 'TMixer',
@@ -73,6 +69,25 @@ class ComponentRegistry:
             'default_properties': {},
             'required_properties': [],
             'property_types': {}
+        },
+        'Tube': {
+            'class_name': 'Tube',
+            'import_path': 'mechwolf',
+            'display_name': 'Tubing',
+            'icon': '🔗',
+            'default_properties': {
+                'length': '1 ft',
+                'ID': '1/16 in',
+                'OD': '1/8 in',
+                'material': 'PFA'
+            },
+            'required_properties': ['length', 'ID', 'OD', 'material'],
+            'property_types': {
+                'length': 'text',
+                'ID': 'text',
+                'OD': 'text',
+                'material': 'text'
+            }
         }
     }
     
@@ -245,10 +260,10 @@ class TabbedApparatusDesigner:
             )
         ])
         
-        # Component list
+        # Component list (scrollable)
         self.active_components_list = widgets.VBox([
             widgets.HTML("<i>No active components added yet</i>")
-        ])
+        ], layout=widgets.Layout(height='300px', overflow='auto', border='1px solid #eee'))
         
         # Property editor
         self.active_property_editor = widgets.VBox([
@@ -269,30 +284,36 @@ class TabbedApparatusDesigner:
     def _create_passive_components_tab(self):
         """Create Tab 2: Passive Components (Vessels, T-Mixers)."""
         # Header
-        header = widgets.HTML("<h3>🧪 Passive Components - Vessels & Mixers</h3>")
+        header = widgets.HTML("<h3>🧪 Passive Components - Vessels, Mixers & Tubes</h3>")
         
         # Add component buttons
         add_vessel_btn = widgets.Button(
             description="🧪 Add Vessel",
             button_style='info',
-            layout=widgets.Layout(width='150px', margin='2px')
+            layout=widgets.Layout(width='140px', margin='2px')
         )
         
         add_tmixer_btn = widgets.Button(
             description="🔀 Add T-Mixer", 
             button_style='info',
-            layout=widgets.Layout(width='150px', margin='2px')
+            layout=widgets.Layout(width='140px', margin='2px')
+        )
+        
+        add_tube_btn = widgets.Button(
+            description="🔗 Add Tube",
+            button_style='info', 
+            layout=widgets.Layout(width='140px', margin='2px')
         )
         
         add_section = widgets.VBox([
             widgets.HTML("<b>Add Components:</b>"),
-            widgets.HBox([add_vessel_btn, add_tmixer_btn])
+            widgets.HBox([add_vessel_btn, add_tmixer_btn, add_tube_btn])
         ])
         
-        # Component list
+        # Component list (scrollable)
         self.passive_components_list = widgets.VBox([
             widgets.HTML("<i>No passive components added yet</i>")
-        ])
+        ], layout=widgets.Layout(height='300px', overflow='auto', border='1px solid #eee'))
         
         # Property editor
         self.passive_property_editor = widgets.VBox([
@@ -328,17 +349,10 @@ class TabbedApparatusDesigner:
             layout=widgets.Layout(width='200px')
         )
         
-        self.tube_type_dropdown = widgets.Dropdown(
-            options=list(ComponentRegistry.TUBE_TYPES.keys()),
-            value='fat_tube',
-            description="Tube Type:",
-            layout=widgets.Layout(width='150px')
-        )
-        
-        self.tube_length_input = widgets.Text(
-            value="1 ft",
-            description="Length:",
-            layout=widgets.Layout(width='100px')
+        self.tube_selection_dropdown = widgets.Dropdown(
+            options=[],
+            description="Tube:",
+            layout=widgets.Layout(width='200px')
         )
         
         add_connection_btn = widgets.Button(
@@ -355,16 +369,15 @@ class TabbedApparatusDesigner:
                 self.to_component_dropdown
             ]),
             widgets.HBox([
-                self.tube_type_dropdown,
-                self.tube_length_input,
+                self.tube_selection_dropdown,
                 add_connection_btn
             ])
         ])
         
-        # Connections list
+        # Connections list (scrollable)
         self.connections_list = widgets.VBox([
             widgets.HTML("<i>No connections created yet</i>")
-        ])
+        ], layout=widgets.Layout(height='200px', overflow='auto', border='1px solid #eee'))
         
         # Network visualization
         self.network_display = widgets.Output(
@@ -419,9 +432,10 @@ class TabbedApparatusDesigner:
         passive_buttons = self.passive_tab.children[1].children[1].children
         passive_buttons[0].on_click(lambda b: self._add_passive_component('Vessel'))
         passive_buttons[1].on_click(lambda b: self._add_passive_component('TMixer'))
+        passive_buttons[2].on_click(lambda b: self._add_passive_component('Tube'))
         
         # Connections tab
-        add_conn_btn = self.connections_tab.children[1].children[2].children[2]
+        add_conn_btn = self.connections_tab.children[1].children[2].children[1]
         add_conn_btn.on_click(self._add_connection)
         
         # Code generation
@@ -459,16 +473,23 @@ class TabbedApparatusDesigner:
         """Add a connection between components."""
         from_comp = self.from_component_dropdown.value
         to_comp = self.to_component_dropdown.value
-        tube_type = self.tube_type_dropdown.value
-        tube_length = self.tube_length_input.value
+        selected_tube = self.tube_selection_dropdown.value
         
-        if from_comp and to_comp and from_comp != to_comp:
-            connection = ApparatusConnection(from_comp, to_comp, tube_type, tube_length)
-            self.connections.append(connection)
-            
-            self._update_connections_display()
-            self._update_network_visualization()
-            self._save_to_metadata()
+        if from_comp and to_comp and selected_tube and from_comp != to_comp:
+            # Find the tube component to get its properties
+            if selected_tube in self.components:
+                tube_comp = self.components[selected_tube]
+                connection = ApparatusConnection(from_comp, to_comp, selected_tube, "")
+                # Store tube properties from the user-created tube
+                connection.tube_properties = tube_comp.properties.copy()
+                connection.tube_type = selected_tube  # Use tube name as type
+                self.connections.append(connection)
+                
+                self._update_connections_display()
+                self._update_network_visualization()
+                self._save_to_metadata()
+            else:
+                print(f"⚠️ Tube '{selected_tube}' not found")
     
     def _update_active_components_display(self):
         """Update the active components list display."""
@@ -546,11 +567,16 @@ class TabbedApparatusDesigner:
         
         conn_widgets = []
         for i, conn in enumerate(self.connections):
-            tube_info = ComponentRegistry.TUBE_TYPES.get(conn.tube_type, {})
+            # Get tube component info if it exists
+            tube_info_text = conn.tube_type
+            if conn.tube_type in self.components:
+                tube_comp = self.components[conn.tube_type]
+                tube_props = tube_comp.properties
+                tube_info_text = f"{conn.tube_type} (ID: {tube_props.get('ID', 'N/A')}, {tube_props.get('length', 'N/A')})"
             
             conn_widget = widgets.HBox([
                 widgets.HTML(f"🔗 <b>{conn.from_component}</b> → <b>{conn.to_component}</b><br>"
-                           f"&nbsp;&nbsp;&nbsp;&nbsp;{conn.tube_type} ({conn.tube_length})"),
+                           f"&nbsp;&nbsp;&nbsp;&nbsp;via {tube_info_text}"),
                 widgets.Button(description="Delete", button_style='danger',
                              layout=widgets.Layout(width='60px'))
             ])
@@ -565,9 +591,16 @@ class TabbedApparatusDesigner:
     
     def _update_connection_dropdowns(self):
         """Update the connection dropdown options."""
-        component_names = list(self.components.keys())
-        self.from_component_dropdown.options = component_names
-        self.to_component_dropdown.options = component_names
+        # Get non-tube components for from/to connections
+        non_tube_components = [name for name, comp in self.components.items() 
+                              if comp.component_type != 'Tube']
+        self.from_component_dropdown.options = non_tube_components
+        self.to_component_dropdown.options = non_tube_components
+        
+        # Get tube components for tube selection
+        tube_components = [name for name, comp in self.components.items() 
+                          if comp.component_type == 'Tube']
+        self.tube_selection_dropdown.options = tube_components
     
     def _update_network_visualization(self):
         """Update the network visualization display."""
@@ -594,7 +627,12 @@ class TabbedApparatusDesigner:
             print(f"\n🔗 Connections ({len(self.connections)}):")
             if self.connections:
                 for conn in self.connections:
-                    print(f"  {conn.from_component} → {conn.to_component} ({conn.tube_type}, {conn.tube_length})")
+                    tube_info = ""
+                    if conn.tube_type in self.components:
+                        tube_comp = self.components[conn.tube_type]
+                        tube_props = tube_comp.properties
+                        tube_info = f" (ID: {tube_props.get('ID', 'N/A')}, Length: {tube_props.get('length', 'N/A')})"
+                    print(f"  {conn.from_component} → {conn.to_component} via {conn.tube_type}{tube_info}")
             else:
                 print("  No connections yet")
             
@@ -738,15 +776,7 @@ class TabbedApparatusDesigner:
         
         code_lines.append("")
         
-        # Generate tube functions
-        code_lines.append("# Tube Functions")
-        used_tube_types = set(conn.tube_type for conn in self.connections)
-        for tube_type in used_tube_types:
-            tube_info = ComponentRegistry.TUBE_TYPES[tube_type]
-            code_lines.append(f'def {tube_type}(length):')
-            code_lines.append(f'    return mw.Tube(length=length, ID="{tube_info["ID"]}", '
-                            f'OD="{tube_info["OD"]}", material="{tube_info["material"]}")')
-        
+        # No need for tube functions since tubes are components
         code_lines.append("")
         
         # Generate apparatus assembly
@@ -754,8 +784,7 @@ class TabbedApparatusDesigner:
         code_lines.append('A = mw.Apparatus("Generated Apparatus")')
         
         for conn in self.connections:
-            code_lines.append(f'A.add({conn.from_component}, {conn.to_component}, '
-                            f'{conn.tube_type}("{conn.tube_length}"))')
+            code_lines.append(f'A.add({conn.from_component}, {conn.to_component}, {conn.tube_type})')
         
         self.code_output.value = "\n".join(code_lines)
     
