@@ -307,6 +307,9 @@ class ReagentUI:
         self.solid_form_widgets = {}
         self.liquid_form_widgets = {}
         
+        # Track editing state
+        self.editing_reagent = {'solid': None, 'liquid': None}
+        
         # Create the tabbed interface
         self._create_interface()
     
@@ -537,14 +540,24 @@ class ReagentUI:
                     status_area.value += "</ul></div>"
                     return
                 
+                # Check if we're editing an existing reagent
+                editing_reagent = self.editing_reagent.get(reagent_type, None)
+                
                 # Save
-                success = on_save(reagent_data, None)
+                success = on_save(reagent_data, editing_reagent)
                 if success:
-                    status_area.value = "<div style='color: green; padding: 10px; background-color: #EEFFEE; border-radius: 5px;'><b>Reagent saved successfully!</b></div>"
-                    # Clear form
+                    if editing_reagent:
+                        status_area.value = "<div style='color: green; padding: 10px; background-color: #EEFFEE; border-radius: 5px;'><b>Reagent updated successfully!</b></div>"
+                        # Clear editing state
+                        self.editing_reagent[reagent_type] = None
+                    else:
+                        status_area.value = "<div style='color: green; padding: 10px; background-color: #EEFFEE; border-radius: 5px;'><b>Reagent saved successfully!</b></div>"
+                    
+                    # Clear form only if not editing, or after successful edit
                     self._clear_form(form_widgets)
                 else:
-                    status_area.value = "<div style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'><b>Failed to save reagent.</b></div>"
+                    action = "update" if editing_reagent else "save"
+                    status_area.value = f"<div style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'><b>Failed to {action} reagent.</b></div>"
                     
             except Exception as e:
                 status_area.value = f"<div style='color: red; padding: 10px; background-color: #FFEEEE; border-radius: 5px;'><b>Error: {str(e)}</b></div>"
@@ -578,6 +591,11 @@ class ReagentUI:
             form_widgets['density'].value = 1.0
         if 'status' in form_widgets:
             form_widgets['status'].value = ""
+    
+    def _clear_form_and_editing_state(self, form_widgets, reagent_type):
+        """Clear form and reset editing state"""
+        self._clear_form(form_widgets)
+        self.editing_reagent[reagent_type] = None
     
     def _populate_form(self, form_widgets, compound_data):
         """Populate form with compound data"""
@@ -774,6 +792,9 @@ class ReagentUI:
             self.tab_widget.selected_index = 1  # Liquid tab
             form_widgets = self.liquid_form_widgets
         
+        # Clear any existing editing state when importing
+        self.editing_reagent[reagent_type] = None
+        
         # Ensure form widgets are available
         if not form_widgets:
             print(f"❌ Error: Form widgets not available for {reagent_type} tab")
@@ -881,11 +902,67 @@ class ReagentUI:
         # Switch to appropriate tab
         if reagent_type == "solid":
             self.tab_widget.selected_index = 0
+            form_widgets = self.solid_form_widgets
         else:
             self.tab_widget.selected_index = 1
+            form_widgets = self.liquid_form_widgets
         
-        # Note: In full implementation, we would populate the form with reagent data
-        print(f"Editing {reagent.get('name', 'reagent')} - form would be populated")
+        # Ensure form widgets are available
+        if not form_widgets:
+            print(f"❌ Error: Form widgets not available for {reagent_type} tab")
+            return
+        
+        # Convert reagent data to the format expected by _populate_form
+        # The reagent data is in old format, need to map to the expected keys
+        compound_data = {
+            'name': reagent.get('name', ''),
+            'inchi': reagent.get('inChi', ''),
+            'smiles': reagent.get('SMILES', ''),
+            'inchikey': reagent.get('inChi Key', ''),
+            'molecular_weight': reagent.get('molecular weight (in g/mol)', 0.0),
+            'density': reagent.get('density (in g/mL)', 1.0)  # For liquid reagents
+        }
+        
+        # Set editing state
+        self.editing_reagent[reagent_type] = reagent
+        
+        # Populate the form with reagent data for editing
+        self._populate_form_for_editing(form_widgets, compound_data, reagent)
+        
+        print(f"✅ Ready to edit {reagent.get('name', 'reagent')}")
+    
+    def _populate_form_for_editing(self, form_widgets, compound_data, original_reagent):
+        """Populate form with reagent data for editing, preserving all fields"""
+        try:
+            # Populate chemical data
+            form_widgets['name'].value = compound_data.get('name', '')
+            form_widgets['inchi'].value = compound_data.get('inchi', '')
+            form_widgets['smiles'].value = compound_data.get('smiles', '')
+            form_widgets['inchikey'].value = compound_data.get('inchikey', '')
+            form_widgets['mw'].value = compound_data.get('molecular_weight', 0.0)
+            
+            # Populate reagent-specific data (equivalents, syringe)
+            form_widgets['eq'].value = original_reagent.get('eq', 1.0)
+            form_widgets['syringe'].value = original_reagent.get('syringe', 1)
+            
+            # Populate density for liquid reagents
+            if 'density' in form_widgets:
+                form_widgets['density'].value = compound_data.get('density', 1.0)
+            
+            # Show editing message
+            if 'status' in form_widgets:
+                form_widgets['status'].value = f"""
+                <div style='color: blue; padding: 10px; background-color: #EEF7FF; border-radius: 5px; border: 1px solid #66B2FF;'>
+                    <b>✏️ Editing Reagent</b><br>
+                    Compound: {compound_data.get('name', 'Unknown')}<br>
+                    Modify the data as needed and click "Save Reagent" to update.
+                </div>
+                """
+                
+        except Exception as e:
+            print(f"❌ Error populating form for editing: {str(e)}")
+            import traceback
+            traceback.print_exc()
     
     def _delete_reagent(self, reagent: Dict[str, Any]):
         """Delete a reagent"""
