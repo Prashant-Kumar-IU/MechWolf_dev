@@ -42,9 +42,9 @@ except ImportError as e:
             
     print(f"Warning: ApparatusBuilderGUI not fully available: {e}")
 
-# Import new tabbed apparatus designer
+# Import enhanced tabbed apparatus designer (v2 - modular)
 try:
-    from .tabbed_apparatus_designer import (
+    from .tabbed_apparatus_designer_v2 import (
         TabbedApparatusDesigner,
         ComponentRegistry,
         ApparatusComponent,
@@ -52,19 +52,42 @@ try:
         create_tabbed_apparatus_designer
     )
     
-    _tabbed_designer_available = True
-    _tabbed_import_error = None
+    _enhanced_designer_available = True
+    _enhanced_import_error = None
     
 except ImportError as e:
-    _tabbed_designer_available = False
-    _tabbed_import_error = str(e)
+    _enhanced_designer_available = False
+    _enhanced_import_error = str(e)
     
-    # Define fallback function
-    def create_tabbed_apparatus_designer(experiment_manager=None):
-        """Fallback function when tabbed designer imports fail."""
-        raise ImportError(f"Cannot create tabbed apparatus designer: {_tabbed_import_error}")
-    
-    print(f"Warning: Tabbed apparatus designer not available: {e}")
+    # Try fallback to original tabbed designer
+    try:
+        from .tabbed_apparatus_designer import (
+            TabbedApparatusDesigner,
+            ComponentRegistry,
+            ApparatusComponent,
+            ApparatusConnection,
+            create_tabbed_apparatus_designer
+        )
+        
+        _enhanced_designer_available = True
+        _enhanced_import_error = None
+        print(f"Info: Using original tabbed designer as fallback")
+        
+    except ImportError as e2:
+        _enhanced_designer_available = False
+        _enhanced_import_error = str(e2)
+        
+        # Define fallback function
+        def create_tabbed_apparatus_designer(experiment_manager=None):
+            """Fallback function when tabbed designer imports fail."""
+            raise ImportError(f"Cannot create tabbed apparatus designer: {_enhanced_import_error}")
+        
+        print(f"Warning: Enhanced tabbed apparatus designer not available: {e}")
+        print(f"Warning: Original tabbed apparatus designer also not available: {e2}")
+
+# Backward compatibility aliases
+_tabbed_designer_available = _enhanced_designer_available
+_tabbed_import_error = _enhanced_import_error
 
 # Convenience function for launching GUI
 def launch_gui(experiment_manager):
@@ -99,17 +122,31 @@ def launch_tabbed_designer(experiment_manager=None):
     designer.display()
     return designer
 
+# Enhanced v2 designer function
+def create_tabbed_apparatus_designer_v2(experiment_manager=None):
+    """Create the enhanced modular v2 designer."""
+    try:
+        from .tabbed_apparatus_designer_v2 import create_tabbed_apparatus_designer
+        return create_tabbed_apparatus_designer(experiment_manager)
+    except ImportError:
+        # Fallback to original if v2 not available
+        return create_tabbed_apparatus_designer(experiment_manager)
+
 def get_designer_info():
     """Get information about available designers."""
     info = {
         'legacy_gui_available': True,  # ApparatusBuilderGUI is always available (with fallbacks)
         'tabbed_designer_available': _tabbed_designer_available,
-        'tabbed_import_error': _tabbed_import_error
+        'enhanced_designer_available': _enhanced_designer_available,
+        'tabbed_import_error': _tabbed_import_error,
+        'enhanced_import_error': _enhanced_import_error
     }
     
     available_designers = ['ApparatusBuilderGUI (legacy)']
-    if _tabbed_designer_available:
-        available_designers.append('TabbedApparatusDesigner (development)')
+    if _enhanced_designer_available:
+        available_designers.append('TabbedApparatusDesigner v2 (enhanced modular)')
+    elif _tabbed_designer_available:
+        available_designers.append('TabbedApparatusDesigner (original)')
     
     info['available_designers'] = available_designers
     return info
