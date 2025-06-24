@@ -31,9 +31,8 @@ class EventHandlers:
         )
         
         # Code generation
-        designer_instance.main_widget.children[2].children[1].on_click(
-            designer_instance._generate_code
-        )
+        designer_instance.generate_button.on_click(designer_instance._generate_code)
+        designer_instance.copy_button.on_click(designer_instance._copy_code)
         
         # Tab change events
         designer_instance.tab_widget.observe(designer_instance._on_tab_change, names='selected_index')

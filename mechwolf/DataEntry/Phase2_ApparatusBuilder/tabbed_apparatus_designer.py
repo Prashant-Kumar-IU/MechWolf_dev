@@ -432,9 +432,12 @@ class TabbedApparatusDesigner:
         self.tab_widget.set_title(2, "Network Connections")
         
         # Code generation section
+        self.generate_button = widgets.Button(description="🔄 Generate Code", button_style='warning')
+        self.copy_button = widgets.Button(description="📋 Copy Code", button_style='success')
         code_header = widgets.HBox([
             widgets.HTML("<h4>🐍 Generated Apparatus Code</h4>"),
-            widgets.Button(description="🔄 Generate Code", button_style='warning')
+            self.generate_button,
+            self.copy_button
         ])
         
         # Main layout
@@ -462,8 +465,8 @@ class TabbedApparatusDesigner:
         add_conn_btn.on_click(self._add_connection)
         
         # Code generation
-        gen_code_btn = self.main_widget.children[2].children[1]
-        gen_code_btn.on_click(self._generate_code)
+        self.generate_button.on_click(self._generate_code)
+        self.copy_button.on_click(self._copy_code)
         
         # Tab change events
         self.tab_widget.observe(self._on_tab_change, names='selected_index')
@@ -1047,6 +1050,31 @@ class TabbedApparatusDesigner:
             code_lines.append(f'A.add({conn.from_component}, {conn.to_component}, {conn.tube_type})')
         
         self.code_output.value = "\n".join(code_lines)
+    
+    def _copy_code(self, _=None):
+        """Copy the generated code to clipboard."""
+        try:
+            # Use JavaScript to copy to clipboard in Jupyter
+            from IPython.display import Javascript, display
+            js_code = f"""
+            navigator.clipboard.writeText(`{self.code_output.value.replace('`', '\\`')}`).then(function() {{
+                console.log('Code copied to clipboard!');
+            }}, function(err) {{
+                console.error('Could not copy code: ', err);
+                // Fallback: select the text area content
+                var textarea = document.querySelector('textarea[placeholder*="Apparatus code"]') || 
+                              document.querySelector('textarea[disabled]');
+                if (textarea) {{
+                    textarea.select();
+                    document.execCommand('copy');
+                }}
+            }});
+            """
+            display(Javascript(js_code))
+            print("📋 Code copied to clipboard!")
+        except Exception as e:
+            print(f"⚠️ Could not copy to clipboard: {e}")
+            print("💡 Try selecting the code manually and copying with Ctrl+C/Cmd+C")
     
     def _on_tab_change(self, change):
         """Handle tab change events."""
