@@ -9,7 +9,7 @@ The Phase2_ApparatusBuilder has been refactored from a monolithic 1,346-line fil
 Phase2_ApparatusBuilder/
 ├── __init__.py                     # Public API & backward compatibility
 ├── tabbed_apparatus_designer.py   # Original monolithic file (preserved)
-├── tabbed_apparatus_designer_v2.py # New modular entry point
+├── tabbed_designer.py              # New modular entry point (primary)
 ├── models/                         # Data models
 │   ├── __init__.py
 │   ├── component.py               # ApparatusComponent class
@@ -50,7 +50,7 @@ from mechwolf.DataEntry.Phase2_ApparatusBuilder import (
 )
 
 # Enhanced v2 function (new)
-from mechwolf.DataEntry.Phase2_ApparatusBuilder import create_tabbed_apparatus_designer_v2
+from mechwolf.DataEntry.Phase2_ApparatusBuilder import create_tabbed_designer
 ```
 
 ## 📊 Module Responsibilities
@@ -134,7 +134,7 @@ def test_harvard_pump_code_generation():
 ```python
 # tests/test_full_workflow.py
 def test_create_apparatus_workflow():
-    designer = create_tabbed_apparatus_designer_v2()
+    designer = create_tabbed_designer()
     # Test full component creation -> connection -> code generation
 ```
 
@@ -147,7 +147,7 @@ The system automatically tries v2 (modular) first, then falls back to v1 (monoli
 designer = create_tabbed_apparatus_designer(experiment_manager)
 
 # Force v2 usage
-designer = create_tabbed_apparatus_designer_v2(experiment_manager)
+designer = create_tabbed_designer(experiment_manager)
 ```
 
 ## 🐛 Debugging Guide

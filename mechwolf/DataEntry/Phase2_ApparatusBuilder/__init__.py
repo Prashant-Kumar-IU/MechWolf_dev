@@ -44,7 +44,7 @@ except ImportError as e:
 
 # Import enhanced tabbed apparatus designer (v2 - modular)
 try:
-    from .tabbed_apparatus_designer_v2 import (
+    from .tabbed_designer import (
         TabbedApparatusDesigner,
         ComponentRegistry,
         ApparatusComponent,
@@ -126,7 +126,7 @@ def launch_tabbed_designer(experiment_manager=None):
 def create_tabbed_apparatus_designer_v2(experiment_manager=None):
     """Create the enhanced modular v2 designer."""
     try:
-        from .tabbed_apparatus_designer_v2 import create_tabbed_apparatus_designer
+        from .tabbed_designer import create_tabbed_apparatus_designer
         return create_tabbed_apparatus_designer(experiment_manager)
     except ImportError:
         # Fallback to original if v2 not available

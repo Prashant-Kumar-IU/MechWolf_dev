@@ -9,7 +9,7 @@ def test_imports():
     
     try:
         # Test v2 imports
-        from .tabbed_apparatus_designer_v2 import (
+        from .tabbed_designer import (
             TabbedApparatusDesigner,
             ComponentRegistry,
             ApparatusComponent,

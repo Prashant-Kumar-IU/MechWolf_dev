@@ -25,7 +25,7 @@ These files have been **superseded** by the modular v2 system:
 ## Migration Path
 
 - **Old**: `from .apparatus_gui import ApparatusBuilderGUI`
-- **New**: `from . import create_tabbed_apparatus_designer_v2`
+- **New**: `from . import create_tabbed_apparatus_designer` (or `create_tabbed_apparatus_designer_v2`)
 
 ## If You Need Legacy Functionality
 

@@ -43,7 +43,7 @@ class ComponentRegistry:
     def get_component_info(cls, component_type: str) -> Dict[str, Any]:
         """Get component info with backward compatibility."""
         # Handle backward compatibility for old naming
-        if component_type == 'HarvardPump':
+        if component_type == 'HarvardSyringePump':
             component_type = 'HarvardSyringePump'
         
         # Check active components first
@@ -68,6 +68,6 @@ class ComponentRegistry:
     @classmethod
     def normalize_component_type(cls, component_type: str) -> str:
         """Normalize component type with backward compatibility."""
-        if component_type == 'HarvardPump':
+        if component_type == 'HarvardSyringePump':
             return 'HarvardSyringePump'
         return component_type

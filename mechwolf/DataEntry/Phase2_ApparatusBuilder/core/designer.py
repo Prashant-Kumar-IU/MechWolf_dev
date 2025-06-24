@@ -448,7 +448,7 @@ class TabbedApparatusDesigner:
         for name, comp in self.components.items():
             comp_type = comp.component_type
             # Handle backward compatibility
-            if comp_type == 'HarvardPump':
+            if comp_type == 'HarvardSyringePump':
                 comp_type = 'HarvardSyringePump'
                 comp.component_type = 'HarvardSyringePump'  # Update for consistency
             
@@ -497,7 +497,7 @@ class TabbedApparatusDesigner:
             for name, comp in self.components.items():
                 comp_type = comp.component_type
                 # Handle backward compatibility
-                if comp_type == 'HarvardPump':
+                if comp_type == 'HarvardSyringePump':
                     comp_type = 'HarvardSyringePump'
                     comp.component_type = 'HarvardSyringePump'
                 info = ComponentRegistry.get_all_components().get(comp_type, {})

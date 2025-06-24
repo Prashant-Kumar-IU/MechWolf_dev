@@ -1,8 +1,11 @@
 """
-Tabbed Apparatus Designer for MechWolf Development
+Tabbed Apparatus Designer for MechWolf Development (LEGACY FALLBACK)
 
 A clean 3-tab interface focused on Harvard pumps, tubing, and T-mixers for 
 development purposes. Uses the experimental metadata system for data management.
+
+⚠️  DEPRECATION NOTICE: This is the legacy monolithic designer used as a fallback.  
+    The new modular system in tabbed_designer.py is preferred for new development.
 
 Tab Structure:
 - Tab 1: Active Components (Harvard Pumps)
@@ -30,152 +33,14 @@ except ImportError:
     print("Warning: Experimental metadata system not available")
 
 # Function to discover components (moved outside class to avoid staticmethod issues)
-def _discover_components():
-    """Dynamically discover components from contrib directory."""
-    components = {
-        'active': {},
-        'passive': {}
-    }
-    
-    try:
-        # Try to discover components dynamically
-        try:
-            from .config.path_utils import get_contrib_path
-            contrib_path = get_contrib_path()
-        except ImportError:
-            # Fallback for legacy compatibility
-            import os
-            from pathlib import Path
-            current_file = Path(__file__)
-            contrib_path = str(current_file.parent.parent.parent / 'components' / 'contrib')
-        
-        # Known component mappings from our analysis
-        known_components = {
-            'HarvardSyringePump': {
-                'module': 'harvardpump',
-                'category': 'active',
-                'display_name': 'Harvard Syringe Pump',
-                'icon': '💉',
-                'default_properties': {
-                    'syringe_volume': '3 mL',
-                    'syringe_diameter': '10 mm',
-                    'serial_port': 'COM1'
-                },
-                'required_properties': ['syringe_volume', 'syringe_diameter', 'serial_port']
-            },
-            'VarianPump': {
-                'module': 'varian',
-                'category': 'active',
-                'display_name': 'Varian HPLC Pump',
-                'icon': '⚙️',
-                'default_properties': {
-                    'serial_port': '/dev/ttyUSB0',
-                    'max_rate': '5 ml/min'
-                },
-                'required_properties': ['serial_port', 'max_rate']
-            },
-            'ViciPump': {
-                'module': 'vicipump',
-                'category': 'active',
-                'display_name': 'Vici M50 Pump',
-                'icon': '🔧',
-                'default_properties': {
-                    'serial_port': '/dev/ttyUSB0',
-                    'volume_per_rev': '1 mL'
-                },
-                'required_properties': ['serial_port', 'volume_per_rev']
-            },
-            'ViciValve': {
-                'module': 'vici',
-                'category': 'active',
-                'display_name': 'VICI Valve',
-                'icon': '🔀',
-                'default_properties': {
-                    'serial_port': '/dev/ttyUSB0'
-                },
-                'required_properties': ['serial_port', 'mapping']
-            }
-        }
-        
-        # Add known components to registry
-        for class_name, info in known_components.items():
-            component_info = {
-                'class_name': class_name,
-                'import_path': f'mechwolf.components.contrib.{info["module"]}',
-                'display_name': info['display_name'],
-                'icon': info['icon'],
-                'default_properties': info['default_properties'],
-                'required_properties': info['required_properties'],
-                'property_types': {prop: 'text' for prop in info['required_properties']}
-            }
-            components[info['category']][class_name] = component_info
-            
-    except Exception as e:
-        print(f"Warning: Could not discover components dynamically: {e}")
-        # Fallback to hardcoded Harvard pump
-        components['active']['HarvardSyringePump'] = {
-            'class_name': 'HarvardSyringePump',
-            'import_path': 'mechwolf.components.contrib.harvardpump',
-            'display_name': 'Harvard Syringe Pump',
-            'icon': '💉',
-            'default_properties': {
-                'syringe_volume': '3 mL',
-                'syringe_diameter': '10 mm',
-                'serial_port': 'COM1'
-            },
-            'required_properties': ['syringe_volume', 'syringe_diameter', 'serial_port'],
-            'property_types': {
-                'syringe_volume': 'text',
-                'syringe_diameter': 'text', 
-                'serial_port': 'text'
-            }
-        }
-    
-    return components
-
-# Discover components at module level
-_discovered = _discover_components()
-
-# Add passive components (stdlib components)
-_discovered['passive'].update({
-    'Vessel': {
-        'class_name': 'Vessel',
-        'import_path': 'mechwolf',
-        'display_name': 'Reagent Vessel',
-        'icon': '🧪',
-        'default_properties': {},
-        'required_properties': [],  # Remove description to avoid duplicate with main description field
-        'property_types': {}
-    },
-    'TMixer': {
-        'class_name': 'TMixer',
-        'import_path': 'mechwolf',
-        'display_name': 'T-Mixer',
-        'icon': '🔀',
-        'default_properties': {},
-        'required_properties': [],
-        'property_types': {}
-    },
-    'Tube': {
-        'class_name': 'Tube',
-        'import_path': 'mechwolf',
-        'display_name': 'Tubing',
-        'icon': '🔗',
-        'default_properties': {
-            'length': '1 ft',
-            'ID': '1/16 in',
-            'OD': '1/8 in',
-            'material': 'PFA'
-        },
-        'required_properties': ['length', 'ID', 'OD', 'material'],
-        'property_types': {
-            'length': 'text',
-            'ID': 'text',
-            'OD': 'text',
-            'material': 'text'
-        }
-    }
-})
+# Use the modular component discovery system
+try:
+    from .registry.component_discovery import discover_components
+    _discovered = discover_components()
+except ImportError:
+    # Fallback for legacy compatibility
+    from registry.component_discovery import discover_components
+    _discovered = discover_components()
 
 class ComponentRegistry:
     """Registry for available components with dynamic discovery from contrib files."""
@@ -232,7 +97,7 @@ class ComponentRegistry:
     def get_component_info(cls, component_type: str) -> Dict[str, Any]:
         """Get component info with backward compatibility."""
         # Handle backward compatibility for old naming
-        if component_type == 'HarvardPump':
+        if component_type == 'HarvardSyringePump':
             component_type = 'HarvardSyringePump'
         
         # Check active components first
@@ -257,7 +122,7 @@ class ComponentRegistry:
     @classmethod
     def normalize_component_type(cls, component_type: str) -> str:
         """Normalize component type with backward compatibility."""
-        if component_type == 'HarvardPump':
+        if component_type == 'HarvardSyringePump':
             return 'HarvardSyringePump'
         return component_type
 
@@ -861,7 +726,7 @@ class TabbedApparatusDesigner:
         for name, comp in self.components.items():
             comp_type = comp.component_type
             # Handle backward compatibility
-            if comp_type == 'HarvardPump':
+            if comp_type == 'HarvardSyringePump':
                 comp_type = 'HarvardSyringePump'
                 comp.component_type = 'HarvardSyringePump'  # Update for consistency
             
@@ -910,7 +775,7 @@ class TabbedApparatusDesigner:
             for name, comp in self.components.items():
                 comp_type = comp.component_type
                 # Handle backward compatibility
-                if comp_type == 'HarvardPump':
+                if comp_type == 'HarvardSyringePump':
                     comp_type = 'HarvardSyringePump'
                     comp.component_type = 'HarvardSyringePump'
                 info = ComponentRegistry.get_all_components().get(comp_type, {})
