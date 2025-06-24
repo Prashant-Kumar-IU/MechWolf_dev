@@ -9,7 +9,13 @@ from IPython.display import display, clear_output
 from typing import Dict, List, Any, Optional
 from collections import defaultdict
 
-from ..models import ApparatusComponent, ApparatusConnection
+from ..models import (
+    ApparatusComponent, 
+    ApparatusConnection,
+    ComponentValidationError,
+    ConnectionValidationError,
+    MetadataError
+)
 from ..registry import ComponentRegistry
 from ..ui import TabBuilders, EventHandlers
 from .editors import ComponentEditor, ConnectionEditor
@@ -100,11 +106,21 @@ class TabbedApparatusDesigner:
         name = name.replace(" ", "_")
         
         component = ApparatusComponent('HarvardSyringePump', name, self.component_counters['HarvardSyringePump'])
-        self.components[name] = component
         
-        self._update_active_components_display()
-        self._update_connection_dropdowns()
-        self._save_to_metadata()
+        # Validate component before adding
+        try:
+            component.validate_properties()
+            self.components[name] = component
+            
+            self._update_active_components_display()
+            self._update_connection_dropdowns()
+            self._safe_save_to_metadata()
+        except ComponentValidationError as e:
+            print(f"⚠️ Component validation failed: {e}")
+            # Still add component but warn user
+            self.components[name] = component
+            self._update_active_components_display()
+            self._update_connection_dropdowns()
     
     def _add_passive_component(self, component_type: str):
         """Add a passive component (Vessel or TMixer)."""
@@ -114,11 +130,21 @@ class TabbedApparatusDesigner:
         name = name.replace(" ", "_")
         
         component = ApparatusComponent(component_type, name, self.component_counters[component_type])
-        self.components[name] = component
         
-        self._update_passive_components_display()
-        self._update_connection_dropdowns()
-        self._save_to_metadata()
+        # Validate component before adding
+        try:
+            component.validate_properties()
+            self.components[name] = component
+            
+            self._update_passive_components_display()
+            self._update_connection_dropdowns()
+            self._safe_save_to_metadata()
+        except ComponentValidationError as e:
+            print(f"⚠️ Component validation failed: {e}")
+            # Still add component but warn user
+            self.components[name] = component
+            self._update_passive_components_display()
+            self._update_connection_dropdowns()
     
     def _add_connection(self, button):
         """Add a connection between components."""
@@ -134,12 +160,23 @@ class TabbedApparatusDesigner:
                 # Store tube properties from the user-created tube
                 connection.tube_properties = tube_comp.properties.copy()
                 connection.tube_type = selected_tube  # Use tube name as type
-                self.connections.append(connection)
                 
-                self._update_connections_display()
-                self._update_connection_dropdowns()
-                self._update_network_visualization()
-                self._save_to_metadata()
+                # Validate connection before adding
+                try:
+                    connection.validate_connection(self.components)
+                    self.connections.append(connection)
+                    
+                    self._update_connections_display()
+                    self._update_connection_dropdowns()
+                    self._update_network_visualization()
+                    self._safe_save_to_metadata()
+                except ConnectionValidationError as e:
+                    print(f"⚠️ Connection validation failed: {e}")
+                    # Still add connection but warn user
+                    self.connections.append(connection)
+                    self._update_connections_display()
+                    self._update_connection_dropdowns()
+                    self._update_network_visualization()
             else:
                 print(f"⚠️ Tube '{selected_tube}' not found")
     
@@ -401,12 +438,36 @@ class TabbedApparatusDesigner:
             
             print(f"\n📈 Stats: {len(self.components)} components, {len(self.connections)} connections")
     
-    def _save_to_metadata(self):
-        """Save current apparatus to experimental metadata."""
+    def _safe_save_to_metadata(self):
+        """Safely save current apparatus to experimental metadata with validation."""
         if not self.experiment_manager or not _metadata_available:
             return
         
         try:
+            # Validate all components before saving
+            validation_errors = []
+            
+            for name, comp in self.components.items():
+                try:
+                    comp.validate_properties()
+                except ComponentValidationError as e:
+                    validation_errors.append(f"Component {name}: {e.message}")
+            
+            # Validate all connections before saving
+            for i, conn in enumerate(self.connections):
+                try:
+                    conn.validate_connection(self.components)
+                except ConnectionValidationError as e:
+                    validation_errors.append(f"Connection #{i+1}: {e.message}")
+            
+            # Warn about validation errors but continue saving
+            if validation_errors:
+                print(f"⚠️ Validation warnings during save:")
+                for error in validation_errors[:5]:  # Show max 5 errors
+                    print(f"  • {error}")
+                if len(validation_errors) > 5:
+                    print(f"  ... and {len(validation_errors) - 5} more issues")
+            
             # Clear existing apparatus data and rebuild
             self.experiment_manager.apparatus.save_data({
                 'components': {'active': [], 'passive': []},
@@ -426,8 +487,18 @@ class TabbedApparatusDesigner:
                 self.experiment_manager.apparatus.add_connection(conn.to_dict())
             
             self.experiment_manager.save()
+            
         except Exception as e:
+            raise MetadataError(f"Failed to save apparatus data: {str(e)}")
+    
+    def _save_to_metadata(self):
+        """Legacy save method - calls safe save with error handling."""
+        try:
+            self._safe_save_to_metadata()
+        except MetadataError as e:
             print(f"Warning: Could not save to metadata: {e}")
+        except Exception as e:
+            print(f"Warning: Unexpected error during save: {e}")
     
     def _load_from_metadata(self):
         """Load apparatus from experimental metadata."""
@@ -438,30 +509,39 @@ class TabbedApparatusDesigner:
             apparatus_data = self.experiment_manager.apparatus.get_data()
             
             if apparatus_data:
-                # Load active components
+                # Load active components with validation
                 for comp_data in apparatus_data.get('components', {}).get('active', []):
-                    comp = ApparatusComponent.from_dict(comp_data)
-                    self.components[comp.name] = comp
-                    # Update counter
-                    self.component_counters[comp.component_type] = max(
-                        self.component_counters[comp.component_type], 
-                        comp.instance_id
-                    )
+                    try:
+                        comp = ApparatusComponent.from_dict(comp_data)
+                        self.components[comp.name] = comp
+                        # Update counter
+                        self.component_counters[comp.component_type] = max(
+                            self.component_counters[comp.component_type], 
+                            comp.instance_id
+                        )
+                    except (ComponentValidationError, KeyError, ValueError) as e:
+                        print(f"⚠️ Skipping invalid active component: {e}")
                 
-                # Load passive components
+                # Load passive components with validation
                 for comp_data in apparatus_data.get('components', {}).get('passive', []):
-                    comp = ApparatusComponent.from_dict(comp_data)
-                    self.components[comp.name] = comp
-                    # Update counter
-                    self.component_counters[comp.component_type] = max(
-                        self.component_counters[comp.component_type], 
-                        comp.instance_id
-                    )
+                    try:
+                        comp = ApparatusComponent.from_dict(comp_data)
+                        self.components[comp.name] = comp
+                        # Update counter
+                        self.component_counters[comp.component_type] = max(
+                            self.component_counters[comp.component_type], 
+                            comp.instance_id
+                        )
+                    except (ComponentValidationError, KeyError, ValueError) as e:
+                        print(f"⚠️ Skipping invalid passive component: {e}")
                 
-                # Load connections
+                # Load connections with validation
                 for conn_data in apparatus_data.get('connections', []):
-                    conn = ApparatusConnection.from_dict(conn_data)
-                    self.connections.append(conn)
+                    try:
+                        conn = ApparatusConnection.from_dict(conn_data)
+                        self.connections.append(conn)
+                    except (ConnectionValidationError, KeyError, ValueError) as e:
+                        print(f"⚠️ Skipping invalid connection: {e}")
                 
                 # Update displays
                 self._update_active_components_display()
@@ -469,8 +549,10 @@ class TabbedApparatusDesigner:
                 self._update_connections_display()
                 self._update_connection_dropdowns()
                 
+        except MetadataError as e:
+            print(f"Warning: Metadata loading error: {e}")
         except Exception as e:
-            print(f"Warning: Could not load from metadata: {e}")
+            print(f"Warning: Unexpected error during load: {e}")
     
     def display(self):
         """Display the tabbed apparatus designer."""
