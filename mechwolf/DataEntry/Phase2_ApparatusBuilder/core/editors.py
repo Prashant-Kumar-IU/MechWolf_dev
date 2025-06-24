@@ -173,6 +173,11 @@ class ComponentEditor:
             # Update displays
             designer_instance._update_active_components_display()
             designer_instance._update_passive_components_display()
+            
+            # Regenerate code if name changed to reflect new component names
+            if hasattr(designer_instance, '_generate_code'):
+                designer_instance._generate_code()
+            
             # Try safe save first, fall back to regular save
             if hasattr(designer_instance, '_safe_save_to_metadata'):
                 designer_instance._safe_save_to_metadata()

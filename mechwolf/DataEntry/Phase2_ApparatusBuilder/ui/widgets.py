@@ -493,6 +493,11 @@ class TubeEditor(widgets.VBox if _ipywidgets_available else object):
         self.designer_instance._update_active_components_display()
         self.designer_instance._update_passive_components_display()
         
+        # Regenerate code if name changed to reflect new component names
+        if old_name != self.component.name:
+            if hasattr(self.designer_instance, '_generate_code'):
+                self.designer_instance._generate_code()
+        
         # Save to metadata
         if hasattr(self.designer_instance, '_safe_save_to_metadata'):
             self.designer_instance._safe_save_to_metadata()
