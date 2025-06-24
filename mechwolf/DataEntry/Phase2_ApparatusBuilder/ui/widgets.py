@@ -151,12 +151,28 @@ class UnitValueInput(widgets.HBox if _ipywidgets_available else object):
     
     @property
     def numeric_value(self) -> Optional[float]:
-        """Get the numeric value as a float."""
+        """Get the numeric value as a float, supporting fractions."""
         if not self.value_input.value.strip():
             return None
         
+        # First try to parse as fraction or regular number using UnitSystem
+        value_str = self.value_input.value.strip()
+        
+        # Try parsing with current unit
+        full_value_str = f"{value_str} {self.unit}" if self.unit else value_str
+        parsed_value, _ = UnitSystem.parse_value_with_unit(full_value_str)
+        
+        if parsed_value is not None:
+            return parsed_value
+        
+        # Fallback: try parsing just the value part (for fractions without units)
+        value_only, _ = UnitSystem.parse_value_with_unit(value_str)
+        if value_only is not None:
+            return value_only
+        
+        # Final fallback: try simple float conversion
         try:
-            return float(self.value_input.value.strip())
+            return float(value_str)
         except ValueError:
             return None
     
@@ -199,7 +215,7 @@ class UnitValueInput(widgets.HBox if _ipywidgets_available else object):
         
         # Check if numeric value is valid
         if self.numeric_value is None:
-            return False, f"Invalid numeric value: '{self.value_input.value}'"
+            return False, f"Invalid numeric value: '{self.value_input.value}'. Use formats like '1/16', '0.0625', or '1.5'"
         
         # Check if unit is valid for this property
         if not UnitSystem.validate_unit_for_property(self.unit, self.property_name):
