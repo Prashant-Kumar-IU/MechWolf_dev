@@ -1056,8 +1056,10 @@ class TabbedApparatusDesigner:
         try:
             # Use JavaScript to copy to clipboard in Jupyter
             from IPython.display import Javascript, display
+            # Escape backticks in the code content
+            escaped_code = self.code_output.value.replace('`', r'\`')
             js_code = f"""
-            navigator.clipboard.writeText(`{self.code_output.value.replace('`', '\\`')}`).then(function() {{
+            navigator.clipboard.writeText(`{escaped_code}`).then(function() {{
                 console.log('Code copied to clipboard!');
             }}, function(err) {{
                 console.error('Could not copy code: ', err);
