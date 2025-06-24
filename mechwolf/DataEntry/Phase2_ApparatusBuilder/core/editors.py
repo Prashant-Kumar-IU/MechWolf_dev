@@ -39,7 +39,7 @@ except ImportError:
     widgets = MockWidgets()
     print("Warning: ipywidgets not available in editors, using mock widgets")
 from ..registry import ComponentRegistry
-from ..ui.widgets import UnitValueInput
+from ..ui.widgets import UnitValueInput, TubeEditor
 from ..config.units import UnitSystem
 from ..models import ComponentValidationError, ConnectionValidationError
 
@@ -50,6 +50,28 @@ class ComponentEditor:
     @staticmethod
     def edit_component(component, designer_instance):
         """Edit component properties."""
+        # Use specialized TubeEditor for tube components
+        if component.component_type == 'Tube':
+            tube_editor = TubeEditor(component, designer_instance)
+            
+            # Update appropriate property editor
+            if component.component_type in ComponentRegistry.ACTIVE_COMPONENTS:
+                if hasattr(designer_instance, 'active_property_editor'):
+                    # tabbed_apparatus_designer.py structure
+                    designer_instance.active_property_editor.children = [tube_editor]
+                elif hasattr(designer_instance, 'active_tab') and hasattr(designer_instance.active_tab, 'property_editor'):
+                    # core/designer.py structure
+                    designer_instance.active_tab.property_editor.children = [tube_editor]
+            else:
+                if hasattr(designer_instance, 'passive_property_editor'):
+                    # tabbed_apparatus_designer.py structure
+                    designer_instance.passive_property_editor.children = [tube_editor]
+                elif hasattr(designer_instance, 'passive_tab') and hasattr(designer_instance.passive_tab, 'property_editor'):
+                    # core/designer.py structure
+                    designer_instance.passive_tab.property_editor.children = [tube_editor]
+            return
+        
+        # Standard editor for non-tube components
         # Create property editor widgets
         prop_widgets = []
         info = ComponentRegistry.get_all_components().get(component.component_type, {})
