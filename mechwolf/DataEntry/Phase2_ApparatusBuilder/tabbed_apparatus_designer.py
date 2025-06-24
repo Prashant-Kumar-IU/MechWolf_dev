@@ -39,7 +39,15 @@ def _discover_components():
     
     try:
         # Try to discover components dynamically
-        contrib_path = '/home/kumar/MechWolf/mechwolf/components/contrib'
+        try:
+            from .config.path_utils import get_contrib_path
+            contrib_path = get_contrib_path()
+        except ImportError:
+            # Fallback for legacy compatibility
+            import os
+            from pathlib import Path
+            current_file = Path(__file__)
+            contrib_path = str(current_file.parent.parent.parent / 'components' / 'contrib')
         
         # Known component mappings from our analysis
         known_components = {

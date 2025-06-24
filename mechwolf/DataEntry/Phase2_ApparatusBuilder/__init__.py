@@ -23,24 +23,24 @@ Main Component:
 """
 
 try:
-    from .apparatus_gui import ApparatusBuilderGUI
+    from .legacy.apparatus_gui import ApparatusBuilderGUI
 except ImportError as e:
-    # Handle missing dependencies gracefully
+    # Handle missing dependencies gracefully - create fallback class
     class ApparatusBuilderGUI:
         def __init__(self, experiment_manager):
             self.experiment = experiment_manager
-            print(f"Warning: ApparatusBuilderGUI dependencies not available: {e}")
+            print(f"Warning: Legacy ApparatusBuilderGUI not available: {e}")
+            print("Note: Legacy GUI has been archived. Use TabbedApparatusDesigner v2 instead.")
         
         def display(self):
-            print("ApparatusBuilderGUI not available - install required dependencies (ipywidgets, etc.)")
+            print("Legacy ApparatusBuilderGUI not available.")
+            print("Use create_tabbed_apparatus_designer_v2() for the modern interface.")
             
         def get_configured_pumps(self):
             return {}
             
         def get_apparatus(self):
             return None
-            
-    print(f"Warning: ApparatusBuilderGUI not fully available: {e}")
 
 # Import enhanced tabbed apparatus designer (v2 - modular)
 try:

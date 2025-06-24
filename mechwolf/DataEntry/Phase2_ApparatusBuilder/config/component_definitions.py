@@ -4,6 +4,8 @@ Component definitions and specifications.
 Contains the static definitions for all supported component types.
 """
 
+from .path_utils import get_default_serial_port
+
 # Known component mappings from contrib directory analysis
 COMPONENT_DEFINITIONS = {
     'active': {
@@ -15,7 +17,7 @@ COMPONENT_DEFINITIONS = {
             'default_properties': {
                 'syringe_volume': '3 mL',
                 'syringe_diameter': '10 mm',
-                'serial_port': 'COM1'
+                'serial_port': get_default_serial_port()
             },
             'required_properties': ['syringe_volume', 'syringe_diameter', 'serial_port']
         },
@@ -25,7 +27,7 @@ COMPONENT_DEFINITIONS = {
             'display_name': 'Varian HPLC Pump',
             'icon': '⚙️',
             'default_properties': {
-                'serial_port': '/dev/ttyUSB0',
+                'serial_port': get_default_serial_port(),
                 'max_rate': '5 ml/min'
             },
             'required_properties': ['serial_port', 'max_rate']
@@ -36,7 +38,7 @@ COMPONENT_DEFINITIONS = {
             'display_name': 'Vici M50 Pump',
             'icon': '🔧',
             'default_properties': {
-                'serial_port': '/dev/ttyUSB0',
+                'serial_port': get_default_serial_port(),
                 'volume_per_rev': '1 mL'
             },
             'required_properties': ['serial_port', 'volume_per_rev']
@@ -47,7 +49,7 @@ COMPONENT_DEFINITIONS = {
             'display_name': 'VICI Valve',
             'icon': '🔀',
             'default_properties': {
-                'serial_port': '/dev/ttyUSB0'
+                'serial_port': get_default_serial_port()
             },
             'required_properties': ['serial_port', 'mapping']
         }
