@@ -4,7 +4,34 @@ Main TabbedApparatusDesigner class.
 Core orchestration logic for the apparatus designer interface.
 """
 
-import ipywidgets as widgets
+# Python version compatibility
+from __future__ import annotations
+
+# Handle missing ipywidgets gracefully
+try:
+    import ipywidgets as widgets
+except ImportError:
+    # Create mock widgets for environments without ipywidgets
+    class MockWidget:
+        def __init__(self, **kwargs):
+            self.value = kwargs.get('value', '')
+            self.children = kwargs.get('children', [])
+            self.layout = kwargs.get('layout')
+        
+        def set_title(self, index, title):
+            pass
+    
+    class MockWidgets:
+        Tab = MockWidget
+        VBox = MockWidget
+        HBox = MockWidget
+        HTML = MockWidget
+        Button = MockWidget
+        Textarea = MockWidget
+        Layout = lambda **kwargs: kwargs
+    
+    widgets = MockWidgets()
+    print("Warning: ipywidgets not available in designer, using mock widgets")
 from IPython.display import display, clear_output
 from typing import Dict, List, Any, Optional
 from collections import defaultdict

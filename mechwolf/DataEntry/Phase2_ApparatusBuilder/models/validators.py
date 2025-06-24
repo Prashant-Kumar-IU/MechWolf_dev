@@ -5,6 +5,9 @@ Provides unit parsing and validation functions based on the proven patterns
 from Old_codes/Appratus/FlowSetupUtils.py and error_handler.py
 """
 
+# Python version compatibility
+from __future__ import annotations
+
 import re
 import keyword
 from typing import Optional, List, Dict, Any, Tuple

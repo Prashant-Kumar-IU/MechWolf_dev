@@ -5,6 +5,9 @@ Provides comprehensive unit definitions, validation, and conversion utilities
 for all measurement types used in apparatus design.
 """
 
+# Python version compatibility
+from __future__ import annotations
+
 from typing import List, Optional, Tuple
 from dataclasses import dataclass
 import re

@@ -4,7 +4,40 @@ Component and connection editors for the apparatus designer.
 Contains logic for editing component properties and connections.
 """
 
-import ipywidgets as widgets
+# Python version compatibility
+from __future__ import annotations
+
+# Handle missing ipywidgets gracefully
+try:
+    import ipywidgets as widgets
+except ImportError:
+    # Create mock widgets for environments without ipywidgets
+    class MockWidget:
+        def __init__(self, **kwargs):
+            self.value = kwargs.get('value', '')
+            self.description = kwargs.get('description', '')
+            self.layout = kwargs.get('layout')
+            self.children = kwargs.get('children', [])
+            self.style = kwargs.get('style', {})
+        
+        def on_click(self, callback):
+            pass
+        
+        def observe(self, callback, names=None):
+            pass
+    
+    class MockWidgets:
+        Text = MockWidget
+        HTML = MockWidget
+        HBox = MockWidget
+        VBox = MockWidget
+        Button = MockWidget
+        Dropdown = MockWidget
+        Layout = lambda **kwargs: kwargs
+        ButtonStyle = lambda **kwargs: kwargs
+    
+    widgets = MockWidgets()
+    print("Warning: ipywidgets not available in editors, using mock widgets")
 from ..registry import ComponentRegistry
 from ..ui.widgets import UnitValueInput
 from ..config.units import UnitSystem

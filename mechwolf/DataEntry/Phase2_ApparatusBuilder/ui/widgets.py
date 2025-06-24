@@ -4,12 +4,40 @@ Custom UI widgets for Phase2_ApparatusBuilder.
 Contains composite widgets that combine multiple ipywidgets for enhanced functionality.
 """
 
-import ipywidgets as widgets
-from typing import Optional, List, Callable, Any, Dict
+# Python version compatibility
+from __future__ import annotations
+
+# Handle missing ipywidgets gracefully
+try:
+    import ipywidgets as widgets
+    _ipywidgets_available = True
+except ImportError:
+    # Create mock widgets for environments without ipywidgets
+    class MockWidget:
+        def __init__(self, **kwargs):
+            self.value = kwargs.get('value', '')
+            self.options = kwargs.get('options', [])
+            self.layout = kwargs.get('layout')
+            self.children = kwargs.get('children', [])
+    
+    class MockWidgets:
+        HBox = MockWidget
+        VBox = MockWidget
+        Text = MockWidget
+        Dropdown = MockWidget
+        HTML = MockWidget
+        Label = MockWidget
+        Layout = lambda **kwargs: kwargs
+    
+    widgets = MockWidgets()
+    _ipywidgets_available = False
+    print("Warning: ipywidgets not available, using mock widgets")
+
+from typing import Optional, List, Callable, Any, Dict, Tuple
 from ..config.units import UnitSystem
 
 
-class UnitValueInput(widgets.HBox):
+class UnitValueInput(widgets.HBox if _ipywidgets_available else object):
     """
     Composite widget combining numeric input with unit dropdown.
     
@@ -154,7 +182,7 @@ class UnitValueInput(widgets.HBox):
         else:
             self.unit_dropdown.value = new_options[0] if new_options else ""
     
-    def validate(self) -> tuple[bool, str]:
+    def validate(self) -> Tuple[bool, str]:
         """
         Validate the current value.
         
@@ -247,7 +275,7 @@ class ValidatedUnitInput(UnitValueInput):
             self.set_error_state(True, message)
 
 
-class PropertyEditorWidget(widgets.VBox):
+class PropertyEditorWidget(widgets.VBox if _ipywidgets_available else object):
     """
     Complete property editor with unit-aware inputs for component properties.
     
@@ -295,7 +323,7 @@ class PropertyEditorWidget(widgets.VBox):
                 elif hasattr(widget, 'value'):
                     widget.value = value
     
-    def validate_all(self) -> tuple[bool, List[str]]:
+    def validate_all(self) -> Tuple[bool, List[str]]:
         """
         Validate all properties.
         

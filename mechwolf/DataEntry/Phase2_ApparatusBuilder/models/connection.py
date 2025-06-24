@@ -4,6 +4,9 @@ ApparatusConnection data model.
 Represents a connection between two components with tube specifications.
 """
 
+# Python version compatibility
+from __future__ import annotations
+
 from typing import Dict, Any
 from .validators import (
     validate_connection_integrity,

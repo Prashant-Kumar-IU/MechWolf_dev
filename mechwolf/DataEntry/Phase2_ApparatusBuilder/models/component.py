@@ -4,6 +4,9 @@ ApparatusComponent data model.
 Represents a single component in the apparatus with properties and metadata.
 """
 
+# Python version compatibility
+from __future__ import annotations
+
 from typing import Dict, Any
 from .validators import (
     validate_component_name,
