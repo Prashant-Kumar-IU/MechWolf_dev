@@ -99,6 +99,9 @@ class ComponentEditor:
             input_widgets[prop_name] = widget
             prop_widgets.append(widget)
         
+        # Error display widget
+        error_display = widgets.HTML(value="", layout=widgets.Layout(margin='5px 0px'))
+        
         # Action buttons
         apply_btn = widgets.Button(description="Apply Changes", button_style='success')
         delete_btn = widgets.Button(description="Delete Component", button_style='danger')
@@ -118,11 +121,15 @@ class ComponentEditor:
                 else:
                     component.properties[prop_name] = widget.value
             
+            # Clear any previous error messages
+            error_display.value = ""
+            
             # Validate component properties after update
             try:
                 component.validate_properties()
             except ComponentValidationError as e:
-                print(f"⚠️ Component validation warning: {e}")
+                error_display.value = f"<div style='color: red; background: #ffe6e6; padding: 8px; border: 1px solid #ff6666; border-radius: 4px; margin: 5px 0;'><b>⚠️ Validation Error:</b> {str(e)}</div>"
+                return  # Don't proceed with updates if validation fails
             
             # Update components dict if name changed
             if old_name != component.name:
@@ -161,7 +168,8 @@ class ComponentEditor:
         delete_btn.on_click(delete_component)
         cancel_btn.on_click(cancel_edit)
         
-        # Button row
+        # Add error display and button row
+        prop_widgets.append(error_display)
         button_row = widgets.HBox([apply_btn, delete_btn, cancel_btn])
         prop_widgets.append(button_row)
         
@@ -262,6 +270,9 @@ class ConnectionEditor:
         
         prop_widgets.append(widgets.HTML("<hr>"))
         
+        # Error display widget for connections
+        conn_error_display = widgets.HTML(value="", layout=widgets.Layout(margin='5px 0px'))
+        
         # Action buttons
         apply_btn = widgets.Button(description="Apply Changes", button_style='success')
         delete_btn = widgets.Button(description="Delete Connection", button_style='danger')
@@ -274,11 +285,15 @@ class ConnectionEditor:
             connection.tube_type = tube_dropdown.value
             connection.tube_length = length_input.value
             
+            # Clear any previous error messages
+            conn_error_display.value = ""
+            
             # Validate connection
             try:
                 connection.validate_connection(designer_instance.components)
             except ConnectionValidationError as e:
-                print(f"⚠️ Connection validation warning: {e}")
+                conn_error_display.value = f"<div style='color: red; background: #ffe6e6; padding: 8px; border: 1px solid #ff6666; border-radius: 4px; margin: 5px 0;'><b>⚠️ Connection Error:</b> {str(e)}</div>"
+                return  # Don't proceed with updates if validation fails
             
             # Update tube properties if tube component exists
             if connection.tube_type in designer_instance.components:
@@ -318,7 +333,8 @@ class ConnectionEditor:
         delete_btn.on_click(delete_connection)
         cancel_btn.on_click(cancel_edit)
         
-        # Button row
+        # Add error display and button row
+        prop_widgets.append(conn_error_display)
         button_row = widgets.HBox([apply_btn, delete_btn, cancel_btn])
         prop_widgets.append(button_row)
         

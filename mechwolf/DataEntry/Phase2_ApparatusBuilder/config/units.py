@@ -156,6 +156,16 @@ class UnitSystem:
             except (ValueError, ZeroDivisionError):
                 return None, None
         
+        # Try fraction format without unit like "1/16"
+        fraction_no_unit_match = re.match(r'^(\d+)/(\d+)$', value_str)
+        if fraction_no_unit_match:
+            try:
+                num = int(fraction_no_unit_match.group(1))
+                denom = int(fraction_no_unit_match.group(2))
+                return num / denom, None
+            except (ValueError, ZeroDivisionError):
+                return None, None
+        
         # Just a number without unit
         try:
             numeric_value = float(value_str)

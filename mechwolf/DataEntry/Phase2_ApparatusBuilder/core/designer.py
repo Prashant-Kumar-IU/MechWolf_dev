@@ -143,12 +143,20 @@ class TabbedApparatusDesigner:
             self._update_connection_dropdowns()
             self._safe_save_to_metadata()
             self._show_success_message(f"Added {component.component_type}: {name}")
+            
+            # Auto-open property editor for the new component
+            self.active_tab.component_selector.value = name
+            ComponentEditor.edit_component(component, self)
         except ComponentValidationError as e:
             self._show_validation_error(f"Component Validation", str(e))
             # Still add component but warn user
             self.components[name] = component
             self._update_active_components_display()
             self._update_connection_dropdowns()
+            
+            # Auto-open property editor for the new component even with warnings
+            self.active_tab.component_selector.value = name
+            ComponentEditor.edit_component(component, self)
     
     def _add_passive_component(self, component_type: str):
         """Add a passive component (Vessel or TMixer)."""
@@ -168,12 +176,20 @@ class TabbedApparatusDesigner:
             self._update_connection_dropdowns()
             self._safe_save_to_metadata()
             self._show_success_message(f"Added {component.component_type}: {name}")
+            
+            # Auto-open property editor for the new component
+            self.passive_tab.component_selector.value = name
+            ComponentEditor.edit_component(component, self)
         except ComponentValidationError as e:
             self._show_validation_error(f"Component Validation", str(e))
             # Still add component but warn user
             self.components[name] = component
             self._update_passive_components_display()
             self._update_connection_dropdowns()
+            
+            # Auto-open property editor for the new component even with warnings
+            self.passive_tab.component_selector.value = name
+            ComponentEditor.edit_component(component, self)
     
     def _add_connection(self, button):
         """Add a connection between components."""
@@ -265,6 +281,8 @@ class TabbedApparatusDesigner:
             <tr style='background: #f0f0f0; border-bottom: 2px solid #ddd;'>
                 <th style='padding: 4px 8px; text-align: left; width: 60px;'>Type</th>
                 <th style='padding: 4px 8px; text-align: left; width: 120px;'>Name</th>
+                <th style='padding: 4px 8px; text-align: left; width: 100px;'>Volume</th>
+                <th style='padding: 4px 8px; text-align: left; width: 80px;'>Port</th>
                 <th style='padding: 4px 8px; text-align: left;'>Description</th>
             </tr>
         </thead>
@@ -275,8 +293,14 @@ class TabbedApparatusDesigner:
             info = ComponentRegistry.get_component_info(comp.component_type)
             # Truncate description if too long
             description = comp.description if comp.description else "<i>No description</i>"
-            if len(description) > 40:
-                description = description[:37] + "..."
+            if len(description) > 30:
+                description = description[:27] + "..."
+            
+            # Get important properties for display
+            volume = comp.properties.get('syringe_volume', 'N/A')
+            port = comp.properties.get('serial_port', 'N/A')
+            if port != 'N/A' and len(port) > 10:
+                port = port[:7] + "..."
             
             html_lines.append(f"""
             <tr style='border-bottom: 1px solid #eee; hover: background: #f9f9f9;' 
@@ -284,6 +308,8 @@ class TabbedApparatusDesigner:
                 onmouseout='this.style.backgroundColor=""'>
                 <td style='padding: 4px 8px;'>{info['icon']}</td>
                 <td style='padding: 4px 8px;'><b>{comp.name}</b></td>
+                <td style='padding: 4px 8px; color: #555;'>{volume}</td>
+                <td style='padding: 4px 8px; color: #555;' title='{comp.properties.get("serial_port", "N/A")}'>{port}</td>
                 <td style='padding: 4px 8px; color: #666;' title='{comp.description}'>{description}</td>
             </tr>
             """)
@@ -308,6 +334,8 @@ class TabbedApparatusDesigner:
             <tr style='background: #f0f0f0; border-bottom: 2px solid #ddd;'>
                 <th style='padding: 4px 8px; text-align: left; width: 60px;'>Type</th>
                 <th style='padding: 4px 8px; text-align: left; width: 120px;'>Name</th>
+                <th style='padding: 4px 8px; text-align: left; width: 100px;'>Key Property</th>
+                <th style='padding: 4px 8px; text-align: left; width: 80px;'>Material/Size</th>
                 <th style='padding: 4px 8px; text-align: left;'>Description</th>
             </tr>
         </thead>
@@ -318,8 +346,29 @@ class TabbedApparatusDesigner:
             info = ComponentRegistry.PASSIVE_COMPONENTS[comp.component_type]
             # Truncate description if too long
             description = comp.description if comp.description else "<i>No description</i>"
-            if len(description) > 40:
-                description = description[:37] + "..."
+            if len(description) > 25:
+                description = description[:22] + "..."
+            
+            # Get component-specific key properties
+            key_prop = "N/A"
+            material_size = "N/A"
+            
+            if comp.component_type == 'Tube':
+                key_prop = comp.properties.get('length', 'N/A')
+                id_val = comp.properties.get('ID', '')
+                od_val = comp.properties.get('OD', '')
+                if id_val and od_val:
+                    material_size = f"ID:{id_val}, OD:{od_val}"
+                elif comp.properties.get('material'):
+                    material_size = comp.properties.get('material')
+            elif comp.component_type == 'Vessel':
+                # For vessels, show any volume or capacity if available
+                key_prop = comp.properties.get('volume', comp.properties.get('capacity', 'N/A'))
+                material_size = comp.properties.get('material', 'N/A')
+            elif comp.component_type == 'TMixer':
+                # For mixers, show mixing volume or type
+                key_prop = comp.properties.get('mixing_volume', comp.properties.get('type', 'N/A'))
+                material_size = comp.properties.get('material', 'N/A')
             
             html_lines.append(f"""
             <tr style='border-bottom: 1px solid #eee;' 
@@ -327,6 +376,8 @@ class TabbedApparatusDesigner:
                 onmouseout='this.style.backgroundColor=""'>
                 <td style='padding: 4px 8px;'>{info['icon']}</td>
                 <td style='padding: 4px 8px;'><b>{comp.name}</b></td>
+                <td style='padding: 4px 8px; color: #555;'>{key_prop}</td>
+                <td style='padding: 4px 8px; color: #555;'>{material_size}</td>
                 <td style='padding: 4px 8px; color: #666;' title='{comp.description}'>{description}</td>
             </tr>
             """)
