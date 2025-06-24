@@ -128,7 +128,10 @@ class ComponentEditor:
             try:
                 component.validate_properties()
             except ComponentValidationError as e:
-                error_display.value = f"<div style='color: red; background: #ffe6e6; padding: 8px; border: 1px solid #ff6666; border-radius: 4px; margin: 5px 0;'><b>⚠️ Validation Error:</b> {str(e)}</div>"
+                error_message = f"<div style='color: red; background: #ffe6e6; padding: 8px; border: 1px solid #ff6666; border-radius: 4px; margin: 5px 0;'><b>⚠️ Validation Error:</b> {str(e)}</div>"
+                error_display.value = error_message
+                # Also print to console for visibility (matching old program style)
+                print(f"⚠️ Validation Error: {str(e)}")
                 return  # Don't proceed with updates if validation fails
             
             # Update components dict if name changed
@@ -148,7 +151,7 @@ class ComponentEditor:
             # Update displays
             designer_instance._update_active_components_display()
             designer_instance._update_passive_components_display()
-            designer_instance._safe_save_to_metadata()
+            designer_instance._save_to_metadata()
             print(f"✅ Updated properties for {component.name}")
             
             # Reset property editor
@@ -175,27 +178,27 @@ class ComponentEditor:
         
         # Update appropriate property editor
         if component.component_type in ComponentRegistry.ACTIVE_COMPONENTS:
-            designer_instance.active_tab.property_editor.children = prop_widgets
+            designer_instance.active_property_editor.children = prop_widgets
         else:
-            designer_instance.passive_tab.property_editor.children = prop_widgets
+            designer_instance.passive_property_editor.children = prop_widgets
     
     @staticmethod
     def _reset_property_editor(component_type: str, designer_instance):
         """Reset property editor to default state"""
         if component_type in ComponentRegistry.ACTIVE_COMPONENTS:
             # Reset active component editor
-            designer_instance.active_tab.component_selector.value = None
-            designer_instance.active_tab.property_editor.children = [
+            designer_instance.active_component_selector.value = None
+            designer_instance.active_property_editor.children = [
                 widgets.HTML("<b>Component Properties:</b>"),
-                designer_instance.active_tab.component_selector,
+                designer_instance.active_component_selector,
                 widgets.HTML("<i>Select a component above to edit properties</i>")
             ]
         else:
             # Reset passive component editor
-            designer_instance.passive_tab.component_selector.value = None
-            designer_instance.passive_tab.property_editor.children = [
+            designer_instance.passive_component_selector.value = None
+            designer_instance.passive_property_editor.children = [
                 widgets.HTML("<b>Component Properties:</b>"),
-                designer_instance.passive_tab.component_selector,
+                designer_instance.passive_component_selector,
                 widgets.HTML("<i>Select a component above to edit properties</i>")
             ]
     
@@ -292,7 +295,10 @@ class ConnectionEditor:
             try:
                 connection.validate_connection(designer_instance.components)
             except ConnectionValidationError as e:
-                conn_error_display.value = f"<div style='color: red; background: #ffe6e6; padding: 8px; border: 1px solid #ff6666; border-radius: 4px; margin: 5px 0;'><b>⚠️ Connection Error:</b> {str(e)}</div>"
+                error_message = f"<div style='color: red; background: #ffe6e6; padding: 8px; border: 1px solid #ff6666; border-radius: 4px; margin: 5px 0;'><b>⚠️ Connection Error:</b> {str(e)}</div>"
+                conn_error_display.value = error_message
+                # Also print to console for visibility (matching old program style)
+                print(f"⚠️ Connection Error: {str(e)}")
                 return  # Don't proceed with updates if validation fails
             
             # Update tube properties if tube component exists
@@ -339,14 +345,14 @@ class ConnectionEditor:
         prop_widgets.append(button_row)
         
         # Update connection property editor
-        designer_instance.connections_tab.connection_property_editor.children = prop_widgets
+        designer_instance.connection_property_editor.children = prop_widgets
     
     @staticmethod
     def _reset_connection_editor(designer_instance):
         """Reset connection property editor to default state."""
-        designer_instance.connections_tab.connection_selector.value = None
-        designer_instance.connections_tab.connection_property_editor.children = [
+        designer_instance.connection_selector.value = None
+        designer_instance.connection_property_editor.children = [
             widgets.HTML("<b>Edit Connection:</b>"),
-            designer_instance.connections_tab.connection_selector,
+            designer_instance.connection_selector,
             widgets.HTML("<i>Select a connection above to edit or delete</i>")
         ]
