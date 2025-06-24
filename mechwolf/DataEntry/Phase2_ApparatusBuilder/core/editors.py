@@ -6,6 +6,9 @@ Contains logic for editing component properties and connections.
 
 import ipywidgets as widgets
 from ..registry import ComponentRegistry
+from ..ui.widgets import UnitValueInput
+from ..config.units import UnitSystem
+from ..models import ComponentValidationError, ConnectionValidationError
 
 
 class ComponentEditor:
@@ -42,11 +45,24 @@ class ComponentEditor:
         input_widgets = {}
         for prop_name in info.get('required_properties', []):
             current_value = component.properties.get(prop_name, '')
-            widget = widgets.Text(
-                value=str(current_value),
-                description=f"{prop_name}:",
-                layout=widgets.Layout(width='300px')
-            )
+            
+            # Use UnitValueInput for properties that have units
+            if prop_name in ['length', 'ID', 'OD', 'diameter', 'syringe_diameter', 'syringe_volume']:
+                widget = UnitValueInput(
+                    property_name=prop_name,
+                    initial_value=str(current_value),
+                    description=f"{prop_name}:",
+                    placeholder=f"Enter {prop_name}...",
+                    width='400px'
+                )
+            else:
+                # Use regular text input for non-unit properties
+                widget = widgets.Text(
+                    value=str(current_value),
+                    description=f"{prop_name}:",
+                    layout=widgets.Layout(width='300px')
+                )
+            
             input_widgets[prop_name] = widget
             prop_widgets.append(widget)
         
@@ -64,7 +80,16 @@ class ComponentEditor:
             
             # Update component properties
             for prop_name, widget in input_widgets.items():
-                component.properties[prop_name] = widget.value
+                if isinstance(widget, UnitValueInput):
+                    component.properties[prop_name] = widget.value
+                else:
+                    component.properties[prop_name] = widget.value
+            
+            # Validate component properties after update
+            try:
+                component.validate_properties()
+            except ComponentValidationError as e:
+                print(f"⚠️ Component validation warning: {e}")
             
             # Update components dict if name changed
             if old_name != component.name:
@@ -83,7 +108,7 @@ class ComponentEditor:
             # Update displays
             designer_instance._update_active_components_display()
             designer_instance._update_passive_components_display()
-            designer_instance._save_to_metadata()
+            designer_instance._safe_save_to_metadata()
             print(f"✅ Updated properties for {component.name}")
             
             # Reset property editor
@@ -192,6 +217,16 @@ class ConnectionEditor:
         )
         prop_widgets.append(tube_dropdown)
         
+        # Tube length input with units
+        length_input = UnitValueInput(
+            property_name='length',
+            initial_value=connection.tube_length,
+            description="Length:",
+            placeholder="Enter tube length...",
+            width='300px'
+        )
+        prop_widgets.append(length_input)
+        
         prop_widgets.append(widgets.HTML("<hr>"))
         
         # Action buttons
@@ -204,6 +239,13 @@ class ConnectionEditor:
             connection.from_component = from_dropdown.value
             connection.to_component = to_dropdown.value
             connection.tube_type = tube_dropdown.value
+            connection.tube_length = length_input.value
+            
+            # Validate connection
+            try:
+                connection.validate_connection(designer_instance.components)
+            except ConnectionValidationError as e:
+                print(f"⚠️ Connection validation warning: {e}")
             
             # Update tube properties if tube component exists
             if connection.tube_type in designer_instance.components:

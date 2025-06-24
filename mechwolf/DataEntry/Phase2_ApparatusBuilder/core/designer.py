@@ -115,8 +115,9 @@ class TabbedApparatusDesigner:
             self._update_active_components_display()
             self._update_connection_dropdowns()
             self._safe_save_to_metadata()
+            self._show_success_message(f"Added {component.component_type}: {name}")
         except ComponentValidationError as e:
-            print(f"⚠️ Component validation failed: {e}")
+            self._show_validation_error(f"Component Validation", str(e))
             # Still add component but warn user
             self.components[name] = component
             self._update_active_components_display()
@@ -139,8 +140,9 @@ class TabbedApparatusDesigner:
             self._update_passive_components_display()
             self._update_connection_dropdowns()
             self._safe_save_to_metadata()
+            self._show_success_message(f"Added {component.component_type}: {name}")
         except ComponentValidationError as e:
-            print(f"⚠️ Component validation failed: {e}")
+            self._show_validation_error(f"Component Validation", str(e))
             # Still add component but warn user
             self.components[name] = component
             self._update_passive_components_display()
@@ -156,7 +158,9 @@ class TabbedApparatusDesigner:
             # Find the tube component to get its properties
             if selected_tube in self.components:
                 tube_comp = self.components[selected_tube]
-                connection = ApparatusConnection(from_comp, to_comp, selected_tube, "")
+                # Get tube length from component properties, default to "1 ft" if not specified
+                tube_length = tube_comp.properties.get('length', '1 ft')
+                connection = ApparatusConnection(from_comp, to_comp, selected_tube, tube_length)
                 # Store tube properties from the user-created tube
                 connection.tube_properties = tube_comp.properties.copy()
                 connection.tube_type = selected_tube  # Use tube name as type
@@ -170,8 +174,9 @@ class TabbedApparatusDesigner:
                     self._update_connection_dropdowns()
                     self._update_network_visualization()
                     self._safe_save_to_metadata()
+                    self._show_success_message(f"Added connection: {from_comp} → {to_comp}")
                 except ConnectionValidationError as e:
-                    print(f"⚠️ Connection validation failed: {e}")
+                    self._show_validation_error(f"Connection Validation", str(e))
                     # Still add connection but warn user
                     self.connections.append(connection)
                     self._update_connections_display()
@@ -462,11 +467,7 @@ class TabbedApparatusDesigner:
             
             # Warn about validation errors but continue saving
             if validation_errors:
-                print(f"⚠️ Validation warnings during save:")
-                for error in validation_errors[:5]:  # Show max 5 errors
-                    print(f"  • {error}")
-                if len(validation_errors) > 5:
-                    print(f"  ... and {len(validation_errors) - 5} more issues")
+                self._show_validation_summary(validation_errors)
             
             # Clear existing apparatus data and rebuild
             self.experiment_manager.apparatus.save_data({
@@ -565,3 +566,52 @@ class TabbedApparatusDesigner:
             'connections': [conn.to_dict() for conn in self.connections],
             'generated_code': self.code_output.value
         }
+    
+    def _show_success_message(self, message: str):
+        """Display a success message to the user."""
+        print(f"✅ {message}")
+    
+    def _show_validation_error(self, title: str, message: str):
+        """Display a validation error in a user-friendly way."""
+        print(f"⚠️ {title}: {message}")
+    
+    def _show_validation_summary(self, validation_errors: list):
+        """Display a summary of validation errors."""
+        print(f"⚠️ Validation warnings during save ({len(validation_errors)} issues):")
+        
+        # Group errors by type for better display
+        component_errors = []
+        connection_errors = []
+        other_errors = []
+        
+        for error in validation_errors:
+            if "Component" in error:
+                component_errors.append(error)
+            elif "Connection" in error:
+                connection_errors.append(error)
+            else:
+                other_errors.append(error)
+        
+        # Display grouped errors
+        if component_errors:
+            print("  🔧 Component Issues:")
+            for error in component_errors[:3]:  # Show max 3
+                print(f"    • {error}")
+            if len(component_errors) > 3:
+                print(f"    ... and {len(component_errors) - 3} more component issues")
+        
+        if connection_errors:
+            print("  🔗 Connection Issues:")
+            for error in connection_errors[:3]:  # Show max 3
+                print(f"    • {error}")
+            if len(connection_errors) > 3:
+                print(f"    ... and {len(connection_errors) - 3} more connection issues")
+        
+        if other_errors:
+            print("  📄 Other Issues:")
+            for error in other_errors[:2]:  # Show max 2
+                print(f"    • {error}")
+            if len(other_errors) > 2:
+                print(f"    ... and {len(other_errors) - 2} more issues")
+        
+        print("  💡 Tip: Edit components/connections to fix validation issues")

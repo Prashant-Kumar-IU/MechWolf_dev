@@ -7,7 +7,7 @@ from Old_codes/Appratus/FlowSetupUtils.py and error_handler.py
 
 import re
 import keyword
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 from .exceptions import (
     PropertyValidationError,
     TubeDimensionError,
@@ -15,61 +15,86 @@ from .exceptions import (
     ComponentValidationError,
     ConnectionValidationError
 )
+from ..config.units import UnitSystem
 
 
-def convert_dimension_to_float(dimension: str) -> Optional[float]:
+def convert_dimension_to_float(dimension: str, target_unit: str = 'in') -> Optional[float]:
     """
-    Convert a dimension string to float value in inches.
+    Convert a dimension string to float value in target unit (default: inches).
     
     Supports formats like:
     - "1/16 in" -> 0.0625
     - "0.0625 in" -> 0.0625
-    - "1/8" -> 0.125
+    - "1.5 mm" -> converted to inches
+    - "1/8" -> 0.125 (assumes inches)
     
-    Based on Old_codes/Appratus/FlowSetupUtils.py:44-57
+    Based on Old_codes/Appratus/FlowSetupUtils.py but enhanced with unit system.
     """
     try:
-        # Handle fraction format
-        fraction_match = re.match(r"(\d+)/(\d+)\s*(?:in)?", str(dimension))
-        if fraction_match:
-            num, denom = map(int, fraction_match.groups())
-            return num / denom
-
-        # Handle decimal format
-        number = float(re.findall(r"[-+]?\d*\.\d+|\d+", str(dimension))[0])
-        return number
+        value, unit = UnitSystem.parse_value_with_unit(str(dimension))
+        
+        if value is None:
+            return None
+        
+        # If no unit specified, assume target unit
+        if unit is None:
+            return value
+        
+        # Convert to target unit if different
+        if unit != target_unit:
+            converted = UnitSystem.convert_value(value, unit, target_unit)
+            return converted if converted is not None else value
+        
+        return value
     except (IndexError, ValueError, TypeError, ZeroDivisionError):
         return None
 
 
-def parse_tube_dimension(value: str) -> Optional[str]:
+def parse_tube_dimension(value: str, default_unit: str = 'in') -> Optional[str]:
     """
     Parse tube dimension that could be fraction or decimal.
     
-    Returns standardized format with 'in' unit.
-    Based on Old_codes/Appratus/FlowSetupUtils.py:60-71
+    Returns standardized format with proper unit.
+    Enhanced from Old_codes/Appratus/FlowSetupUtils.py with unit system.
     """
     try:
-        fraction_match = re.match(r"(\d+)/(\d+)\s*(?:in)?", value)
-        if fraction_match:
-            num, denom = map(int, fraction_match.groups())
-            return f"{num}/{denom} in"
-
-        number = float(re.findall(r"[-+]?\d*\.\d+|\d+", value)[0])
-        return f"{number} in"
+        parsed_value, unit = UnitSystem.parse_value_with_unit(value)
+        
+        if parsed_value is None:
+            return None
+        
+        # Use provided unit or default
+        final_unit = unit if unit else default_unit
+        
+        # Validate unit is appropriate for diameter
+        if not UnitSystem.validate_unit_for_property(final_unit, 'diameter'):
+            final_unit = default_unit
+        
+        return UnitSystem.format_value_with_unit(parsed_value, final_unit)
     except (IndexError, ValueError):
         return None
 
 
-def parse_length_dimension(value: str) -> Optional[str]:
+def parse_length_dimension(value: str, default_unit: str = 'ft') -> Optional[str]:
     """
-    Parse length values to foot units.
+    Parse length values with proper unit handling.
     
-    Based on Old_codes/Appratus/FlowSetupUtils.py:74-80
+    Enhanced from Old_codes/Appratus/FlowSetupUtils.py with unit system.
     """
     try:
-        number = float(re.findall(r"[-+]?\d*\.\d+|\d+", value)[0])
-        return f"{number} foot"
+        parsed_value, unit = UnitSystem.parse_value_with_unit(value)
+        
+        if parsed_value is None:
+            return None
+        
+        # Use provided unit or default
+        final_unit = unit if unit else default_unit
+        
+        # Validate unit is appropriate for length
+        if not UnitSystem.validate_unit_for_property(final_unit, 'length'):
+            final_unit = default_unit
+        
+        return UnitSystem.format_value_with_unit(parsed_value, final_unit)
     except (IndexError, ValueError):
         return None
 
@@ -78,26 +103,41 @@ def validate_tube_dimensions(id_val: str, od_val: str) -> None:
     """
     Validate tube dimensions ensuring OD > ID for all tubes.
     
-    Based on Old_codes/Appratus/error_handler.py:47-76
+    Enhanced from Old_codes/Appratus/error_handler.py with unit conversion support.
     """
     if not id_val or not od_val:
         raise TubeDimensionError(
             id_val or "None", 
             od_val or "None",
-            "Please enter valid values for tube dimensions (e.g., '1/16 in' or '0.0625 in')"
+            "Please enter valid values for tube dimensions (e.g., '1/16 in', '1.5 mm', or '0.0625 in')"
         )
 
-    r_id = convert_dimension_to_float(id_val)
-    r_od = convert_dimension_to_float(od_val)
+    # Parse dimensions with units
+    id_value, id_unit = UnitSystem.parse_value_with_unit(id_val)
+    od_value, od_unit = UnitSystem.parse_value_with_unit(od_val)
     
-    if r_id is None or r_od is None:
+    if id_value is None or od_value is None:
         raise TubeDimensionError(
             id_val, 
             od_val,
-            "Invalid dimension format. Use formats like '1/16 in' or '0.0625 in'"
+            "Invalid dimension format. Use formats like '1/16 in', '1.5 mm', or '0.0625 in'"
+        )
+    
+    # Convert to common unit for comparison (inches)
+    id_unit = id_unit or 'in'  # Default to inches if no unit
+    od_unit = od_unit or 'in'
+    
+    id_inches = UnitSystem.convert_value(id_value, id_unit, 'in')
+    od_inches = UnitSystem.convert_value(od_value, od_unit, 'in')
+    
+    if id_inches is None or od_inches is None:
+        raise TubeDimensionError(
+            id_val,
+            od_val,
+            f"Cannot compare dimensions with units '{id_unit}' and '{od_unit}'"
         )
 
-    if r_od <= r_id:
+    if od_inches <= id_inches:
         raise TubeDimensionError(
             id_val,
             od_val, 
@@ -145,64 +185,66 @@ def validate_required_component_properties(component_type: str, properties: Dict
 
 
 def validate_syringe_volume(volume: str) -> None:
-    """Validate syringe volume format (e.g., '3 mL')."""
+    """Validate syringe volume format with unit support (e.g., '3 mL', '0.5 L')."""
     if not volume:
         raise PropertyValidationError("syringe_volume", volume, "Syringe volume cannot be empty")
     
-    # Check for mL unit
-    if "mL" not in volume and "ml" not in volume:
+    # Parse volume with units
+    value, unit = UnitSystem.parse_value_with_unit(volume)
+    
+    if value is None:
         raise PropertyValidationError(
             "syringe_volume", 
             volume, 
-            "Syringe volume must include 'mL' unit (e.g., '3 mL')"
+            "Invalid volume format. Use format like '3 mL', '0.5 L', or '500 μL'"
         )
     
-    # Extract and validate numeric value
-    try:
-        number_match = re.findall(r"[-+]?\d*\.\d+|\d+", volume)
-        if not number_match:
-            raise ValueError("No numeric value found")
-        
-        value = float(number_match[0])
-        if value <= 0:
-            raise ValueError("Value must be positive")
-            
-    except ValueError:
+    if value <= 0:
         raise PropertyValidationError(
             "syringe_volume", 
             volume, 
-            "Invalid volume format. Use format like '3 mL' or '10.5 mL'"
+            "Syringe volume must be positive"
+        )
+    
+    # Validate unit is a volume unit
+    if unit and not UnitSystem.validate_unit_for_property(unit, 'volume'):
+        available_units = UnitSystem.get_available_units('volume')
+        raise PropertyValidationError(
+            "syringe_volume", 
+            volume, 
+            f"Invalid volume unit '{unit}'. Use one of: {', '.join(available_units)}"
         )
 
 
 def validate_syringe_diameter(diameter: str) -> None:
-    """Validate syringe diameter format (e.g., '10 mm')."""
+    """Validate syringe diameter format with unit support (e.g., '10 mm', '0.5 in')."""
     if not diameter:
         raise PropertyValidationError("syringe_diameter", diameter, "Syringe diameter cannot be empty")
     
-    # Check for mm unit
-    if "mm" not in diameter:
+    # Parse diameter with units
+    value, unit = UnitSystem.parse_value_with_unit(diameter)
+    
+    if value is None:
         raise PropertyValidationError(
             "syringe_diameter", 
             diameter, 
-            "Syringe diameter must include 'mm' unit (e.g., '10 mm')"
+            "Invalid diameter format. Use format like '10 mm', '0.5 in', or '1.2 cm'"
         )
     
-    # Extract and validate numeric value
-    try:
-        number_match = re.findall(r"[-+]?\d*\.\d+|\d+", diameter)
-        if not number_match:
-            raise ValueError("No numeric value found")
-        
-        value = float(number_match[0])
-        if value <= 0:
-            raise ValueError("Value must be positive")
-            
-    except ValueError:
+    if value <= 0:
         raise PropertyValidationError(
             "syringe_diameter", 
             diameter, 
-            "Invalid diameter format. Use format like '10 mm' or '12.5 mm'"
+            "Syringe diameter must be positive"
+        )
+    
+    # Validate unit is a diameter unit
+    if unit and not UnitSystem.validate_unit_for_property(unit, 'diameter'):
+        available_units = UnitSystem.get_available_units('diameter')
+        raise PropertyValidationError(
+            "syringe_diameter", 
+            diameter, 
+            f"Invalid diameter unit '{unit}'. Use one of: {', '.join(available_units)}"
         )
 
 

@@ -23,7 +23,8 @@ from .validators import (
     validate_serial_port,
     validate_connection_integrity,
     parse_tube_dimension,
-    parse_length_dimension
+    parse_length_dimension,
+    convert_dimension_to_float
 )
 
 __all__ = [
@@ -43,5 +44,6 @@ __all__ = [
     'validate_serial_port',
     'validate_connection_integrity',
     'parse_tube_dimension',
-    'parse_length_dimension'
+    'parse_length_dimension',
+    'convert_dimension_to_float'
 ]

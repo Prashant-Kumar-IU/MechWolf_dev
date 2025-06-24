@@ -13,6 +13,7 @@ from .validators import (
     validate_serial_port,
     validate_required_component_properties
 )
+from ..config.units import UnitSystem
 from .exceptions import ComponentValidationError
 
 
@@ -41,14 +42,36 @@ class ApparatusComponent:
         validate_component_name(name)
     
     def to_dict(self):
-        """Convert to dictionary for metadata storage."""
+        """Convert to dictionary for metadata storage with structured units."""
+        # Process properties to separate values and units for better storage
+        processed_properties = {}
+        
+        for prop_name, prop_value in self.properties.items():
+            if isinstance(prop_value, str) and prop_value:
+                # Try to parse as value with unit
+                parsed_value, unit = UnitSystem.parse_value_with_unit(prop_value)
+                
+                if parsed_value is not None and unit is not None:
+                    # Store as structured data
+                    processed_properties[prop_name] = {
+                        'value': parsed_value,
+                        'unit': unit,
+                        'formatted': prop_value  # Keep original for display
+                    }
+                else:
+                    # Store as simple string
+                    processed_properties[prop_name] = prop_value
+            else:
+                processed_properties[prop_name] = prop_value
+        
         return {
             'type': self.component_type,  # Match ApparatusDataManager expected format
             'name': self.name,
             'description': self.description,
             'instance_id': self.instance_id,
-            'properties': self.properties,
-            'registry_info': self.registry_info
+            'properties': processed_properties,
+            'registry_info': self.registry_info,
+            'unit_system_version': '1.0'  # Track format version
         }
     
     def validate_properties(self) -> None:
@@ -87,6 +110,29 @@ class ApparatusComponent:
         
         if id_val and od_val:
             validate_tube_dimensions(id_val, od_val)
+        
+        # Validate length if present
+        length_val = self.properties.get('length')
+        if length_val:
+            parsed_value, unit = UnitSystem.parse_value_with_unit(length_val)
+            if parsed_value is None:
+                raise ComponentValidationError(
+                    self.name,
+                    f"Invalid length format: '{length_val}'. Use format like '1 ft' or '12 in'"
+                )
+            if parsed_value <= 0:
+                raise ComponentValidationError(
+                    self.name,
+                    f"Length must be positive: '{length_val}'"
+                )
+        
+        # Validate material is specified
+        material = self.properties.get('material')
+        if not material or not material.strip():
+            raise ComponentValidationError(
+                self.name,
+                "Tube material must be specified (e.g., 'PFA', 'PTFE', 'Stainless Steel')"
+            )
     
     def _validate_harvard_pump_properties(self) -> None:
         """Validate Harvard pump specific properties."""
@@ -98,6 +144,27 @@ class ApparatusComponent:
         
         if 'serial_port' in self.properties:
             validate_serial_port(self.properties['serial_port'])
+        
+        # Additional validation for flow rate if present
+        flow_rate = self.properties.get('flow_rate')
+        if flow_rate:
+            parsed_value, unit = UnitSystem.parse_value_with_unit(flow_rate)
+            if parsed_value is None:
+                raise ComponentValidationError(
+                    self.name,
+                    f"Invalid flow rate format: '{flow_rate}'. Use format like '1.5 mL/min'"
+                )
+            if parsed_value <= 0:
+                raise ComponentValidationError(
+                    self.name,
+                    f"Flow rate must be positive: '{flow_rate}'"
+                )
+            if unit and not UnitSystem.validate_unit_for_property(unit, 'flow_rate'):
+                available_units = UnitSystem.get_available_units('flow_rate')
+                raise ComponentValidationError(
+                    self.name,
+                    f"Invalid flow rate unit '{unit}'. Use one of: {', '.join(available_units)}"
+                )
     
     def _validate_pump_properties(self) -> None:
         """Validate general pump properties."""
@@ -110,12 +177,28 @@ class ApparatusComponent:
         comp_type = data.get('type', data.get('component_type', ''))
         comp = cls(comp_type, data['name'], data.get('instance_id', 0))
         comp.description = data.get('description', '')
-        comp.properties = data.get('properties', {})
+        # Load properties, handling both old and new unit formats
+        raw_properties = data.get('properties', {})
+        processed_properties = {}
+        
+        for prop_name, prop_value in raw_properties.items():
+            if isinstance(prop_value, dict) and 'value' in prop_value and 'unit' in prop_value:
+                # New structured format - reconstruct formatted string
+                processed_properties[prop_name] = UnitSystem.format_value_with_unit(
+                    prop_value['value'], prop_value['unit']
+                )
+            else:
+                # Old format or non-unit property
+                processed_properties[prop_name] = prop_value
+        
+        comp.properties = processed_properties
         
         # Validate properties after loading
         try:
             comp.validate_properties()
         except ComponentValidationError as e:
             print(f"Warning: Loaded component has validation issues: {e}")
+        except Exception as e:
+            print(f"Warning: Unexpected validation error for component {comp.name}: {e}")
         
         return comp

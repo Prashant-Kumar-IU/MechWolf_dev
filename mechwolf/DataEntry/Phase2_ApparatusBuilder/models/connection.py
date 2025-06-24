@@ -32,13 +32,27 @@ class ApparatusConnection:
         # Note: Components dict validation will be done externally when available
     
     def to_dict(self):
-        """Convert to dictionary for metadata storage."""
+        """Convert to dictionary for metadata storage with structured units."""
+        # Process tube_length for structured storage
+        tube_length_data = self.tube_length
+        if isinstance(self.tube_length, str) and self.tube_length:
+            from ..config.units import UnitSystem
+            parsed_value, unit = UnitSystem.parse_value_with_unit(self.tube_length)
+            
+            if parsed_value is not None and unit is not None:
+                tube_length_data = {
+                    'value': parsed_value,
+                    'unit': unit,
+                    'formatted': self.tube_length
+                }
+        
         return {
             'from': self.from_component,  # Match ApparatusDataManager expected format
             'to': self.to_component,
             'tube_type': self.tube_type,
-            'tube_length': self.tube_length,
-            'tube_properties': self.tube_properties
+            'tube_length': tube_length_data,
+            'tube_properties': self.tube_properties,
+            'unit_system_version': '1.0'
         }
     
     def validate_connection(self, components_dict: Dict[str, Any] = None) -> None:
@@ -95,15 +109,22 @@ class ApparatusConnection:
     
     def _validate_tube_length(self) -> None:
         """Validate tube length format."""
-        if not self.tube_length:
-            raise ConnectionValidationError(
-                f"{self.from_component} → {self.to_component}",
-                "Tube length cannot be empty"
-            )
+        # If tube_length is empty or None, set a default
+        if not self.tube_length or self.tube_length.strip() == "":
+            self.tube_length = "1 ft"  # Set reasonable default
+            return
         
         # Parse and validate tube length format
         parsed_length = parse_length_dimension(self.tube_length)
         if parsed_length is None:
+            # Try to fix common issues - if it's just a number, assume feet
+            try:
+                float(self.tube_length.strip())
+                self.tube_length = f"{self.tube_length.strip()} ft"
+                return  # Successfully fixed
+            except ValueError:
+                pass
+            
             raise ConnectionValidationError(
                 f"{self.from_component} → {self.to_component}",
                 f"Invalid tube length format: '{self.tube_length}'. Use format like '1 ft' or '12 in'"
@@ -120,6 +141,18 @@ class ApparatusConnection:
             data.get('tube_type', 'fat_tube'),
             data.get('tube_length', '1 ft')
         )
+        # Handle tube_length in both old and new formats
+        tube_length_data = data.get('tube_length', '1 ft')
+        if isinstance(tube_length_data, dict) and 'value' in tube_length_data and 'unit' in tube_length_data:
+            # New structured format
+            from ..config.units import UnitSystem
+            conn.tube_length = UnitSystem.format_value_with_unit(
+                tube_length_data['value'], tube_length_data['unit']
+            )
+        else:
+            # Old format or simple string
+            conn.tube_length = str(tube_length_data)
+        
         conn.tube_properties = data.get('tube_properties', {})
         
         # Validate connection after loading
