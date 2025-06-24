@@ -151,7 +151,11 @@ class ComponentEditor:
             # Update displays
             designer_instance._update_active_components_display()
             designer_instance._update_passive_components_display()
-            designer_instance._save_to_metadata()
+            # Try safe save first, fall back to regular save
+            if hasattr(designer_instance, '_safe_save_to_metadata'):
+                designer_instance._safe_save_to_metadata()
+            elif hasattr(designer_instance, '_save_to_metadata'):
+                designer_instance._save_to_metadata()
             print(f"✅ Updated properties for {component.name}")
             
             # Reset property editor
@@ -177,30 +181,62 @@ class ComponentEditor:
         prop_widgets.append(button_row)
         
         # Update appropriate property editor
+        # Handle both widget structures (direct properties vs tab-based)
         if component.component_type in ComponentRegistry.ACTIVE_COMPONENTS:
-            designer_instance.active_property_editor.children = prop_widgets
+            if hasattr(designer_instance, 'active_property_editor'):
+                # tabbed_apparatus_designer.py structure
+                designer_instance.active_property_editor.children = prop_widgets
+            elif hasattr(designer_instance, 'active_tab') and hasattr(designer_instance.active_tab, 'property_editor'):
+                # core/designer.py structure
+                designer_instance.active_tab.property_editor.children = prop_widgets
         else:
-            designer_instance.passive_property_editor.children = prop_widgets
+            if hasattr(designer_instance, 'passive_property_editor'):
+                # tabbed_apparatus_designer.py structure
+                designer_instance.passive_property_editor.children = prop_widgets
+            elif hasattr(designer_instance, 'passive_tab') and hasattr(designer_instance.passive_tab, 'property_editor'):
+                # core/designer.py structure
+                designer_instance.passive_tab.property_editor.children = prop_widgets
     
     @staticmethod
     def _reset_property_editor(component_type: str, designer_instance):
         """Reset property editor to default state"""
+        # Handle both widget structures (direct properties vs tab-based)
         if component_type in ComponentRegistry.ACTIVE_COMPONENTS:
             # Reset active component editor
-            designer_instance.active_component_selector.value = None
-            designer_instance.active_property_editor.children = [
-                widgets.HTML("<b>Component Properties:</b>"),
-                designer_instance.active_component_selector,
-                widgets.HTML("<i>Select a component above to edit properties</i>")
-            ]
+            if hasattr(designer_instance, 'active_component_selector') and hasattr(designer_instance, 'active_property_editor'):
+                # tabbed_apparatus_designer.py structure
+                designer_instance.active_component_selector.value = None
+                designer_instance.active_property_editor.children = [
+                    widgets.HTML("<b>Component Properties:</b>"),
+                    designer_instance.active_component_selector,
+                    widgets.HTML("<i>Select a component above to edit properties</i>")
+                ]
+            elif hasattr(designer_instance, 'active_tab') and hasattr(designer_instance.active_tab, 'component_selector'):
+                # core/designer.py structure
+                designer_instance.active_tab.component_selector.value = None
+                designer_instance.active_tab.property_editor.children = [
+                    widgets.HTML("<b>Component Properties:</b>"),
+                    designer_instance.active_tab.component_selector,
+                    widgets.HTML("<i>Select a component above to edit properties</i>")
+                ]
         else:
             # Reset passive component editor
-            designer_instance.passive_component_selector.value = None
-            designer_instance.passive_property_editor.children = [
-                widgets.HTML("<b>Component Properties:</b>"),
-                designer_instance.passive_component_selector,
-                widgets.HTML("<i>Select a component above to edit properties</i>")
-            ]
+            if hasattr(designer_instance, 'passive_component_selector') and hasattr(designer_instance, 'passive_property_editor'):
+                # tabbed_apparatus_designer.py structure
+                designer_instance.passive_component_selector.value = None
+                designer_instance.passive_property_editor.children = [
+                    widgets.HTML("<b>Component Properties:</b>"),
+                    designer_instance.passive_component_selector,
+                    widgets.HTML("<i>Select a component above to edit properties</i>")
+                ]
+            elif hasattr(designer_instance, 'passive_tab') and hasattr(designer_instance.passive_tab, 'component_selector'):
+                # core/designer.py structure
+                designer_instance.passive_tab.component_selector.value = None
+                designer_instance.passive_tab.property_editor.children = [
+                    widgets.HTML("<b>Component Properties:</b>"),
+                    designer_instance.passive_tab.component_selector,
+                    widgets.HTML("<i>Select a component above to edit properties</i>")
+                ]
     
     @staticmethod
     def _delete_component(component, designer_instance):
@@ -310,7 +346,11 @@ class ConnectionEditor:
             designer_instance._update_connections_display()
             designer_instance._update_connection_dropdowns()
             designer_instance._update_network_visualization()
-            designer_instance._save_to_metadata()
+            # Try safe save first, fall back to regular save
+            if hasattr(designer_instance, '_safe_save_to_metadata'):
+                designer_instance._safe_save_to_metadata()
+            elif hasattr(designer_instance, '_save_to_metadata'):
+                designer_instance._save_to_metadata()
             print(f"✅ Updated connection #{connection_index + 1}")
             
             # Reset connection editor
@@ -325,6 +365,10 @@ class ConnectionEditor:
                 designer_instance._update_connections_display()
                 designer_instance._update_connection_dropdowns()
                 designer_instance._update_network_visualization()
+                # Try safe save first, fall back to regular save
+            if hasattr(designer_instance, '_safe_save_to_metadata'):
+                designer_instance._safe_save_to_metadata()
+            elif hasattr(designer_instance, '_save_to_metadata'):
                 designer_instance._save_to_metadata()
                 print(f"🗑️ Deleted connection #{connection_index + 1}")
                 
@@ -345,14 +389,31 @@ class ConnectionEditor:
         prop_widgets.append(button_row)
         
         # Update connection property editor
-        designer_instance.connection_property_editor.children = prop_widgets
+        # Handle both widget structures (direct properties vs tab-based)
+        if hasattr(designer_instance, 'connection_property_editor'):
+            # tabbed_apparatus_designer.py structure
+            designer_instance.connection_property_editor.children = prop_widgets
+        elif hasattr(designer_instance, 'connections_tab') and hasattr(designer_instance.connections_tab, 'connection_property_editor'):
+            # core/designer.py structure
+            designer_instance.connections_tab.connection_property_editor.children = prop_widgets
     
     @staticmethod
     def _reset_connection_editor(designer_instance):
         """Reset connection property editor to default state."""
-        designer_instance.connection_selector.value = None
-        designer_instance.connection_property_editor.children = [
-            widgets.HTML("<b>Edit Connection:</b>"),
-            designer_instance.connection_selector,
-            widgets.HTML("<i>Select a connection above to edit or delete</i>")
-        ]
+        # Handle both widget structures (direct properties vs tab-based)
+        if hasattr(designer_instance, 'connection_selector') and hasattr(designer_instance, 'connection_property_editor'):
+            # tabbed_apparatus_designer.py structure
+            designer_instance.connection_selector.value = None
+            designer_instance.connection_property_editor.children = [
+                widgets.HTML("<b>Edit Connection:</b>"),
+                designer_instance.connection_selector,
+                widgets.HTML("<i>Select a connection above to edit or delete</i>")
+            ]
+        elif hasattr(designer_instance, 'connections_tab') and hasattr(designer_instance.connections_tab, 'connection_selector'):
+            # core/designer.py structure
+            designer_instance.connections_tab.connection_selector.value = None
+            designer_instance.connections_tab.connection_property_editor.children = [
+                widgets.HTML("<b>Edit Connection:</b>"),
+                designer_instance.connections_tab.connection_selector,
+                widgets.HTML("<i>Select a connection above to edit or delete</i>")
+            ]
