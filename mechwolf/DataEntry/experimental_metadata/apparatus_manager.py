@@ -235,12 +235,14 @@ class ApparatusDataManager:
         return self.save_data(data)
     
     # Bulk Operations
-    def configure_components(self, components: Dict[str, List[Dict[str, Any]]]) -> bool:
+    def configure_components(self, components: Dict[str, List[Dict[str, Any]]], 
+                           component_types: Dict[str, Dict[str, Any]] = None) -> bool:
         """
         Configure multiple components at once
         
         Args:
             components: Dictionary with 'active' and/or 'passive' component lists
+            component_types: Optional registry of component type definitions (new format)
         
         Returns:
             True if configured successfully
@@ -255,6 +257,10 @@ class ApparatusDataManager:
         
         if "passive" in components:
             data["components"]["passive"] = components["passive"]
+        
+        # Store component types registry if provided (new format)
+        if component_types is not None:
+            data["component_types"] = component_types
         
         return self.save_data(data)
     
@@ -408,6 +414,70 @@ class ApparatusDataManager:
         data = self.get_data()
         return data.get("calibration_data", {}).get(component_name)
     
+    # Component Types Registry Methods
+    def get_component_types_registry(self) -> Dict[str, Dict[str, Any]]:
+        """Get the component types registry"""
+        data = self.get_data()
+        return data.get("component_types", {})
+    
+    def set_component_types_registry(self, component_types: Dict[str, Dict[str, Any]]) -> bool:
+        """Set the component types registry"""
+        data = self.get_data()
+        data["component_types"] = component_types
+        return self.save_data(data)
+    
+    def ensure_component_types_registry(self) -> bool:
+        """Ensure component types registry exists and is populated"""
+        data = self.get_data()
+        
+        if "component_types" not in data:
+            data["component_types"] = {}
+        
+        # Collect all unique component types from existing components
+        all_types = set()
+        for comp in data.get("components", {}).get("active", []):
+            all_types.add(comp.get("type"))
+        for comp in data.get("components", {}).get("passive", []):
+            all_types.add(comp.get("type"))
+        
+        # Add missing component types to registry
+        from ..Phase2_ApparatusBuilder.registry import ComponentRegistry
+        registry_updated = False
+        
+        for comp_type in all_types:
+            if comp_type and comp_type not in data["component_types"]:
+                # Get registry info from ComponentRegistry
+                registry_info = ComponentRegistry.get_component_info(comp_type)
+                data["component_types"][comp_type] = registry_info
+                registry_updated = True
+        
+        if registry_updated:
+            return self.save_data(data)
+        return True
+    
+    def convert_to_compact_format(self) -> bool:
+        """Convert apparatus config from verbose to compact format"""
+        data = self.get_data()
+        
+        # Ensure component types registry exists
+        self.ensure_component_types_registry()
+        data = self.get_data()  # Refresh data
+        
+        # Process components to remove embedded registry_info
+        components_updated = False
+        
+        for comp_list in [data.get("components", {}).get("active", []), 
+                         data.get("components", {}).get("passive", [])]:
+            for comp in comp_list:
+                if "registry_info" in comp:
+                    # Remove embedded registry_info (it's now in component_types)
+                    del comp["registry_info"]
+                    components_updated = True
+        
+        if components_updated:
+            return self.save_data(data)
+        return True
+
     # Helper Methods
     def _remove_connections_with_component(self, component_name: str, data: Dict[str, Any]) -> None:
         """Remove all connections involving a specific component"""

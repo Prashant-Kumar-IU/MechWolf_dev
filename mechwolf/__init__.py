@@ -7,11 +7,16 @@ _ureg = UnitRegistry(autoconvert_offset_to_baseunit=True)
 __version__ = "2.0.0"
 
 try:
-    import pkg_resources
-    __version__ = pkg_resources.get_distribution("mechwolf").version
-except:
-    # Fallback to hardcoded version if pkg_resources fails
-    pass
+    from importlib.metadata import version
+    __version__ = version("mechwolf")
+except ImportError:
+    # Fallback for Python < 3.8
+    try:
+        import pkg_resources
+        __version__ = pkg_resources.get_distribution("mechwolf").version
+    except:
+        # Fallback to hardcoded version if all methods fail
+        pass
 
 from IPython import get_ipython
 

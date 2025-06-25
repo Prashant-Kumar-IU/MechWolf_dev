@@ -1,0 +1,273 @@
+{
+    "mechwolf_experiment": {
+        "version": "3.0.0",
+        "experiment_id": "2025_06_25_00_01_15_c60354b5",
+        "experiment_name": "Tabbed Designer Development Demo",
+        "created": "2025-06-25T00:01:15.515940",
+        "last_updated": "2025-06-25T01:46:42.023297",
+        "description": "MechWolf flow chemistry experiment",
+        "notebook_file": "tabbed_designer_demo_experiment.json"
+    },
+    "chemistry": {
+        "schema_version": "1.0.0",
+        "mass_scale": 100.0,
+        "concentration": 250.0,
+        "solid_reagents": [
+            {
+                "name": "Xtalfluor-E",
+                "molecular_weight": 229.0,
+                "eq": 1.0,
+                "position": 1,
+                "inChi": "1S/C4H10F2NS.BF4/c1-3-7(4-2)8(5)6;2-1(3,4)5/h3-4H2,1-2H3;/q+1;-1",
+                "inChi_Key": "YLNKFQWRRIXZPJ-UHFFFAOYSA-N",
+                "SMILES": "[B-](F)(F)(F)F.CCN(CC)[S+](F)F"
+            }
+        ],
+        "liquid_reagents": [
+            {
+                "name": "bromomethylbenzene",
+                "molecular_weight": 171.03,
+                "eq": 1.2,
+                "density": 1.441,
+                "position": 1,
+                "inChi": "1S/C7H7Br/c8-6-7-4-2-1-3-5-7/h1-5H,6H2",
+                "inChi_Key": "AGEZXYOZHKGVCM-UHFFFAOYSA-N",
+                "SMILES": "C1=CC=C(C=C1)CBr"
+            }
+        ],
+        "solvent": "THF",
+        "solvent_volume": []
+    },
+    "apparatus_config": {
+        "components": {
+            "active": [
+                {
+                    "type": "HarvardSyringePump",
+                    "name": "pump_1",
+                    "description": "",
+                    "instance_id": 1,
+                    "properties": {
+                        "syringe_volume": {
+                            "value": 3.0,
+                            "unit": "mL",
+                            "formatted": "3 mL"
+                        },
+                        "syringe_diameter": {
+                            "value": 10.0,
+                            "unit": "mm",
+                            "formatted": "10 mm"
+                        },
+                        "serial_port": "/dev/ttyUSB0"
+                    },
+                    "registry_info": {
+                        "class_name": "HarvardSyringePump",
+                        "import_path": "mechwolf.components.contrib.harvardpump",
+                        "display_name": "Harvard Syringe Pump",
+                        "icon": "💉",
+                        "default_properties": {
+                            "syringe_volume": "3 mL",
+                            "syringe_diameter": "10 mm",
+                            "serial_port": "/dev/ttyUSB0"
+                        },
+                        "required_properties": [
+                            "syringe_volume",
+                            "syringe_diameter",
+                            "serial_port"
+                        ],
+                        "property_types": {
+                            "syringe_volume": "text",
+                            "syringe_diameter": "text",
+                            "serial_port": "text"
+                        }
+                    },
+                    "unit_system_version": "1.0"
+                },
+                {
+                    "type": "HarvardSyringePump",
+                    "name": "pump_2",
+                    "description": "",
+                    "instance_id": 2,
+                    "properties": {
+                        "syringe_volume": {
+                            "value": 3.0,
+                            "unit": "mL",
+                            "formatted": "3 mL"
+                        },
+                        "syringe_diameter": {
+                            "value": 10.0,
+                            "unit": "mm",
+                            "formatted": "10 mm"
+                        },
+                        "serial_port": "/dev/ttyUSB0"
+                    },
+                    "registry_info": {
+                        "class_name": "HarvardSyringePump",
+                        "import_path": "mechwolf.components.contrib.harvardpump",
+                        "display_name": "Harvard Syringe Pump",
+                        "icon": "💉",
+                        "default_properties": {
+                            "syringe_volume": "3 mL",
+                            "syringe_diameter": "10 mm",
+                            "serial_port": "/dev/ttyUSB0"
+                        },
+                        "required_properties": [
+                            "syringe_volume",
+                            "syringe_diameter",
+                            "serial_port"
+                        ],
+                        "property_types": {
+                            "syringe_volume": "text",
+                            "syringe_diameter": "text",
+                            "serial_port": "text"
+                        }
+                    },
+                    "unit_system_version": "1.0"
+                }
+            ],
+            "passive": [
+                {
+                    "type": "Vessel",
+                    "name": "vessel_1",
+                    "description": "",
+                    "instance_id": 1,
+                    "properties": {},
+                    "registry_info": {
+                        "class_name": "Vessel",
+                        "import_path": "mechwolf",
+                        "display_name": "Reagent Vessel",
+                        "icon": "🧪",
+                        "default_properties": {},
+                        "required_properties": [],
+                        "property_types": {}
+                    },
+                    "unit_system_version": "1.0"
+                },
+                {
+                    "type": "Vessel",
+                    "name": "vessel_2",
+                    "description": "",
+                    "instance_id": 2,
+                    "properties": {},
+                    "registry_info": {
+                        "class_name": "Vessel",
+                        "import_path": "mechwolf",
+                        "display_name": "Reagent Vessel",
+                        "icon": "🧪",
+                        "default_properties": {},
+                        "required_properties": [],
+                        "property_types": {}
+                    },
+                    "unit_system_version": "1.0"
+                },
+                {
+                    "type": "Vessel",
+                    "name": "vessel_3",
+                    "description": "",
+                    "instance_id": 3,
+                    "properties": {},
+                    "registry_info": {
+                        "class_name": "Vessel",
+                        "import_path": "mechwolf",
+                        "display_name": "Reagent Vessel",
+                        "icon": "🧪",
+                        "default_properties": {},
+                        "required_properties": [],
+                        "property_types": {}
+                    },
+                    "unit_system_version": "1.0"
+                },
+                {
+                    "type": "TMixer",
+                    "name": "tmixer_1",
+                    "description": "",
+                    "instance_id": 1,
+                    "properties": {},
+                    "registry_info": {
+                        "class_name": "TMixer",
+                        "import_path": "mechwolf",
+                        "display_name": "T-Mixer",
+                        "icon": "🔀",
+                        "default_properties": {},
+                        "required_properties": [],
+                        "property_types": {}
+                    },
+                    "unit_system_version": "1.0"
+                },
+                {
+                    "type": "Tube",
+                    "name": "tube_1",
+                    "description": "",
+                    "instance_id": 1,
+                    "properties": {
+                        "length": {
+                            "value": 15.0,
+                            "unit": "ft",
+                            "formatted": "15 ft"
+                        },
+                        "ID": {
+                            "value": 0.0625,
+                            "unit": "in",
+                            "formatted": "1/16 in"
+                        },
+                        "OD": {
+                            "value": 1.0,
+                            "unit": "in",
+                            "formatted": "1 in"
+                        },
+                        "material": "PFA"
+                    },
+                    "registry_info": {
+                        "class_name": "Tube",
+                        "import_path": "mechwolf",
+                        "display_name": "Tubing",
+                        "icon": "🔗",
+                        "default_properties": {
+                            "length": "1 ft",
+                            "ID": "1/16 in",
+                            "OD": "1/8 in",
+                            "material": "PFA"
+                        },
+                        "required_properties": [
+                            "length",
+                            "ID",
+                            "OD",
+                            "material"
+                        ],
+                        "property_types": {
+                            "length": "text",
+                            "ID": "text",
+                            "OD": "text",
+                            "material": "text"
+                        }
+                    },
+                    "unit_system_version": "1.0"
+                }
+            ]
+        },
+        "connections": []
+    },
+    "protocol_config": {
+        "schema_version": "1.0.0",
+        "name": "New Protocol",
+        "description": "Flow chemistry protocol",
+        "procedures": [],
+        "timing": {},
+        "parameters": {}
+    },
+    "experiment_execution": {
+        "schema_version": "1.0.0",
+        "status": "not_started",
+        "sensor_data": {},
+        "executed_procedures": [],
+        "errors": [],
+        "logs": []
+    },
+    "analysis": {
+        "schema_version": "1.0.0",
+        "tlc_data": {},
+        "spectroscopy": {},
+        "chromatography": {},
+        "yield_data": {},
+        "custom_analysis": {}
+    }
+}

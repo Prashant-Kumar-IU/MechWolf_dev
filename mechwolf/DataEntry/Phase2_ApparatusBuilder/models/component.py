@@ -44,8 +44,13 @@ class ApparatusComponent:
         # Validate component name
         validate_component_name(name)
     
-    def to_dict(self):
-        """Convert to dictionary for metadata storage with structured units."""
+    def to_dict(self, include_registry_info=False):
+        """Convert to dictionary for metadata storage with structured units.
+        
+        Args:
+            include_registry_info: If True, includes full registry_info (legacy format)
+                                 If False, excludes registry_info (new compact format)
+        """
         # Process properties to separate values and units for better storage
         processed_properties = {}
         
@@ -67,15 +72,20 @@ class ApparatusComponent:
             else:
                 processed_properties[prop_name] = prop_value
         
-        return {
+        result = {
             'type': self.component_type,  # Match ApparatusDataManager expected format
             'name': self.name,
             'description': self.description,
             'instance_id': self.instance_id,
             'properties': processed_properties,
-            'registry_info': self.registry_info,
             'unit_system_version': '1.0'  # Track format version
         }
+        
+        # Include registry_info only if explicitly requested (for backwards compatibility)
+        if include_registry_info:
+            result['registry_info'] = self.registry_info
+            
+        return result
     
     def validate_properties(self) -> None:
         """
@@ -175,11 +185,26 @@ class ApparatusComponent:
             validate_serial_port(self.properties['serial_port'])
     
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
-        """Create component from dictionary."""
+    def from_dict(cls, data: Dict[str, Any], component_types_registry: Dict[str, Any] = None):
+        """Create component from dictionary.
+        
+        Args:
+            data: Component instance data
+            component_types_registry: Registry of component type definitions (for new format)
+        """
         comp_type = data.get('type', data.get('component_type', ''))
         comp = cls(comp_type, data['name'], data.get('instance_id', 0))
         comp.description = data.get('description', '')
+        
+        # Handle registry_info - either from data (old format) or from registry (new format)
+        if 'registry_info' in data:
+            # Old format - registry_info is embedded
+            comp.registry_info = data['registry_info']
+        elif component_types_registry and comp_type in component_types_registry:
+            # New format - get registry_info from component_types registry
+            comp.registry_info = component_types_registry[comp_type]
+        # If neither available, registry_info from __init__ is used (ComponentRegistry lookup)
+        
         # Load properties, handling both old and new unit formats
         raw_properties = data.get('properties', {})
         processed_properties = {}

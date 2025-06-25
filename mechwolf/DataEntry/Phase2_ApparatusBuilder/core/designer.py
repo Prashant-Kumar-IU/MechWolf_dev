@@ -583,13 +583,16 @@ class TabbedApparatusDesigner:
                 'connections': []
             })
             
-            # Save components separately as active/passive
+            # Save components separately as active/passive using compact format
             for name, comp in self.components.items():
-                comp_dict = comp.to_dict()
+                comp_dict = comp.to_dict(include_registry_info=False)  # Use compact format
                 if comp.component_type in ComponentRegistry.ACTIVE_COMPONENTS:
                     self.experiment_manager.apparatus.add_active_component(comp_dict)
                 else:
                     self.experiment_manager.apparatus.add_passive_component(comp_dict)
+            
+            # Ensure component types registry is updated
+            self.experiment_manager.apparatus.ensure_component_types_registry()
             
             # Save connections
             for conn in self.connections:
@@ -670,7 +673,7 @@ class TabbedApparatusDesigner:
     def get_apparatus_data(self):
         """Get current apparatus data for external use."""
         return {
-            'components': {name: comp.to_dict() for name, comp in self.components.items()},
+            'components': {name: comp.to_dict(include_registry_info=False) for name, comp in self.components.items()},
             'connections': [conn.to_dict() for conn in self.connections],
             'generated_code': self.code_output.value
         }

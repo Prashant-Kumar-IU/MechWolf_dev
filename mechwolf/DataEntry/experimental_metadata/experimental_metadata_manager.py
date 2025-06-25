@@ -10,7 +10,6 @@ import json
 import os
 from pathlib import Path
 from typing import Dict, Any, Optional, List
-from datetime import datetime
 
 from .schema_definitions import (
     UNIFIED_SCHEMA, 
@@ -58,7 +57,6 @@ class ExperimentalMetadataManager:
             experiment_name: Name for new experiment (ignored if file exists)
         """
         self.json_file = Path(json_file)
-        self.backup_dir = self.json_file.parent / ".mechwolf_backups" 
         self._data = {}
         self._is_loaded = False
         
@@ -120,23 +118,16 @@ class ExperimentalMetadataManager:
             print(f"❌ Unexpected error loading metadata: {e}")
             raise
     
-    def save(self, create_backup: bool = True) -> bool:
+    def save(self) -> bool:
         """
         Save experimental metadata to JSON file
         
-        Args:
-            create_backup: Whether to create a backup before saving
-            
         Returns:
             True if saved successfully, False otherwise
         """
         try:
             # Update last modified timestamp
             self._data["mechwolf_experiment"]["last_updated"] = get_current_timestamp()
-            
-            # Create backup if requested and file exists
-            if create_backup and self.json_file.exists():
-                self._create_backup()
             
             # Ensure parent directory exists
             self.json_file.parent.mkdir(parents=True, exist_ok=True)
@@ -310,29 +301,6 @@ class ExperimentalMetadataManager:
         
         return summary.strip()
     
-    def _create_backup(self) -> None:
-        """Create a backup of the current file"""
-        try:
-            # Create backup directory
-            self.backup_dir.mkdir(exist_ok=True)
-            
-            # Generate backup filename with timestamp
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_name = f"{self.json_file.stem}_backup_{timestamp}.json"
-            backup_path = self.backup_dir / backup_name
-            
-            # Copy current file to backup
-            import shutil
-            shutil.copy2(self.json_file, backup_path)
-            
-            # Clean up old backups (keep last 10)
-            backups = sorted(self.backup_dir.glob(f"{self.json_file.stem}_backup_*.json"))
-            if len(backups) > 10:
-                for old_backup in backups[:-10]:
-                    old_backup.unlink()
-            
-        except Exception as e:
-            print(f"⚠️  Warning: Could not create backup: {e}")
     
     def _migrate_legacy_data(self, legacy_data: Dict[str, Any]) -> Dict[str, Any]:
         """Migrate legacy data format to unified format"""
