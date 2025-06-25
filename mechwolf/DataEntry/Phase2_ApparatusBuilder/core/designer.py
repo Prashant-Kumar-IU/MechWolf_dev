@@ -237,30 +237,45 @@ class TabbedApparatusDesigner:
     
     def _copy_code(self, _=None):
         """Copy the generated code to clipboard."""
-        try:
-            # Use JavaScript to copy to clipboard in Jupyter
-            from IPython.display import Javascript, display
-            # Escape backticks in the code content
-            escaped_code = self.code_output.value.replace('`', r'\`')
-            js_code = f"""
-            navigator.clipboard.writeText(`{escaped_code}`).then(function() {{
-                console.log('Code copied to clipboard!');
-            }}, function(err) {{
-                console.error('Could not copy code: ', err);
-                // Fallback: select the text area content
-                var textarea = document.querySelector('textarea[placeholder*="Apparatus code"]') || 
-                              document.querySelector('textarea[disabled]');
-                if (textarea) {{
-                    textarea.select();
-                    document.execCommand('copy');
-                }}
-            }});
-            """
-            display(Javascript(js_code))
-            print("📋 Code copied to clipboard!")
-        except Exception as e:
-            print(f"⚠️ Could not copy to clipboard: {e}")
-            print("💡 Try selecting the code manually and copying with Ctrl+C/Cmd+C")
+        from IPython.display import display, HTML
+        
+        # Simple JavaScript that focuses on reliability
+        html_content = f"""
+        <script>
+        function copyCodeToClipboard() {{
+            const code = {repr(self.code_output.value)};
+            
+            if (navigator.clipboard) {{
+                navigator.clipboard.writeText(code).then(() => {{
+                    alert('📋 Code copied to clipboard!');
+                }}).catch(() => {{
+                    fallbackCopy(code);
+                }});
+            }} else {{
+                fallbackCopy(code);
+            }}
+        }}
+        
+        function fallbackCopy(text) {{
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {{
+                document.execCommand('copy');
+                alert('📋 Code copied to clipboard!');
+            }} catch (err) {{
+                alert('❌ Failed to copy. Please copy manually.');
+            }}
+            document.body.removeChild(textArea);
+        }}
+        
+        copyCodeToClipboard();
+        </script>
+        """
+        
+        display(HTML(html_content))
+    
     
     def _on_tab_change(self, change):
         """Handle tab change events."""

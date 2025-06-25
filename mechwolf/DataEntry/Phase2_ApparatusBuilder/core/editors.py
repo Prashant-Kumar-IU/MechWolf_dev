@@ -388,19 +388,21 @@ class ConnectionEditor:
             if 0 <= connection_index < len(designer_instance.connections):
                 del designer_instance.connections[connection_index]
                 
+                # Reset connection editor first to clear form fields
+                ConnectionEditor._reset_connection_editor(designer_instance)
+                
                 # Update displays
                 designer_instance._update_connections_display()
                 designer_instance._update_connection_dropdowns()
                 designer_instance._update_network_visualization()
-                # Try safe save first, fall back to regular save
-            if hasattr(designer_instance, '_safe_save_to_metadata'):
-                designer_instance._safe_save_to_metadata()
-            elif hasattr(designer_instance, '_save_to_metadata'):
-                designer_instance._save_to_metadata()
-                print(f"🗑️ Deleted connection #{connection_index + 1}")
                 
-                # Reset connection editor
-                ConnectionEditor._reset_connection_editor(designer_instance)
+                # Try safe save first, fall back to regular save
+                if hasattr(designer_instance, '_safe_save_to_metadata'):
+                    designer_instance._safe_save_to_metadata()
+                elif hasattr(designer_instance, '_save_to_metadata'):
+                    designer_instance._save_to_metadata()
+                    
+                print(f"🗑️ Deleted connection #{connection_index + 1}")
         
         def cancel_edit(_):
             # Reset connection editor without saving
@@ -430,7 +432,11 @@ class ConnectionEditor:
         # Handle both widget structures (direct properties vs tab-based)
         if hasattr(designer_instance, 'connection_selector') and hasattr(designer_instance, 'connection_property_editor'):
             # tabbed_apparatus_designer.py structure
+            # Force clear the selector value and options first
+            designer_instance.connection_selector.unobserve_all()
             designer_instance.connection_selector.value = None
+            # Clear and reset the property editor immediately
+            designer_instance.connection_property_editor.children = []
             designer_instance.connection_property_editor.children = [
                 widgets.HTML("<b>Edit Connection:</b>"),
                 designer_instance.connection_selector,
@@ -438,7 +444,11 @@ class ConnectionEditor:
             ]
         elif hasattr(designer_instance, 'connections_tab') and hasattr(designer_instance.connections_tab, 'connection_selector'):
             # core/designer.py structure
+            # Force clear the selector value and options first
+            designer_instance.connections_tab.connection_selector.unobserve_all()
             designer_instance.connections_tab.connection_selector.value = None
+            # Clear and reset the property editor immediately
+            designer_instance.connections_tab.connection_property_editor.children = []
             designer_instance.connections_tab.connection_property_editor.children = [
                 widgets.HTML("<b>Edit Connection:</b>"),
                 designer_instance.connections_tab.connection_selector,
