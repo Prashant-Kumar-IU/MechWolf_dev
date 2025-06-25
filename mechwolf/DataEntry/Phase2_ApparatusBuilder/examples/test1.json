@@ -4,7 +4,7 @@
         "experiment_id": "2025_06_25_03_14_25_7bcb5658",
         "experiment_name": "Phase1 Reagent Entry Test",
         "created": "2025-06-25T03:14:25.556487",
-        "last_updated": "2025-06-25T03:47:34.802186",
+        "last_updated": "2025-06-25T03:54:52.098196",
         "description": "MechWolf flow chemistry experiment",
         "notebook_file": "test1.json"
     },
@@ -148,9 +148,9 @@
                             "formatted": "1/16 in"
                         },
                         "OD": {
-                            "value": 0.125,
+                            "value": 0.1,
                             "unit": "in",
-                            "formatted": "1/8 in"
+                            "formatted": "0.1 in"
                         },
                         "material": "PFA"
                     },
@@ -209,23 +209,6 @@
             ]
         },
         "connections": [
-            {
-                "from": "vessel_3",
-                "to": "pump_2",
-                "tube_type": "tube_1",
-                "tube_length": {
-                    "value": 1.0,
-                    "unit": "ft",
-                    "formatted": "1 ft"
-                },
-                "tube_properties": {
-                    "length": "1 ft",
-                    "ID": "1/16 in",
-                    "OD": "1/8 in",
-                    "material": "PFA"
-                },
-                "unit_system_version": "1.0"
-            },
             {
                 "from": "pump_2",
                 "to": "tmixer_2",
@@ -327,6 +310,23 @@
                     "material": "PFA"
                 },
                 "unit_system_version": "1.0"
+            },
+            {
+                "from": "vessel_3",
+                "to": "pump_2",
+                "tube_type": "tube_1",
+                "tube_length": {
+                    "value": 1.0,
+                    "unit": "ft",
+                    "formatted": "1 ft"
+                },
+                "tube_properties": {
+                    "length": "1 ft",
+                    "ID": "1/16 in",
+                    "OD": "1/8 in",
+                    "material": "PFA"
+                },
+                "unit_system_version": "1.0"
             }
         ],
         "component_types": {
@@ -354,20 +354,20 @@
                     "material": "text"
                 }
             },
-            "TMixer": {
-                "class_name": "TMixer",
-                "import_path": "mechwolf",
-                "display_name": "T-Mixer",
-                "icon": "🔀",
-                "default_properties": {},
-                "required_properties": [],
-                "property_types": {}
-            },
             "Vessel": {
                 "class_name": "Vessel",
                 "import_path": "mechwolf",
                 "display_name": "Reagent Vessel",
                 "icon": "🧪",
+                "default_properties": {},
+                "required_properties": [],
+                "property_types": {}
+            },
+            "TMixer": {
+                "class_name": "TMixer",
+                "import_path": "mechwolf",
+                "display_name": "T-Mixer",
+                "icon": "🔀",
                 "default_properties": {},
                 "required_properties": [],
                 "property_types": {}
