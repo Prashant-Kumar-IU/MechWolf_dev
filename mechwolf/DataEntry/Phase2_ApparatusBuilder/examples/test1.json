@@ -4,7 +4,7 @@
         "experiment_id": "2025_06_25_03_14_25_7bcb5658",
         "experiment_name": "Phase1 Reagent Entry Test",
         "created": "2025-06-25T03:14:25.556487",
-        "last_updated": "2025-06-25T03:34:51.487067",
+        "last_updated": "2025-06-25T03:47:34.802186",
         "description": "MechWolf flow chemistry experiment",
         "notebook_file": "test1.json"
     },
@@ -210,23 +210,6 @@
         },
         "connections": [
             {
-                "from": "pump_1",
-                "to": "tmixer_1",
-                "tube_type": "tube_1",
-                "tube_length": {
-                    "value": 1.0,
-                    "unit": "ft",
-                    "formatted": "1 ft"
-                },
-                "tube_properties": {
-                    "length": "1 ft",
-                    "ID": "1/16 in",
-                    "OD": "1/8 in",
-                    "material": "PFA"
-                },
-                "unit_system_version": "1.0"
-            },
-            {
                 "from": "vessel_3",
                 "to": "pump_2",
                 "tube_type": "tube_1",
@@ -327,39 +310,26 @@
                     "material": "PFA"
                 },
                 "unit_system_version": "1.0"
+            },
+            {
+                "from": "pump_1",
+                "to": "tmixer_1",
+                "tube_type": "tube_1",
+                "tube_length": {
+                    "value": 1.0,
+                    "unit": "ft",
+                    "formatted": "1 ft"
+                },
+                "tube_properties": {
+                    "length": "1 ft",
+                    "ID": "1/16 in",
+                    "OD": "1/8 in",
+                    "material": "PFA"
+                },
+                "unit_system_version": "1.0"
             }
         ],
         "component_types": {
-            "TMixer": {
-                "class_name": "TMixer",
-                "import_path": "mechwolf",
-                "display_name": "T-Mixer",
-                "icon": "🔀",
-                "default_properties": {},
-                "required_properties": [],
-                "property_types": {}
-            },
-            "HarvardSyringePump": {
-                "class_name": "HarvardSyringePump",
-                "import_path": "mechwolf.components.contrib.harvardpump",
-                "display_name": "Harvard Syringe Pump",
-                "icon": "💉",
-                "default_properties": {
-                    "syringe_volume": "3 mL",
-                    "syringe_diameter": "10 mm",
-                    "serial_port": "/dev/ttyUSB0"
-                },
-                "required_properties": [
-                    "syringe_volume",
-                    "syringe_diameter",
-                    "serial_port"
-                ],
-                "property_types": {
-                    "syringe_volume": "text",
-                    "syringe_diameter": "text",
-                    "serial_port": "text"
-                }
-            },
             "Tube": {
                 "class_name": "Tube",
                 "import_path": "mechwolf",
@@ -384,6 +354,15 @@
                     "material": "text"
                 }
             },
+            "TMixer": {
+                "class_name": "TMixer",
+                "import_path": "mechwolf",
+                "display_name": "T-Mixer",
+                "icon": "🔀",
+                "default_properties": {},
+                "required_properties": [],
+                "property_types": {}
+            },
             "Vessel": {
                 "class_name": "Vessel",
                 "import_path": "mechwolf",
@@ -392,6 +371,27 @@
                 "default_properties": {},
                 "required_properties": [],
                 "property_types": {}
+            },
+            "HarvardSyringePump": {
+                "class_name": "HarvardSyringePump",
+                "import_path": "mechwolf.components.contrib.harvardpump",
+                "display_name": "Harvard Syringe Pump",
+                "icon": "💉",
+                "default_properties": {
+                    "syringe_volume": "3 mL",
+                    "syringe_diameter": "10 mm",
+                    "serial_port": "/dev/ttyUSB0"
+                },
+                "required_properties": [
+                    "syringe_volume",
+                    "syringe_diameter",
+                    "serial_port"
+                ],
+                "property_types": {
+                    "syringe_volume": "text",
+                    "syringe_diameter": "text",
+                    "serial_port": "text"
+                }
             }
         }
     },

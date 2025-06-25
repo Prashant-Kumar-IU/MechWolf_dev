@@ -109,11 +109,9 @@ class TabbedApparatusDesigner:
         
         # Code generation section
         self.generate_button = widgets.Button(description="🔄 Generate Code", button_style='warning')
-        self.copy_button = widgets.Button(description="📋 Copy Code", button_style='success')
         code_header = widgets.HBox([
             widgets.HTML("<h4>🐍 Generated Apparatus Code</h4>"),
-            self.generate_button,
-            self.copy_button
+            self.generate_button
         ])
         
         # Main layout
@@ -235,46 +233,6 @@ class TabbedApparatusDesigner:
         """Generate MechWolf apparatus code."""
         self.code_output.value = CodeGenerator.generate_code(self.components, self.connections)
     
-    def _copy_code(self, _=None):
-        """Copy the generated code to clipboard."""
-        from IPython.display import display, HTML
-        
-        # Simple JavaScript that focuses on reliability
-        html_content = f"""
-        <script>
-        function copyCodeToClipboard() {{
-            const code = {repr(self.code_output.value)};
-            
-            if (navigator.clipboard) {{
-                navigator.clipboard.writeText(code).then(() => {{
-                    alert('📋 Code copied to clipboard!');
-                }}).catch(() => {{
-                    fallbackCopy(code);
-                }});
-            }} else {{
-                fallbackCopy(code);
-            }}
-        }}
-        
-        function fallbackCopy(text) {{
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            document.body.appendChild(textArea);
-            textArea.select();
-            try {{
-                document.execCommand('copy');
-                alert('📋 Code copied to clipboard!');
-            }} catch (err) {{
-                alert('❌ Failed to copy. Please copy manually.');
-            }}
-            document.body.removeChild(textArea);
-        }}
-        
-        copyCodeToClipboard();
-        </script>
-        """
-        
-        display(HTML(html_content))
     
     
     def _on_tab_change(self, change):
