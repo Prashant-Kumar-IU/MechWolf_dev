@@ -742,6 +742,9 @@ class TabbedApparatusDesigner:
         self.passive_component_selector.options = passive_components
         
         # Update connection selector with readable connection descriptions
+        # Store the current event handler to preserve it
+        current_observers = getattr(self.connection_selector, '_trait_notifiers', {}).get('value', [])
+        
         # Force clear the dropdown first
         self.connection_selector.options = []
         self.connection_selector.value = None
@@ -760,6 +763,10 @@ class TabbedApparatusDesigner:
             
             # Set new options
             self.connection_selector.options = connection_options
+        
+        # Ensure event handler is still bound after options update
+        if not current_observers and hasattr(self, '_on_connection_selected'):
+            self.connection_selector.observe(self._on_connection_selected, names='value')
     
     def _update_network_visualization(self):
         """Update the network visualization display."""
@@ -1200,6 +1207,8 @@ class TabbedApparatusDesigner:
     def _reset_connection_editor(self):
         """Reset connection property editor to default state."""
         self.connection_selector.value = None
+        # Update dropdown options to reflect current connections
+        self._update_connection_dropdowns()
         self.connection_property_editor.children = [
             widgets.HTML("<b>Edit Connection:</b>"),
             self.connection_selector,

@@ -432,9 +432,10 @@ class ConnectionEditor:
         # Handle both widget structures (direct properties vs tab-based)
         if hasattr(designer_instance, 'connection_selector') and hasattr(designer_instance, 'connection_property_editor'):
             # tabbed_apparatus_designer.py structure
-            # Force clear the selector value and options first
-            designer_instance.connection_selector.unobserve_all()
+            # Force clear the selector value first
             designer_instance.connection_selector.value = None
+            # Update dropdown options and re-bind event handler
+            designer_instance._update_connection_dropdowns()
             # Clear and reset the property editor immediately
             designer_instance.connection_property_editor.children = []
             designer_instance.connection_property_editor.children = [
@@ -444,9 +445,10 @@ class ConnectionEditor:
             ]
         elif hasattr(designer_instance, 'connections_tab') and hasattr(designer_instance.connections_tab, 'connection_selector'):
             # core/designer.py structure
-            # Force clear the selector value and options first
-            designer_instance.connections_tab.connection_selector.unobserve_all()
+            # Force clear the selector value first
             designer_instance.connections_tab.connection_selector.value = None
+            # Update dropdown options and re-bind event handler
+            designer_instance._update_connection_dropdowns()
             # Clear and reset the property editor immediately
             designer_instance.connections_tab.connection_property_editor.children = []
             designer_instance.connections_tab.connection_property_editor.children = [
