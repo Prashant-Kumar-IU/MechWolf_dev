@@ -4,7 +4,7 @@
         "experiment_id": "2025_06_25_03_14_25_7bcb5658",
         "experiment_name": "Phase1 Reagent Entry Test",
         "created": "2025-06-25T03:14:25.556487",
-        "last_updated": "2025-06-25T03:54:52.098196",
+        "last_updated": "2025-06-25T16:42:46.460715",
         "description": "MechWolf flow chemistry experiment",
         "notebook_file": "test1.json"
     },
@@ -60,26 +60,6 @@
                         "serial_port": "/dev/ttyUSB0"
                     },
                     "unit_system_version": "1.0"
-                },
-                {
-                    "type": "HarvardSyringePump",
-                    "name": "pump_2",
-                    "description": "",
-                    "instance_id": 2,
-                    "properties": {
-                        "syringe_volume": {
-                            "value": 3.0,
-                            "unit": "mL",
-                            "formatted": "3 mL"
-                        },
-                        "syringe_diameter": {
-                            "value": 10.0,
-                            "unit": "mm",
-                            "formatted": "10 mm"
-                        },
-                        "serial_port": "/dev/ttyUSB0"
-                    },
-                    "unit_system_version": "1.0"
                 }
             ],
             "passive": [
@@ -108,26 +88,10 @@
                     "unit_system_version": "1.0"
                 },
                 {
-                    "type": "Vessel",
-                    "name": "vessel_4",
-                    "description": "",
-                    "instance_id": 4,
-                    "properties": {},
-                    "unit_system_version": "1.0"
-                },
-                {
                     "type": "TMixer",
                     "name": "tmixer_1",
                     "description": "",
                     "instance_id": 1,
-                    "properties": {},
-                    "unit_system_version": "1.0"
-                },
-                {
-                    "type": "TMixer",
-                    "name": "tmixer_2",
-                    "description": "",
-                    "instance_id": 2,
                     "properties": {},
                     "unit_system_version": "1.0"
                 },
@@ -180,38 +144,13 @@
                         "material": "PFA"
                     },
                     "unit_system_version": "1.0"
-                },
-                {
-                    "type": "Tube",
-                    "name": "tube_3",
-                    "description": "",
-                    "instance_id": 3,
-                    "properties": {
-                        "length": {
-                            "value": 1.0,
-                            "unit": "ft",
-                            "formatted": "1 ft"
-                        },
-                        "ID": {
-                            "value": 0.0625,
-                            "unit": "in",
-                            "formatted": "1/16 in"
-                        },
-                        "OD": {
-                            "value": 0.125,
-                            "unit": "in",
-                            "formatted": "1/8 in"
-                        },
-                        "material": "PFA"
-                    },
-                    "unit_system_version": "1.0"
                 }
             ]
         },
         "connections": [
             {
-                "from": "pump_2",
-                "to": "tmixer_2",
+                "from": "pump_1",
+                "to": "vessel_1",
                 "tube_type": "tube_1",
                 "tube_length": {
                     "value": 1.0,
@@ -221,15 +160,15 @@
                 "tube_properties": {
                     "length": "1 ft",
                     "ID": "1/16 in",
-                    "OD": "1/8 in",
+                    "OD": "0.1 in",
                     "material": "PFA"
                 },
                 "unit_system_version": "1.0"
             },
             {
-                "from": "tmixer_2",
-                "to": "vessel_4",
-                "tube_type": "tube_3",
+                "from": "vessel_1",
+                "to": "tmixer_1",
+                "tube_type": "tube_1",
                 "tube_length": {
                     "value": 1.0,
                     "unit": "ft",
@@ -238,14 +177,31 @@
                 "tube_properties": {
                     "length": "1 ft",
                     "ID": "1/16 in",
-                    "OD": "1/8 in",
+                    "OD": "0.1 in",
+                    "material": "PFA"
+                },
+                "unit_system_version": "1.0"
+            },
+            {
+                "from": "vessel_2",
+                "to": "tmixer_1",
+                "tube_type": "tube_1",
+                "tube_length": {
+                    "value": 1.0,
+                    "unit": "ft",
+                    "formatted": "1 ft"
+                },
+                "tube_properties": {
+                    "length": "1 ft",
+                    "ID": "1/16 in",
+                    "OD": "0.1 in",
                     "material": "PFA"
                 },
                 "unit_system_version": "1.0"
             },
             {
                 "from": "tmixer_1",
-                "to": "tmixer_2",
+                "to": "vessel_3",
                 "tube_type": "tube_2",
                 "tube_length": {
                     "value": 1.0,
@@ -261,42 +217,8 @@
                 "unit_system_version": "1.0"
             },
             {
-                "from": "vessel_1",
-                "to": "pump_1",
-                "tube_type": "tube_1",
-                "tube_length": {
-                    "value": 1.0,
-                    "unit": "ft",
-                    "formatted": "1 ft"
-                },
-                "tube_properties": {
-                    "length": "1 ft",
-                    "ID": "1/16 in",
-                    "OD": "1/8 in",
-                    "material": "PFA"
-                },
-                "unit_system_version": "1.0"
-            },
-            {
-                "from": "vessel_2",
-                "to": "pump_1",
-                "tube_type": "tube_1",
-                "tube_length": {
-                    "value": 1.0,
-                    "unit": "ft",
-                    "formatted": "1 ft"
-                },
-                "tube_properties": {
-                    "length": "1 ft",
-                    "ID": "1/16 in",
-                    "OD": "1/8 in",
-                    "material": "PFA"
-                },
-                "unit_system_version": "1.0"
-            },
-            {
                 "from": "pump_1",
-                "to": "tmixer_1",
+                "to": "vessel_2",
                 "tube_type": "tube_1",
                 "tube_length": {
                     "value": 1.0,
@@ -306,24 +228,7 @@
                 "tube_properties": {
                     "length": "1 ft",
                     "ID": "1/16 in",
-                    "OD": "1/8 in",
-                    "material": "PFA"
-                },
-                "unit_system_version": "1.0"
-            },
-            {
-                "from": "vessel_3",
-                "to": "pump_2",
-                "tube_type": "tube_1",
-                "tube_length": {
-                    "value": 1.0,
-                    "unit": "ft",
-                    "formatted": "1 ft"
-                },
-                "tube_properties": {
-                    "length": "1 ft",
-                    "ID": "1/16 in",
-                    "OD": "1/8 in",
+                    "OD": "0.1 in",
                     "material": "PFA"
                 },
                 "unit_system_version": "1.0"
@@ -354,24 +259,6 @@
                     "material": "text"
                 }
             },
-            "Vessel": {
-                "class_name": "Vessel",
-                "import_path": "mechwolf",
-                "display_name": "Reagent Vessel",
-                "icon": "🧪",
-                "default_properties": {},
-                "required_properties": [],
-                "property_types": {}
-            },
-            "TMixer": {
-                "class_name": "TMixer",
-                "import_path": "mechwolf",
-                "display_name": "T-Mixer",
-                "icon": "🔀",
-                "default_properties": {},
-                "required_properties": [],
-                "property_types": {}
-            },
             "HarvardSyringePump": {
                 "class_name": "HarvardSyringePump",
                 "import_path": "mechwolf.components.contrib.harvardpump",
@@ -392,6 +279,24 @@
                     "syringe_diameter": "text",
                     "serial_port": "text"
                 }
+            },
+            "Vessel": {
+                "class_name": "Vessel",
+                "import_path": "mechwolf",
+                "display_name": "Reagent Vessel",
+                "icon": "🧪",
+                "default_properties": {},
+                "required_properties": [],
+                "property_types": {}
+            },
+            "TMixer": {
+                "class_name": "TMixer",
+                "import_path": "mechwolf",
+                "display_name": "T-Mixer",
+                "icon": "🔀",
+                "default_properties": {},
+                "required_properties": [],
+                "property_types": {}
             }
         }
     },

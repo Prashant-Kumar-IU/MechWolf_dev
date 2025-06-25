@@ -1,11 +1,13 @@
 """
 Phase3_ProtocolDev - Protocol development and validation
 
-This module provides an integrated interface for developing and validating
-protocols that use the configured apparatus and pumps from previous phases.
+This module provides interfaces for developing and validating protocols that use 
+the configured apparatus and pumps from previous phases.
 
 Key Features:
-    - Protocol procedure builder with drag-and-drop interface
+    - Simple protocol builder with table-based interface
+    - Clean MechWolf code generation with timedelta variables
+    - Advanced protocol GUI with drag-and-drop interface
     - Real-time MechWolf core validation integration
     - Time-based procedure sequencing
     - Parameter validation and safety checks
@@ -13,12 +15,28 @@ Key Features:
     - Integration with experimental metadata system
 
 Main Components:
-    protocol_gui: Main protocol development interface
+    simple_protocol_builder: Streamlined table-based protocol builder
+    protocol_gui: Advanced protocol development interface
     procedure_builder: Visual procedure construction
     protocol_validator: MechWolf core validation integration
-    simulation_engine: Protocol simulation capabilities
 """
 
+# Import Simple Protocol Builder
+try:
+    from .simple_protocol_builder import SimpleProtocolBuilder
+except ImportError as e:
+    # Handle missing dependencies gracefully
+    class SimpleProtocolBuilder:
+        def __init__(self, experiment_manager):
+            self.experiment = experiment_manager
+            print(f"Warning: SimpleProtocolBuilder dependencies not available: {e}")
+        
+        def display(self):
+            print("SimpleProtocolBuilder not available - install required dependencies (ipywidgets, etc.)")
+    
+    print(f"Warning: SimpleProtocolBuilder not fully available: {e}")
+
+# Import Advanced Protocol GUI
 try:
     from .protocol_gui import ProtocolDevGUI
 except ImportError as e:
@@ -35,10 +53,24 @@ except ImportError as e:
             
     print(f"Warning: ProtocolDevGUI not fully available: {e}")
 
-# Convenience function for launching GUI
+# Convenience functions for launching GUIs
+def launch_simple_builder(experiment_manager):
+    """
+    Launch the simple protocol builder (recommended)
+    
+    Args:
+        experiment_manager: ExperimentalMetadataManager instance
+        
+    Returns:
+        SimpleProtocolBuilder instance
+    """
+    builder = SimpleProtocolBuilder(experiment_manager)
+    builder.display()
+    return builder
+
 def launch_gui(experiment_manager, protocol=None, pumps=None):
     """
-    Launch the protocol development GUI
+    Launch the advanced protocol development GUI
     
     Args:
         experiment_manager: ExperimentalMetadataManager instance
@@ -82,4 +114,7 @@ def get_validated_protocol(experiment_manager, apparatus):
         print(f"Error creating validated protocol: {e}")
         return None
 
-__all__ = ['ProtocolDevGUI', 'launch_gui', 'get_validated_protocol']
+__all__ = [
+    'SimpleProtocolBuilder', 'launch_simple_builder',
+    'ProtocolDevGUI', 'launch_gui', 'get_validated_protocol'
+]
