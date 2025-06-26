@@ -315,7 +315,7 @@ class FinalDetailsTab:
             
             html += f"""
                     <tr style="{row_style}">
-                        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">
+                        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; word-wrap: break-word; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                             <strong>{reagent['name']}</strong>
                         </td>
                         <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">
