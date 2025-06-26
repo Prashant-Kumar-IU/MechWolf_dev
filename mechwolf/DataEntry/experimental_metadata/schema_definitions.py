@@ -5,7 +5,7 @@ This module defines the JSON schema structure for the unified experimental
 metadata format. Each section has its own schema version and validation rules.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 # Current schema version
@@ -50,6 +50,7 @@ UNIFIED_SCHEMA = {
                             "eq": {"type": ["number", "null"]},
                             "mass": {"type": "number"},
                             "position": {"type": ["number", "null"]},
+                            "syringe": {"type": ["number", "null"]}
                         },
                         "required": ["name", "molecular_weight"]
                     }
@@ -68,6 +69,7 @@ UNIFIED_SCHEMA = {
                             "volume": {"type": ["number", "null"]},
                             "density": {"type": "number"},
                             "position": {"type": ["number", "null"]},
+                            "syringe": {"type": ["number", "null"]}
                         },
                         "required": ["name", "molecular_weight"]
                     }
@@ -330,3 +332,9 @@ def get_current_timestamp() -> str:
     """Get current timestamp in ISO format"""
     return datetime.now().isoformat()
 
+# Schema version mappings for migration
+SCHEMA_VERSION_MAPPING = {
+    "1.0.0": "Legacy format",
+    "2.0.0": "FlowSetups_New format", 
+    "3.0.0": "Unified experimental metadata format"
+}
