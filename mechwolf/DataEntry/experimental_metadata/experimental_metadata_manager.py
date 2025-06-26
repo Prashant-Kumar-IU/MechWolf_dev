@@ -97,21 +97,18 @@ class ExperimentalMetadataManager:
             with open(self.json_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             
-            # Handle different formats
-            if "mechwolf_experiment" in data:
-                # Already in unified format
-                self._data = data
-            else:
-                # Legacy format - attempt to migrate
-                self._data = self._migrate_legacy_data(data)
+            # Validate unified format
+            if "mechwolf_experiment" not in data:
+                raise ValueError(f"Invalid format: {self.json_file} is not in unified experimental metadata format")
             
+            self._data = data
             self._is_loaded = True
             return self._data
             
         except (FileNotFoundError, json.JSONDecodeError) as e:
             print(f"⚠️  Error loading {self.json_file}: {e}")
             print("Creating new experiment metadata...")
-            self.create_new_experiment("Migrated Experiment")
+            self.create_new_experiment("New Experiment")
             return self._data
         
         except Exception as e:
@@ -302,53 +299,3 @@ class ExperimentalMetadataManager:
         return summary.strip()
     
     
-    def _migrate_legacy_data(self, legacy_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Migrate legacy data format to unified format"""
-        print("🔄 Migrating legacy data to unified format...")
-        
-        # Start with default structure
-        unified_data = DEFAULT_EXPERIMENT_METADATA.copy()
-        
-        # Set experiment metadata
-        now = get_current_timestamp()
-        experiment_id = generate_experiment_id()
-        
-        unified_data["mechwolf_experiment"].update({
-            "experiment_id": experiment_id,
-            "experiment_name": "Migrated Experiment",
-            "created": now,
-            "last_updated": now,
-            "notebook_file": str(self.json_file.name),
-            "description": "Migrated from legacy format"
-        })
-        
-        # Migrate chemistry data
-        if any(key in legacy_data for key in ["solid_reagents", "liquid_reagents", "mass_scale"]):
-            chemistry_section = unified_data["chemistry"]
-            
-            # Copy chemistry fields
-            for field in ["mass_scale", "concentration", "solvent", "limiting_reagent",
-                         "solid_reagents", "liquid_reagents", "solvent_volume"]:
-                if field in legacy_data:
-                    chemistry_section[field] = legacy_data[field]
-        
-        # Migrate apparatus data
-        if "apparatus_config" in legacy_data:
-            unified_data["apparatus_config"] = legacy_data["apparatus_config"]
-            # Ensure schema version is set
-            unified_data["apparatus_config"]["schema_version"] = "2.0.0"
-        
-        # Migrate protocol data
-        if any(key in legacy_data for key in ["protocol_configs", "protocol_config"]):
-            if "protocol_configs" in legacy_data and legacy_data["protocol_configs"]:
-                # Take the latest protocol config
-                latest_protocol = legacy_data["protocol_configs"][-1]
-                unified_data["protocol_config"] = latest_protocol
-            elif "protocol_config" in legacy_data:
-                unified_data["protocol_config"] = legacy_data["protocol_config"]
-            
-            # Ensure schema version is set
-            unified_data["protocol_config"]["schema_version"] = "1.0.0"
-        
-        print("✅ Migration completed")
-        return unified_data

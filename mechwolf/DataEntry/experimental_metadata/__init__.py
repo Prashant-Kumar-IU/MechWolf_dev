@@ -32,7 +32,6 @@ from .apparatus_manager import ApparatusDataManager
 from .protocol_manager import ProtocolDataManager
 from .analysis_manager import AnalysisDataManager
 from .schema_definitions import UNIFIED_SCHEMA, validate_section
-from .migration_utilities import migrate_legacy_files, convert_reagent_json, convert_apparatus_json
 
 __version__ = "3.0.0"
 __author__ = "MechWolf Experimental Metadata Team"
@@ -55,7 +54,6 @@ __all__ = [
     'AnalysisDataManager',
     'create_experiment_metadata',
     'load_experiment_metadata',
-    'migrate_legacy_files',
     'UNIFIED_SCHEMA',
     'validate_section'
 ]

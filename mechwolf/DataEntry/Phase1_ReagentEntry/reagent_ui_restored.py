@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional, List, Callable
 import traceback
 
 # Import the components we've already created
-from .data_adapter import ReagentDataAdapter
+# Note: data_adapter removed - now using direct experimental_metadata integration
 from .pubchem_service import PubChemService
 from .structure_visualization import StructureVisualization
 from .ui_components import UIComponents
@@ -296,7 +296,8 @@ class ReagentUI:
             experiment_manager: ExperimentalMetadataManager instance
         """
         self.experiment = experiment_manager
-        self.data_manager = ReagentDataAdapter(experiment_manager)
+        # Direct integration with experimental metadata (no adapter needed)
+        self.chemistry_manager = experiment_manager.chemistry
         self.pubchem_service = PubChemService()
         
         # Initialize UI state
@@ -833,7 +834,7 @@ class ReagentUI:
         with self.reagents_output:
             clear_output(wait=True)
             
-            data = self.data_manager.load_data()
+            data = self.chemistry_manager.get_data()
             
             # Display solid reagents
             solid_reagents = data.get("solid reagents", [])
@@ -966,7 +967,7 @@ class ReagentUI:
     
     def _delete_reagent(self, reagent: Dict[str, Any]):
         """Delete a reagent"""
-        success = self.data_manager.delete_reagent(reagent)
+        success = self.chemistry_manager.remove_reagent(reagent.get('name', ''), reagent.get('type', 'solid'))
         if success:
             print(f"✅ Deleted {reagent.get('name', 'reagent')}")
             self._refresh_display_tab()
@@ -988,7 +989,7 @@ class ReagentUI:
         self._refresh_final_details_display()
         
         # Load current data for form initialization
-        data = self.data_manager.load_data()
+        data = self.chemistry_manager.get_data()
         
         # Form fields
         mass_scale_input = widgets.FloatText(
@@ -1072,7 +1073,8 @@ class ReagentUI:
                     return
                 
                 # Save the final details
-                success = self.data_manager.update_final_details(
+                # Update final details directly through chemistry manager
+                success = self.chemistry_manager.update_reagent_scale(
                     mass_scale,
                     concentration,
                     solvent
@@ -1155,7 +1157,7 @@ class ReagentUI:
     
     def _get_limiting_reagent_info(self):
         """Get current limiting reagent name and molecular weight"""
-        data = self.data_manager.load_data()
+        data = self.chemistry_manager.get_data()
         
         # Find the limiting reagent (eq = 1.0)
         limiting_reagent = None
@@ -1190,10 +1192,10 @@ class ReagentUI:
         try:
             if old_reagent:
                 # Update existing
-                success = self.data_manager.update_reagent(old_reagent, new_reagent, "solid")
+                success = self.chemistry_manager.update_solid_reagent(old_reagent, new_reagent)
             else:
                 # Add new
-                success = self.data_manager.add_reagent(new_reagent, "solid")
+                success = self.chemistry_manager.add_solid_reagent(new_reagent)
             
             if success:
                 self._refresh_display_tab()
@@ -1210,10 +1212,10 @@ class ReagentUI:
         try:
             if old_reagent:
                 # Update existing
-                success = self.data_manager.update_reagent(old_reagent, new_reagent, "liquid")
+                success = self.chemistry_manager.update_liquid_reagent(old_reagent, new_reagent)
             else:
                 # Add new
-                success = self.data_manager.add_reagent(new_reagent, "liquid")
+                success = self.chemistry_manager.add_liquid_reagent(new_reagent)
             
             if success:
                 self._refresh_display_tab()
@@ -1262,7 +1264,7 @@ class ReagentUI:
     def _generate_stoichiometry_table(self) -> str:
         """Generate HTML for stoichiometry table based on current reagents"""
         try:
-            data = self.data_manager.load_data()
+            data = self.chemistry_manager.get_data()
             
             # Get all reagents
             solid_reagents = data.get("solid reagents", [])
@@ -1424,4 +1426,4 @@ class ReagentUI:
 
     def get_data(self) -> Dict[str, Any]:
         """Get current reagent data"""
-        return self.data_manager.load_data()
+        return self.chemistry_manager.get_data()
