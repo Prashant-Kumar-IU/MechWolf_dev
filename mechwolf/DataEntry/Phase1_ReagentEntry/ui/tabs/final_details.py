@@ -289,11 +289,11 @@ class FinalDetailsTab:
                     <thead>
                         <tr style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white;">
                             <th style="padding: 15px; text-align: left; font-weight: 600;">Reagent</th>
-                            <th style="padding: 15px; text-align: center; font-weight: 600;">Type</th>
                             <th style="padding: 15px; text-align: center; font-weight: 600;">MW (g/mol)</th>
                             <th style="padding: 15px; text-align: center; font-weight: 600;">Equivalents</th>
                             <th style="padding: 15px; text-align: center; font-weight: 600;">Amount (mmol)</th>
                             <th style="padding: 15px; text-align: center; font-weight: 600;">Mass (mg)</th>
+                            <th style="padding: 15px; text-align: center; font-weight: 600;">Density (g/mL)</th>
                             <th style="padding: 15px; text-align: center; font-weight: 600;">Volume (μL)</th>
                             <th style="padding: 15px; text-align: center; font-weight: 600;">Position</th>
                         </tr>
@@ -313,20 +313,24 @@ class FinalDetailsTab:
                 volume_display = "—"
                 mass_display = f"{reagent['mass_mg']:.1f}"
             
+            # Format density display
+            if reagent['type'] == 'liquid' and 'density' in reagent:
+                density_display = f"{reagent['density']:.2f}"
+            else:
+                density_display = "—"
+            
             html += f"""
                     <tr style="{row_style}">
-                        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; word-wrap: break-word; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <td style="padding: 18px 12px; border-bottom: 1px solid #e2e8f0; word-wrap: break-word; max-width: 200px; white-space: normal; line-height: 1.4;">
                             <strong>{reagent['name']}</strong>
                         </td>
-                        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">
-                            {'🧱' if reagent['type'] == 'solid' else '💧'} {reagent['type'].title()}
-                        </td>
-                        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{reagent['molecular_weight']:.1f}</td>
-                        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{reagent['equivalents']:.2f}</td>
-                        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{reagent['moles_mmol']:.3f}</td>
-                        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{mass_display}</td>
-                        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{volume_display}</td>
-                        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{reagent['position']}</td>
+                        <td style="padding: 18px 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{reagent['molecular_weight']:.1f}</td>
+                        <td style="padding: 18px 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{reagent['equivalents']:.2f}</td>
+                        <td style="padding: 18px 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{reagent['moles_mmol']:.3f}</td>
+                        <td style="padding: 18px 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{mass_display}</td>
+                        <td style="padding: 18px 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{density_display}</td>
+                        <td style="padding: 18px 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{volume_display}</td>
+                        <td style="padding: 18px 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">{reagent['position']}</td>
                     </tr>
             """
         
