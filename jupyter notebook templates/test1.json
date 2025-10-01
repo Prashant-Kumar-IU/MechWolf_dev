@@ -4,7 +4,7 @@
         "experiment_id": "2025_06_25_03_14_25_7bcb5658",
         "experiment_name": "Phase1 Reagent Entry Test",
         "created": "2025-06-25T03:14:25.556487",
-        "last_updated": "2025-06-26T12:57:47.680159",
+        "last_updated": "2025-06-27T18:47:44.924171",
         "description": "MechWolf flow chemistry experiment",
         "notebook_file": "test1.json"
     },
@@ -53,8 +53,28 @@
                 {
                     "type": "HarvardSyringePump",
                     "name": "pump_1",
-                    "description": "",
+                    "description": "Test 2",
                     "instance_id": 1,
+                    "properties": {
+                        "syringe_volume": {
+                            "value": 3.0,
+                            "unit": "mL",
+                            "formatted": "3 mL"
+                        },
+                        "syringe_diameter": {
+                            "value": 10.0,
+                            "unit": "mm",
+                            "formatted": "10 mm"
+                        },
+                        "serial_port": "/dev/ttyUSB0"
+                    },
+                    "unit_system_version": "1.0"
+                },
+                {
+                    "type": "HarvardSyringePump",
+                    "name": "pump_2",
+                    "description": "",
+                    "instance_id": 2,
                     "properties": {
                         "syringe_volume": {
                             "value": 3.0,
@@ -159,7 +179,7 @@
         "connections": [
             {
                 "from": "pump_1",
-                "to": "vessel_1",
+                "to": "vessel_3",
                 "tube_type": "tube_1",
                 "tube_length": {
                     "value": 1.0,
