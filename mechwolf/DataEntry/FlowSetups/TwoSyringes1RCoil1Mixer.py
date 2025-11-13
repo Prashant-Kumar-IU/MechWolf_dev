@@ -28,13 +28,16 @@ ApparatusCreator:
     create_apparatus(self) -> mw.Apparatus:
         Creates and returns an apparatus based on the saved configuration.
 """
+from typing import Any, Dict, List, Optional, Tuple
+
 from IPython.display import clear_output
+
 import mechwolf as mw
 from mechwolf.components.contrib.harvardpump import HarvardSyringePump
-from typing import List, Dict, Any, Optional, Tuple
-from .FlowSetupUtils import parse_tube_dimension, parse_numeric_foot
-from .error_handler import ErrorHandler, ValidationError
+
 from .data_manager import DataManager
+from .error_handler import ErrorHandler, ValidationError
+from .FlowSetupUtils import parse_numeric_foot, parse_tube_dimension
 from .widget_manager import WidgetManager
 
 
@@ -201,9 +204,10 @@ class ApparatusCreator:
         return "single-channel"
 
     def create_apparatus(self) -> mw.Apparatus:
-        import time
-        from IPython import get_ipython
         import asyncio
+        import time
+
+        from IPython import get_ipython
 
         # Create and display widgets
         app = ComponentApp(self.pumps, self.json_file)

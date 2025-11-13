@@ -17,9 +17,10 @@ Example:
     To use this script, call the `process_data` function with the path to the JSON file containing reagent data:
     process_data("path/to/data_file.json")
 """
+from typing import Any, Dict, List, Optional
+
 from astropy.table import QTable
 from sigfig import round
-from typing import Dict, Any, Optional, List
 
 
 class Reagent:
@@ -127,9 +128,11 @@ def process_data(data_file: str) -> None:
             round(reagent.mass, decimals=4) for reagent in reagent_list
         ]
         reagent_table["Volume (mL)"] = [
-            round((reagent.volume / 1000), decimals=4)
-            if hasattr(reagent, "volume") and reagent.volume != 0
-            else "N/A"
+            (
+                round((reagent.volume / 1000), decimals=4)
+                if hasattr(reagent, "volume") and reagent.volume != 0
+                else "N/A"
+            )
             for reagent in reagent_list
         ]
         reagent_table["Density (g/mL)"] = [

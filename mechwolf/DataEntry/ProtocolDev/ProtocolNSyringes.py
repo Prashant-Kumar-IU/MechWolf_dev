@@ -6,7 +6,7 @@ protocols involving pumps and vessels in a laboratory automation setup.
 Classes:
     ProtocolAlgorithm: Manages protocol creation and validation for pumps and vessels.
 Methods:
-    __init__(self, protocol: Protocol, pumps_or_pump: Union[List[ActiveComponent], ActiveComponent, Tuple[ActiveComponent, ...]], 
+    __init__(self, protocol: Protocol, pumps_or_pump: Union[List[ActiveComponent], ActiveComponent, Tuple[ActiveComponent, ...]],
              *additional_components: ActiveComponent, data_file: str) -> None:
         Initializes the ProtocolAlgorithm with the given protocol, components, and data file.
     _get_pump_vessel_mapping(self) -> List[Dict[str, Any]]:
@@ -24,26 +24,33 @@ Methods:
     create_protocol(self) -> Protocol:
         Creates and returns a protocol based on the validated inputs and pump configurations.
 """
-from mechwolf.core.protocol import Protocol
-from mechwolf.components import ActiveComponent
-from .ProtocolGUICreator import ProtocolGUI, PumpConfig
 import re
-from typing import List, Dict, Any, Union, Tuple, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from mechwolf.components import ActiveComponent
+from mechwolf.core.protocol import Protocol
+
+from .ProtocolGUICreator import ProtocolGUI, PumpConfig
 
 
 class ProtocolAlgorithm:
     def __init__(
-        self, protocol: Protocol, pumps_or_pump: Union[List[ActiveComponent], ActiveComponent, Tuple[ActiveComponent, ...]], 
-        *additional_components: ActiveComponent, data_file: Optional[str] = None
+        self,
+        protocol: Protocol,
+        pumps_or_pump: Union[
+            List[ActiveComponent], ActiveComponent, Tuple[ActiveComponent, ...]
+        ],
+        *additional_components: ActiveComponent,
+        data_file: Optional[str] = None,
     ) -> None:
         self.protocol = protocol
-        
+
         # Handle the case where pumps is a list or an individual pump
         if isinstance(pumps_or_pump, list) or isinstance(pumps_or_pump, tuple):
             self.components = list(pumps_or_pump) + list(additional_components)
         else:
             self.components = [pumps_or_pump] + list(additional_components)
-            
+
         self.apparatus = protocol.apparatus
 
         if data_file is None:
@@ -137,9 +144,10 @@ class ProtocolAlgorithm:
             gui = ProtocolGUI(self.pump_vessel_mapping, self.data_file)
 
             # Wait for GUI completion
-            import time
-            from IPython import get_ipython
             import asyncio
+            import time
+
+            from IPython import get_ipython
 
             while not gui.setup_complete:
                 time.sleep(0.1)

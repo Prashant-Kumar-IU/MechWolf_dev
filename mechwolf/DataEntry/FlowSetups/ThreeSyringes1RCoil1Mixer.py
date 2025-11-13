@@ -1,4 +1,5 @@
 import json
+
 """
 ComponentApp class handles the creation and management of components for a chemical apparatus setup.
 Attributes:
@@ -44,13 +45,20 @@ Methods:
     _make_tube(tube_config: Dict[str, Any], length: float) -> mw.Tube:
         Creates a tube with the given configuration and length.
 """
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
 from IPython.display import clear_output
+
 import mechwolf as mw
 from mechwolf.components.contrib.harvardpump import HarvardSyringePump
-from .FlowSetupUtils import parse_tube_dimension, parse_numeric_foot, check_required_fields
-from .error_handler import ErrorHandler
+
 from .data_manager import DataManager
+from .error_handler import ErrorHandler
+from .FlowSetupUtils import (
+    check_required_fields,
+    parse_numeric_foot,
+    parse_tube_dimension,
+)
 from .widget_manager import WidgetManager
 
 
@@ -260,9 +268,10 @@ class ApparatusCreator:
 
     def _process_events(self) -> None:
         """Process IPython events"""
-        import time
-        from IPython import get_ipython
         import asyncio
+        import time
+
+        from IPython import get_ipython
 
         time.sleep(0.1)
         if get_ipython():

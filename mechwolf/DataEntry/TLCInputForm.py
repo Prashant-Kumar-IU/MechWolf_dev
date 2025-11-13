@@ -1,6 +1,8 @@
-import ipywidgets as widgets
-from IPython.display import display, clear_output
 from typing import List
+
+import ipywidgets as widgets
+from IPython.display import clear_output, display
+
 
 class TLCInputForm:
     """
@@ -137,7 +139,7 @@ class TLCInputForm:
                     result_output,
                 ]
             )
-            
+
             # Make sure display works properly in both versions
             display(form_container)
 

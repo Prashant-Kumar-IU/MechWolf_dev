@@ -37,10 +37,11 @@ Methods:
                 Raises:
                     ValueError: If the time format is invalid.
 """
-from mechwolf.core.protocol import Protocol
+import re
+
 from mechwolf.components import ActiveComponent
 from mechwolf.components.contrib.harvardpump import HarvardSyringePump
-import re
+from mechwolf.core.protocol import Protocol
 
 
 class ProtocolAlgorithm:

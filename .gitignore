@@ -124,3 +124,4 @@ docs/api/zoo/*
 
 # automatically generated logging
 *.log.json
+.venev/

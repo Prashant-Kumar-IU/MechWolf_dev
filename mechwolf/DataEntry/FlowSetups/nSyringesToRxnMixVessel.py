@@ -26,19 +26,23 @@ ApparatusCreator:
     create_apparatus(self) -> mw.Apparatus:
         Creates and returns an apparatus based on the configuration provided by the ComponentApp.
 """
+
 import json
+from typing import Any, Dict, List, Optional
+
 import ipywidgets as widgets
-from IPython.display import display, clear_output
+from IPython.display import clear_output, display
+
 import mechwolf as mw
 from mechwolf.components.contrib.harvardpump import HarvardSyringePump
-from typing import Any, Dict, List, Optional
+
+from .data_manager import DataManager
+from .error_handler import ValidationError
 from .FlowSetupUtils import (
-    parse_tube_dimension,
     parse_numeric_foot,
+    parse_tube_dimension,
     validate_required_fields_with_rmv,
 )
-from .error_handler import ValidationError
-from .data_manager import DataManager
 
 
 class ComponentApp:
@@ -54,29 +58,33 @@ class ComponentApp:
     def create_widgets(self) -> None:
         apparatus_name_label = widgets.Label("Apparatus Name:")
         self.apparatus_name_widget = widgets.Text(
-            value=self.existing_config.get("apparatus_name", "")
-            if self.existing_config
-            else "",
+            value=(
+                self.existing_config.get("apparatus_name", "")
+                if self.existing_config
+                else ""
+            ),
             layout=widgets.Layout(width="50%"),
         )
 
         rmv_name_label = widgets.Label("Reaction Mixture Vessel Name:")
         self.product_vessel_name_widget = widgets.Text(
-            value=self.existing_config.get("reaction_mixture_vessel", {}).get(
-                "name", ""
-            )
-            if self.existing_config
-            else "",
+            value=(
+                self.existing_config.get("reaction_mixture_vessel", {}).get("name", "")
+                if self.existing_config
+                else ""
+            ),
             layout=widgets.Layout(width="50%"),
         )
 
         rmv_desc_label = widgets.Label("Reaction Mixture Vessel Description:")
         self.product_vessel_desc_widget = widgets.Text(
-            value=self.existing_config.get("reaction_mixture_vessel", {}).get(
-                "description", ""
-            )
-            if self.existing_config
-            else "",
+            value=(
+                self.existing_config.get("reaction_mixture_vessel", {}).get(
+                    "description", ""
+                )
+                if self.existing_config
+                else ""
+            ),
             layout=widgets.Layout(width="50%"),
         )
 
@@ -307,9 +315,10 @@ class ApparatusCreator:
         self.json_file: str = data_file if data_file else "apparatus_config.json"
 
     def create_apparatus(self) -> mw.Apparatus:
-        import time
-        from IPython import get_ipython
         import asyncio
+        import time
+
+        from IPython import get_ipython
 
         app = ComponentApp(self.pumps, self.json_file)
         app.create_widgets()
@@ -354,8 +363,8 @@ class ApparatusCreator:
 
 
 if __name__ == "__main__":
-    from mechwolf.components.contrib.varian import VarianPump
     from mechwolf.components.contrib.freestep_pump import FreeStepPump
+    from mechwolf.components.contrib.varian import VarianPump
 
     pump_1 = HarvardSyringePump(
         syringe_volume="10 mL", syringe_diameter="14.567 mm", serial_port="COM1"

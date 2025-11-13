@@ -1,4 +1,5 @@
-from typing import Dict, Any, List, Tuple
+from typing import Any, Dict, List, Tuple
+
 from .FlowSetupUtils import convert_dimension_to_float
 
 

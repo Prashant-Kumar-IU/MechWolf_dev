@@ -1,5 +1,6 @@
-import ipywidgets as widgets
 from typing import Any, Dict, Union
+
+import ipywidgets as widgets
 
 """
 Manages the creation and handling of various widgets for a component application.
@@ -116,7 +117,11 @@ class WidgetManager:
         )
 
     def create_all_widgets(
-        self, num_vessels: int = 3, num_tubes: int = 1, num_coils: int = 2, num_mixers: int = 1
+        self,
+        num_vessels: int = 3,
+        num_tubes: int = 1,
+        num_coils: int = 2,
+        num_mixers: int = 1,
     ) -> Dict[str, Union[widgets.Widget, Dict[str, int]]]:
         """Create all widgets with configurable numbers of components"""
         # Store component counts

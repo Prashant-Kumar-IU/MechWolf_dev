@@ -1,5 +1,6 @@
 import mechwolf as mw
 
+
 class HarvardSyringePump(mw.Pump):
     """
     A dual-channel infusion only Harvard syringe pump.
@@ -59,41 +60,41 @@ class HarvardSyringePump(mw.Pump):
         "stability": "beta",
         "supported": True,
     }
-    
-    
-    def __init__(self, syringe_volume, syringe_diameter, serial_port, name = None):
-        super().__init__(name = name)
+
+    def __init__(self, syringe_volume, syringe_diameter, serial_port, name=None):
+        super().__init__(name=name)
         self.serial_port = serial_port
         self.syringe_volume = mw._ureg.parse_expression(syringe_volume)
         self.syringe_diameter = mw._ureg.parse_expression(syringe_diameter)
-        
+
     def __enter__(self):
         import aioserial
 
         self._ser = aioserial.AioSerial(
             self.serial_port,
             115200,
-            parity = aioserial.PARITY_NONE,
-            stopbits = 1,
-            timeout = 1,
-            write_timeout = 1,)
-        syringe_volume_ml = self.syringe_volume.to(mw._ureg.ml).magnitude 
+            parity=aioserial.PARITY_NONE,
+            stopbits=1,
+            timeout=1,
+            write_timeout=1,
+        )
+        syringe_volume_ml = self.syringe_volume.to(mw._ureg.ml).magnitude
         syringe_diameter_mm = self.syringe_diameter.to(mw._ureg.mm).magnitude
-        self._ser.write(f'svolume {syringe_volume_ml} ml\r'.encode())
-        self._ser.write(f'diameter {syringe_diameter_mm}\r'.encode())
+        self._ser.write(f"svolume {syringe_volume_ml} ml\r".encode())
+        self._ser.write(f"diameter {syringe_diameter_mm}\r".encode())
 
         return self
-    
+
     def __exit__(self, exc_type, exc_value, traceback):
         self.rate = mw._ureg.parse_expression("0 mL/min")
-        self._ser.write(b'stop\r') 
-        
+        self._ser.write(b"stop\r")
+
         del self._ser
 
     async def _update(self):
         rate_mlmin = self.rate.to(mw._ureg.ml / mw._ureg.min).magnitude
         if rate_mlmin == 0:
-            self._ser.write(b'stop\r') 
+            self._ser.write(b"stop\r")
         else:
-            self._ser.write(f'irate {rate_mlmin} m/m\r'.encode())
-            self._ser.write(b'irun\r')
+            self._ser.write(f"irate {rate_mlmin} m/m\r".encode())
+            self._ser.write(b"irun\r")

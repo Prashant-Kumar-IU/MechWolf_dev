@@ -1,7 +1,7 @@
-import platform
-import subprocess
 import glob
 import os
+import platform
+import subprocess
 from typing import List
 
 

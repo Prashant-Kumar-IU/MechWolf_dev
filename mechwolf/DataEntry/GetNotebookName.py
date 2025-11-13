@@ -11,9 +11,10 @@ def get_notebook_json_name(save_dir: Optional[str] = None) -> Optional[str]:
     """
     try:
         import os
-        from notebook import notebookapp
-        from IPython import get_ipython
+
         import requests
+        from IPython import get_ipython
+        from notebook import notebookapp
 
         # Set the save directory to the current working directory if not provided
         if save_dir is None:

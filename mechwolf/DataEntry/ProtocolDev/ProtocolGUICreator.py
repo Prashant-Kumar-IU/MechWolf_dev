@@ -37,11 +37,15 @@ Methods:
         _get_vessels_for_pump(pump_index: int) -> List[str]: Helper method to get all vessels connected to a pump.
         save_protocol(b: Optional[widgets.Button]): Saves the protocol configuration to a JSON file and displays a summary.
 """
-import ipywidgets as widgets
-from IPython.display import display, clear_output
-import mechwolf as mw
-from typing import List, Dict, Any, Optional
+
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
+import ipywidgets as widgets
+from IPython.display import clear_output, display
+
+import mechwolf as mw
+
 from .protocol_data_manager import ProtocolDataManager
 
 
@@ -106,12 +110,14 @@ class ProtocolGUI:
         )
 
         # Main container for better compatibility across versions
-        self.main_container = widgets.VBox([
-            widgets.HBox(
-                [left_container, right_container], 
-                layout=widgets.Layout(width="100%")
-            )
-        ])
+        self.main_container = widgets.VBox(
+            [
+                widgets.HBox(
+                    [left_container, right_container],
+                    layout=widgets.Layout(width="100%"),
+                )
+            ]
+        )
 
         display(self.main_container)
 
@@ -149,7 +155,7 @@ class ProtocolGUI:
 
     def initialize_entries(self) -> None:
         """Initialize empty entries list or load from existing config"""
-        if (self.existing_config and "pump_entries" in self.existing_config):
+        if self.existing_config and "pump_entries" in self.existing_config:
             # Load existing entries
             for entry in self.existing_config["pump_entries"]:
                 self.temp_entries.append(entry)
@@ -349,7 +355,7 @@ class ProtocolGUI:
             # Include direction indication in the display
             direction = " (backward)" if details["flow_rate"] < 0 else ""
             flow_rate_display = abs(details["flow_rate"])  # Show absolute value
-            
+
             label = widgets.HTML(
                 value=(
                     f"<div style='font-size: 14px; padding: 5px;'>"
@@ -473,9 +479,11 @@ class ProtocolGUI:
                         "flow_rate": entry["flow_rate"],
                         "volume": entry["volume"],
                         "delay": entry["delay"],
-                        "vessels": connected_vessels
-                        if connected_vessels
-                        else [entry["vessel"].name],
+                        "vessels": (
+                            connected_vessels
+                            if connected_vessels
+                            else [entry["vessel"].name]
+                        ),
                     }
         except Exception as e:
             print(f"Error processing pump entries: {str(e)}")
@@ -485,12 +493,12 @@ class ProtocolGUI:
             vessels_str = ", ".join(details["vessels"])
             direction = " (backward)" if details["flow_rate"] < 0 else ""
             flow_display = abs(details["flow_rate"])
-            
+
             pump_info = f"Pump {pump_idx} → {vessels_str}"
             flow_info = f"Flow Rate: {flow_display} mL/min{direction}"
             volume_info = f"Volume: {details['volume']} mL"
             delay_info = f"Delay: {details['delay']} s"
-            
+
             # Use absolute value of flow rate for time calculation
             active_time = (details["volume"] / abs(details["flow_rate"])) * 60
             time_info = f"Active Time: {self._format_time(active_time)}"

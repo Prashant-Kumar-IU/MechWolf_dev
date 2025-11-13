@@ -6,20 +6,20 @@ You may find yourself in the position that MechWolf's included components aren't
 In that case, you'll have to create your own component.
 Here's how:
 
-1.  **Decide what kind of component it is.**  
+1.  **Decide what kind of component it is.**
     If you're trying to make a new kind of pump, for example, you'll want to be inheriting from `Pump`.
     For components being controlled (i.e. not aliases of `Component`), you'll have to create a subclass of `ActiveComponent`.
 
-2.  **Create a new class.**  
+2.  **Create a new class.**
     If you're struggling, see [the official Python docs](https://docs.python.org/3/tutorial/classes.html), a handy [tutorial on classes](https://www.tutorialspoint.com/python3/python_classes_objects.htm), or look at MechWolf's source code.
     Make sure to add `name` as an optional argument to `__init__` and the line `super().__init__(name=name)`, which tells Python to pass the name argument up to the `ActiveComponent` class.
 
-3.  **Give the component its controllable attributes.**  
+3.  **Give the component its controllable attributes.**
     This means that anything that you will be using as keywords during your calls to `Protocol.add()` must be attributes.
     Furthermore, if they are quantities such as "10 mL/min", these attributes should be parsed `Quantity` objects.
     To get a `Quantity` object, import MechWolf's internal Unit registry (_i.e._ using `from mechwolf import _ureg`) and call `_ureg.parse_expression()` with the string of the component's attributes.
 
-4.  **Give it a base state attribute.**  
+4.  **Give it a base state attribute.**
     MechWolf requires that any component being modified as part of a protocol have a base state attribute to which it will return to after the protocol.
     For things that turn on, this base state is usually "off".
     The base state method must be called `_base_state` and be a dict with attributes as keys and settings for those attributes as values.
@@ -35,7 +35,7 @@ Here's how:
     At the end of your protocol, `Protocol.compile()` adds a procedure for each `ActiveComponent` in the protocol to return to its base state.
     In addition, when the component is not explicity being used, the component will default to its base state.
 
-5.  **Give it a method to update the hardware's state.**  
+5.  **Give it a method to update the hardware's state.**
     The job of the update method is to make the object's real-world state match its virtual representation.
     The update method must be asynchronous and be called `_update()`.
     This is where the hardware interfacing happens.
@@ -53,13 +53,13 @@ Here's how:
     It should asynchronously return the data read in from the sensor, which may be in any JSON-serializable format.
     MechWolf will automatically timestamp and log it, so don't worry about that.
 
-7.  \*\*Test thoroughly with `validate_component`.  
+7.  \*\*Test thoroughly with `validate_component`.
     For your convenience, the `validate_component`
     function will take an instance of your class (not the class
     itself) and verify that it meets the requirements to be used in
     a protocol.
 
-8.  **Contribute to GitHub** _(optional)_  
+8.  **Contribute to GitHub** _(optional)_
     Odds are you're not the only person in the world who could use
     the component you're making. In the spirit of collaboration, we
     welcome any and all components submitted to us that are
